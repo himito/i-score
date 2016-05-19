@@ -20,7 +20,7 @@ install:
 build_script:
   - git submodule update --init --recursive
   - cd base/addons
-  - git clone https://github.com/OSSIA/iscore-addon-staticanalysis
+  - git clone https://github.com/himito/iscore-addon-staticanalysis.git
   - cd iscore-addon-staticanalysis
   - git submodule update --init --recursive
   - cd ../../../
