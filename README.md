@@ -2,7 +2,9 @@ i-score
 =======
 
 
-i-score is an interactive intermedia sequencer - read more on http://i-score.org/
+i-score is an interactive intermedia sequencer - read more on http://i-score.org/.
+
+**This fork provides a plugin to generate an interactive score to control the improvisation according to larger structures found in an audio recording - read more [here](https://himito.gitlab.io/vmo_i-score_generator/).**
 
 ![i-score screenshot](/Documentation/iscore.png?raw=true)
 
