@@ -10,18 +10,13 @@ dist: trusty
 sudo: required
 env:
   global:
-    secure: kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo=
-  matrix:
+    secure: "kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo="
+matrix:
   exclude:
   - os: linux
   - os: osx
-  include:
   - os: linux
     env: CONF=linux-gcov CAN_DEPLOY=False
-  - os: osx
-    env: CONF=osx-package CAN_DEPLOY=True
-  - os: linux
-    env: CONF=linux-package CAN_DEPLOY=True
   - os: osx
     env: CONF=osx-debug CAN_DEPLOY=False
   - os: osx
@@ -34,6 +29,11 @@ env:
     env: CONF=linux-static-debug CAN_DEPLOY=False
   - os: linux
     env: CONF=linux-release CAN_DEPLOY=False
+  include:
+  - os: osx
+    env: CONF=osx-package CAN_DEPLOY=True
+  - os: linux
+    env: CONF=linux-package CAN_DEPLOY=True
 before_install:
 - ./tools/travis/deps.sh
 script:
@@ -43,7 +43,7 @@ after_success:
 deploy:
 - provider: releases
   api_key:
-    secure: kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo=
+    secure: "kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo="
   file: build/i-score-$TRAVIS_TAG-OSX.zip
   skip_cleanup: true
   on:
@@ -51,7 +51,7 @@ deploy:
     condition: $CAN_DEPLOY = True && $TRAVIS_OS_NAME = osx
 - provider: releases
   api_key:
-    secure: kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo=
+    secure: "kZ9QvfpdEscfJfIVJdtQ1QnDwips4csNiZ+BrNIYe+55EDBDsTO8Z9qa03Ck4F5w+ais1j0s7zoPNZxDwwvyJPdziBKjJb7ady7woEsT6v3UywjQi5kC40PWGCuaw7jeqdaRCC2vMro35bdg8T0MTvN0bkL+eF9AI8zdlHm//ZvUVpn7SIJHRWoRW9fz6SUVBxHkYv5P1ZxvcIpGqaoAxt2r2/2ARbsFo15yScNs3JpspQM+SYK6xAD7lQOnFreF40n/1rdGGf0BUefnwO8ajNoQOp81LsiwPoI4FHH8URhdFRTmdrvIyiFxiewoPl7woSk5va5oLYHHXMxOx6+grN4lWac9WwKs+UmpeFMptXDnYUIJJKApE37gCzvrwK7JRj9fglxhZtQZb0WZnDv0O2qWh/Sl5GuM0u16PJKf2alNihyTTPSsv1iLxWdTsQySR/6NVKwPyC1cat7TxCeEGKFudgdZJlRk28VaQF5ROQGIlAuqUhMUreSbCPp6lLjiPjE7yoid0hPGtZuBi+XVGwIqp9Ly/ym7cCAh2Q6xbKIsOWxh8ciFzYigmUiQ6+wdpBCf4ZkDbqDKiwsivQrLT/2aUjJRkhhFJpWRQW9ujp9Zw0WzUhjEOBPEOi0WFRYYS0gli0BxKB6p31/qBcptlxtmhXCYQvg5dASVBpEF4Fo="
   file: build/i-score-$TRAVIS_TAG-Ubuntu-14.04-amd64.deb
   skip_cleanup: true
   on:
