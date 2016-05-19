@@ -67,16 +67,14 @@ after_success:
 
 deploy:
   - provider: releases
-    api_key:
-      secure: "hk56wIhJMippWajLTGtO44szXtBCzhCNHAET9fKZ7dXcfEVG22YHuUDMo1ROn6ZhthB5m8SLgctuTf4GtuvGxhdQzjeBSsvYCs6QAAUtMjBb4/lafcBZfr3Amf5TT8MfznGESQDMGjMUjnwQlUoWCVE0XoqNq6DbFlyoZPpscSE="
+    api_key: "81d5f3e4e2f5d1b85e438379f5a096dce4e0b4ef"
     file: build/i-score-$TRAVIS_TAG-OSX.zip
     skip_cleanup: true
     on:
       tags: true
       condition: $CAN_DEPLOY = True && $TRAVIS_OS_NAME = osx
   - provider: releases
-    api_key:
-      secure: "hk56wIhJMippWajLTGtO44szXtBCzhCNHAET9fKZ7dXcfEVG22YHuUDMo1ROn6ZhthB5m8SLgctuTf4GtuvGxhdQzjeBSsvYCs6QAAUtMjBb4/lafcBZfr3Amf5TT8MfznGESQDMGjMUjnwQlUoWCVE0XoqNq6DbFlyoZPpscSE="
+    api_key: "81d5f3e4e2f5d1b85e438379f5a096dce4e0b4ef"
     file: build/i-score-$TRAVIS_TAG-Ubuntu-14.04-amd64.deb
     skip_cleanup: true
     on:
