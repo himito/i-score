@@ -21,10 +21,10 @@ Current builds tested on Mac OS X, Ubuntu 14.04, Debian GNU/Linux (Jessie, Sid),
 [![OpenHub](https://www.openhub.net/p/i-score/widgets/project_thin_badge.gif)](https://www.openhub.net/p/i-score)
 
 ### Build
-* Linux, OS X : [![Travis Status](https://travis-ci.org/OSSIA/i-score.svg?branch=master)](https://travis-ci.org/OSSIA/i-score)
-* Windows : [![Appveyor Status](https://ci.appveyor.com/api/projects/status/github/OSSIA/i-score?branch=master&svg=true)](https://ci.appveyor.com/project/JeanMichalCelerier/i-score)
+* Linux, OS X : [![Travis Status](https://api.travis-ci.org/himito/i-score.svg?branch=master)](https://travis-ci.org/himito/i-score)
+* Windows : [![Appveyor Status](https://ci.appveyor.com/api/projects/status/github/himito/i-score?branch=master&svg=true)](https://ci.appveyor.com/project/himito/i-score)
 [//]: # (* Coverity : [![Coverity Status](https://scan.coverity.com/projects/3356/badge.svg)](https://scan.coverity.com/projects/3356))
-* Coveralls : [![Coverage Status](https://coveralls.io/repos/OSSIA/i-score/badge.svg?branch=&service=github)](https://coveralls.io/github/OSSIA/i-score?branch=)
+[//]: # (* Coveralls : [![Coverage Status](https://coveralls.io/repos/OSSIA/i-score/badge.svg?branch=&service=github)](https://coveralls.io/github/OSSIA/i-score?branch=))
 
 ### Quick install
 * Arch Linux : (in the AUR4)
