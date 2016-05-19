@@ -16,14 +16,14 @@ install:
   - cd iscore-windows-sdk
   - nsis.exe /S
   - cd ..
-  
+
 build_script:
   - git submodule update --init --recursive
-#  - cd base/addons
-#  - git clone https://github.com/OSSIA/iscore-addon-csp
-#  - cd iscore-addon-csp
-#  - git submodule update --init --recursive
-#  - cd ../../../
+  - cd base/addons
+  - git clone https://github.com/himito/iscore-addon-staticanalysis
+  - cd iscore-addon-staticanalysis
+  - git submodule update --init --recursive
+  - cd ../../../
   - mkdir build
   - cd build
   - set PATH=%CMAKE_PATH%\bin;%QTDIR%\bin;%MINGW%\bin;

@@ -8,12 +8,14 @@ i-score is an interactive intermedia sequencer - read more on http://i-score.org
 
 ![i-score screenshot](/Documentation/iscore.png?raw=true)
 
+<!---
 Easiest way is to grab a release in Github releases.
 
 In order to build i-score, follow the instructions in INSTALL.md.
 Current builds tested on Mac OS X, Ubuntu 14.04, Debian GNU/Linux (Jessie, Sid), and ArchLinux.
 
 (the previous version source is located at : http://github.com/i-score/i-score)
+-->
 
 ## Status
 
@@ -26,6 +28,7 @@ Current builds tested on Mac OS X, Ubuntu 14.04, Debian GNU/Linux (Jessie, Sid),
 [//]: # (* Coverity : [![Coverity Status](https://scan.coverity.com/projects/3356/badge.svg)](https://scan.coverity.com/projects/3356))
 [//]: # (* Coveralls : [![Coverage Status](https://coveralls.io/repos/OSSIA/i-score/badge.svg?branch=&service=github)](https://coveralls.io/github/OSSIA/i-score?branch=))
 
+<!---
 ### Quick install
 * Arch Linux : (in the AUR4)
 `yaourt -S jamomacore-git iscore-git`
@@ -42,9 +45,10 @@ Installation of some dependencies is required :
 
     wget https://www.dropbox.com/s/0pmy14zlpqpyaq6/JamomaCore-0.6-dev-Linux.deb?dl=1 -O jamoma.deb
     sudo dpkg -i jamoma.deb
+-->
 
-Then [fetch the release here](https://github.com/OSSIA/i-score/releases/latest).
+Then [fetch the release here](https://github.com/himito/i-score/releases/latest).
 
-* Windows, OS X : [Latest release](https://github.com/OSSIA/i-score/releases/latest)
+* Windows, OS X : [Latest release](https://github.com/himito/i-score/releases/latest)
 
 * For more see [here](https://github.com/OSSIA/i-score/wiki/Build-and-install).
