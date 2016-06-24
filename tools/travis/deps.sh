@@ -2,7 +2,7 @@
 
 git submodule update --init --recursive
 # export ISCORE_PLUGINS_TO_BUILD=("iscore-addon-csp")
-export ISCORE_PLUGINS_TO_BUILD=("iscore-addon-staticanalysis")
+export ISCORE_PLUGINS_TO_BUILD=("iscore-addon-staticanalysis" "iscore-addon-remotecontrol")
 
 # Set-up the plug-ins
 (
