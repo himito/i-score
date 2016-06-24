@@ -21,7 +21,7 @@ OSCDevice::OSCDevice(const Device::DeviceSettings &settings):
 
 bool OSCDevice::reconnect()
 {
-    OSSIADevice::disconnect();
+    disconnect();
 
     try {
         auto stgs = settings().deviceSpecificSettings.value<OSCSpecificSettings>();
@@ -29,6 +29,7 @@ bool OSCDevice::reconnect()
                                       stgs.inputPort,
                                       stgs.outputPort);
         m_dev = OSSIA::Device::create(ossia_settings, settings().name.toStdString());
+        setLogging_impl(isLogging());
     }
     catch(...)
     {

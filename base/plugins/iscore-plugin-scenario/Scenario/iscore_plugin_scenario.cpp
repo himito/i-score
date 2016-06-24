@@ -16,6 +16,8 @@
 #include <Scenario/Process/ScenarioFactory.hpp>
 #include <Scenario/Settings/Factory.hpp>
 #include <Scenario/iscore_plugin_scenario.hpp>
+#include <Scenario/Application/Drops/ScenarioDropHandler.hpp>
+#include <Scenario/Application/Drops/MessageDropHandler.hpp>
 #include <State/Message.hpp>
 #include <QMetaType>
 #include <QString>
@@ -27,8 +29,6 @@
 #include <Process/LayerPresenter.hpp>
 #include <Process/StateProcessFactoryList.hpp>
 #include <Process/Inspector/ProcessInspectorWidgetDelegateFactoryList.hpp>
-#include <Scenario/Application/Menus/Plugin/ScenarioActionsFactory.hpp>
-#include <Scenario/Application/Menus/Plugin/ScenarioContextMenuPluginList.hpp>
 #include <Scenario/Commands/Scenario/Displacement/MoveEventList.hpp>
 #include <Scenario/Commands/TimeNode/TriggerCommandFactory/TriggerCommandFactory.hpp>
 #include <Scenario/Document/DisplayedElements/DisplayedElementsProvider.hpp>
@@ -83,13 +83,10 @@ iscore_plugin_scenario::iscore_plugin_scenario()
     qRegisterMetaType<Id<Process::ProcessModel>>();
 }
 
-iscore_plugin_scenario::~iscore_plugin_scenario()
-{
-
-}
+iscore_plugin_scenario::~iscore_plugin_scenario() = default;
 
 iscore::GUIApplicationContextPlugin* iscore_plugin_scenario::make_applicationPlugin(
-        const iscore::ApplicationContext& app)
+        const iscore::GUIApplicationContext& app)
 {
     using namespace Scenario;
     return new ScenarioApplicationPlugin{app};
@@ -104,13 +101,14 @@ std::vector<std::unique_ptr<iscore::FactoryListInterface>> iscore_plugin_scenari
             Process::StateProcessList,
             MoveEventList,
             CSPCoherencyCheckerList,
-            ScenarioContextMenuPluginList,
             ConstraintInspectorDelegateFactoryList,
             DisplayedElementsToolPaletteFactoryList,
             TriggerCommandFactoryList,
             DisplayedElementsProviderList,
             Process::InspectorWidgetDelegateFactoryList,
-            Process::StateProcessInspectorWidgetDelegateFactoryList
+            Process::StateProcessInspectorWidgetDelegateFactoryList,
+            DropHandlerList,
+            ConstraintDropHandlerList
             >();
 }
 
@@ -131,16 +129,6 @@ std::vector<std::unique_ptr<iscore::FactoryInterfaceBase>> iscore_plugin_scenari
 {
     using namespace Scenario;
     using namespace Scenario::Command;
-    /*
-        if(key == ScenarioActionsFactory::static_abstractFactoryKey())
-        {
-            // new ScenarioCommonActionsFactory is instantiated in ScenarioApplicationPlugin
-            // because other plug ins need it.
-            return {};
-        }
-    */
-
-    // TODO use me everywhere.
     return instantiate_factories<
             iscore::ApplicationContext,
     TL<
@@ -164,7 +152,9 @@ std::vector<std::unique_ptr<iscore::FactoryInterfaceBase>> iscore_plugin_scenari
     FW<iscore::SettingsDelegateFactory,
         Scenario::Settings::Factory>,
     FW<iscore::PanelDelegateFactory,
-        Scenario::PanelDelegateFactory>
+        Scenario::PanelDelegateFactory>,
+    FW<Scenario::DropHandler,
+        Scenario::MessageDropHandler>
 #if defined(ISCORE_LIB_INSPECTOR)
     ,
     FW<Inspector::InspectorWidgetFactory,

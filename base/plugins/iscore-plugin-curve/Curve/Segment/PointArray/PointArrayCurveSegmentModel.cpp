@@ -1,6 +1,6 @@
 #include <Curve/Segment/Linear/LinearCurveSegmentModel.hpp>
 #include <Curve/Segment/Power/PowerCurveSegmentModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include <iscore/serialization/VisitorCommon.hpp>
 #include <QDebug>
@@ -127,7 +127,7 @@ void PointArraySegment::addPoint(double x, double y)
         max_y = y;
     }
 
-    m_points.insert(std::make_pair(x, y));
+    m_points[x] = y;
 
     m_valid = false;
     emit dataChanged();

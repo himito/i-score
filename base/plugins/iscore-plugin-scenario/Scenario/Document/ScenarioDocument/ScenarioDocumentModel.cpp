@@ -11,7 +11,7 @@
 #include <Scenario/Document/Constraint/Rack/Slot/SlotModel.hpp>
 #include <Scenario/Process/ScenarioProcessMetadata.hpp>
 #include <boost/iterator/iterator_facade.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/document/DocumentInterface.hpp>
 #include <QList>
 #include <QObject>
@@ -45,21 +45,22 @@
 #include <QFileInfo>
 #include <algorithm>
 #include <chrono>
+#include <Scenario/Settings/Model.hpp>
 
 namespace Process { class LayerPresenter; }
 namespace Scenario
 {
-ScenarioDocumentModel::ScenarioDocumentModel(QObject* parent) :
+ScenarioDocumentModel::ScenarioDocumentModel(
+        const iscore::DocumentContext& ctx,
+        QObject* parent) :
     iscore::DocumentDelegateModelInterface {
         Id<iscore::DocumentDelegateModelInterface>(iscore::id_generator::getFirstId()),
         "Scenario::ScenarioDocumentModel",
         parent},
+    m_focusManager{ctx.document.focusManager()},
     m_baseScenario{new BaseScenario{Id<BaseScenario>{0}, this}}
 {
-    TimeValue dur{std::chrono::minutes{3}};
-#ifdef ISCORE_DEBUG
-    dur = std::chrono::seconds{30};
-#endif
+    auto dur = ctx.app.settings<Scenario::Settings::Model>().getDefaultDuration();
 
     m_baseScenario->constraint().duration.setRigid(false);
     ConstraintDurations::Algorithms::changeAllDurations(m_baseScenario->constraint(), dur);
@@ -245,7 +246,7 @@ void ScenarioDocumentModel::setNewSelection(const Selection& s)
     emit focusMe();
 }
 
-void ScenarioDocumentModel::setDisplayedConstraint(const ConstraintModel& constraint)
+void ScenarioDocumentModel::setDisplayedConstraint(ConstraintModel& constraint)
 {
     if(displayedElements.initialized())
     {

@@ -1,4 +1,5 @@
 #pragma once
+#include <core/document/Document.hpp>
 #include <core/document/DocumentBuilder.hpp>
 #include <QObject>
 #include <QString>
@@ -50,6 +51,11 @@ class ISCORE_LIB_BASE_EXPORT DocumentManager : public QObject
                 const iscore::ApplicationContext& ctx,
                 Args&&... args)
         {
+            auto cur = currentDocument();
+            if(cur && cur->virgin())
+            {
+                forceCloseDocument(ctx, *cur);
+            }
             prepareNewDocument(ctx);
             return setupDocument(
                         ctx, m_builder.loadDocument(ctx, std::forward<Args>(args)...));
@@ -111,6 +117,10 @@ class ISCORE_LIB_BASE_EXPORT DocumentManager : public QObject
                 const iscore::ApplicationContext& ctx);
 
         bool preparingNewDocument() const;
+
+    signals:
+        void documentChanged(iscore::Document*);
+
     private:
         /**
          * @brief checkAndUpdateJson
@@ -119,6 +129,8 @@ class ISCORE_LIB_BASE_EXPORT DocumentManager : public QObject
         bool checkAndUpdateJson(
                 QJsonDocument&,
                 const iscore::ApplicationContext& ctx);
+
+        void saveRecentFilesState();
 
         iscore::View& m_view;
 

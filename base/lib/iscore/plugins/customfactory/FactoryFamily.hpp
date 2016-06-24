@@ -1,31 +1,23 @@
 #pragma once
 #include <iscore/plugins/customfactory/FactoryInterface.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
 #include <iscore/tools/ForEachType.hpp>
 #include <iscore/tools/std/Pointer.hpp>
 #include <iscore/tools/std/Algorithms.hpp>
+#include <iscore/tools/std/IndirectContainer.hpp>
 #include <iscore/tools/Todo.hpp>
 
-#include <boost/multi_index_container.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/multi_index/identity.hpp>
-#include <boost/multi_index/member.hpp>
-#include <boost/multi_index/mem_fun.hpp>
-#include <boost/iterator/indirect_iterator.hpp>
+#include <unordered_map>
 
 #include <iscore_lib_base_export.h>
 #include <QMetaType>
 
-namespace bmi = boost::multi_index;
-
 namespace iscore
 {
-
 /**
-     * @brief The FactoryFamily class
-     *
-     * Keeps the factories, so that they can be found easily.
-     */
+ * @brief The FactoryFamily class
+ *
+ * Keeps the factories, so that they can be found easily.
+ */
 class ISCORE_LIB_BASE_EXPORT FactoryListInterface
 {
     public:
@@ -43,68 +35,21 @@ class ISCORE_LIB_BASE_EXPORT FactoryListInterface
         virtual void insert(std::unique_ptr<iscore::FactoryInterfaceBase>) = 0;
 };
 
-
-template<typename Map_T>
-class IndirectMap
-{
-    public:
-        auto begin()        { return boost::make_indirect_iterator(map.begin()); }
-        auto begin() const  { return boost::make_indirect_iterator(map.begin()); }
-
-        auto cbegin()       { return boost::make_indirect_iterator(map.cbegin()); }
-        auto cbegin() const { return boost::make_indirect_iterator(map.cbegin()); }
-
-        auto end()          { return boost::make_indirect_iterator(map.end()); }
-        auto end() const    { return boost::make_indirect_iterator(map.end()); }
-
-        auto cend()         { return boost::make_indirect_iterator(map.cend()); }
-        auto cend() const   { return boost::make_indirect_iterator(map.cend()); }
-
-        auto empty() const { return map.empty(); }
-
-        template<typename K>
-        auto find(K&& key)
-        {
-            return map.find(std::forward<K>(key));
-        }
-
-        template<typename E>
-        auto insert(E&& elt)
-        {
-            return map.insert(std::forward<E>(elt));
-        }
-
-    protected:
-        Map_T map;
-};
-
 // FIXME They should take an export macro also ?
 template<typename FactoryType>
 class ConcreteFactoryList :
         public iscore::FactoryListInterface,
-        public IndirectMap<
-                bmi::multi_index_container<
-                    std::unique_ptr<FactoryType>,
-                    bmi::indexed_by<
-                        bmi::hashed_unique<
-                            bmi::const_mem_fun<
-                                iscore::GenericFactoryInterface<typename FactoryType::ConcreteFactoryKey>,
-                                add_cref_t<typename FactoryType::ConcreteFactoryKey>,
-                                &FactoryType::template key<typename FactoryType::ConcreteFactoryKey>
-                            >
-                        >
-                    >
-                >
-        >
+        public IndirectUnorderedMap<
+            std::unordered_map<
+                typename FactoryType::ConcreteFactoryKey,
+                std::unique_ptr<FactoryType>
+        >>
 {
     public:
         using factory_type = FactoryType;
         using key_type = typename FactoryType::ConcreteFactoryKey;
 
-        virtual ~ConcreteFactoryList() noexcept
-        {
-
-        }
+        ~ConcreteFactoryList() noexcept override = default;
 
         static const iscore::AbstractFactoryKey& static_abstractFactoryKey() {
             return FactoryType::static_abstractFactoryKey();
@@ -116,25 +61,26 @@ class ConcreteFactoryList :
 
         void insert(std::unique_ptr<iscore::FactoryInterfaceBase> e) final override
         {
-			auto pf = dynamic_unique_ptr_cast<factory_type>(std::move(e));
+            auto pf = dynamic_unique_ptr_cast<factory_type>(std::move(e));
             if(pf)
             {
-                auto it = this->map.find(pf->template key<key_type>());
-                if(it == this->map.end())
-                {
-                    this->map.insert(std::move(pf));
-                }
+                auto k = pf->concreteFactoryKey();
+                auto it = this->map.find(k);
+                ISCORE_ASSERT(it == this->map.end());
+
+                this->map.emplace(std::make_pair(k, std::move(pf)));
             }
         }
-
-        const auto& list() const
-        { return this->map; }
 
         auto get(const key_type& k) const
         {
             auto it = this->map.find(k);
-            return (it != this->map.end()) ? it->get() : nullptr;
+            return (it != this->map.end()) ? it->second.get() : nullptr;
         }
+
+    protected:
+        const auto& list() const
+        { return this->map; }
 };
 
 template<typename T>
@@ -170,7 +116,7 @@ struct GenericFactoryInserter
         }
 
         template<typename TheClass>
-        void visit()
+        void operator()()
         {
             vec.push_back(std::make_unique<TheClass>());
         }
@@ -182,6 +128,13 @@ auto make_ptr_vector()
     return GenericFactoryInserter<Args...>{}.vec;
 }
 
+/**
+ * @brief FactoryBuilder
+ *
+ * This class allows the user to customize the
+ * creation of the factory by specializing it with the actual
+ * factory type. An example is in iscore_plugin_scenario.cpp.
+ */
 template<typename Context_T,
          typename Factory_T>
 struct FactoryBuilder // sorry padre for I have sinned
@@ -207,7 +160,7 @@ struct ContextualGenericFactoryInserter
         }
 
         template<typename TheClass>
-        void visit()
+        void operator()()
         {
             vec.push_back(FactoryBuilder<Context_T, TheClass>::make(context));
         }
@@ -219,22 +172,3 @@ auto make_ptr_vector(const Context_T& context)
 {
     return ContextualGenericFactoryInserter<Context_T, Base_T, Args...>{context}.vec;
 }
-
-#define ISCORE_STANDARD_FACTORY(FactorizedElementName) \
-class FactorizedElementName ## FactoryTag {}; \
-using FactorizedElementName ## FactoryKey = StringKey<FactorizedElementName ## FactoryTag>; \
-Q_DECLARE_METATYPE(FactorizedElementName ## FactoryKey) \
-\
-class FactorizedElementName ## Factory : \
-        public iscore::GenericFactoryInterface<FactorizedElementName ## FactoryKey> \
-{ \
-        ISCORE_ABSTRACT_FACTORY_DECL(#FactorizedElementName) \
-    public: \
-            using ConcreteFactoryKey = FactorizedElementName ## FactoryKey; \
-        virtual std::unique_ptr<FactorizedElementName> make() = 0; \
-}; \
-class FactorizedElementName ## FactoryList final : public iscore::FactoryListInterface \
-{ \
-       ISCORE_FACTORY_LIST_DECL(FactorizedElementName ## Factory) \
-};
-

@@ -3,73 +3,52 @@
 #include <QList>
 #include <QPoint>
 
-
-#include "ScenarioActions.hpp"
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 #include <iscore/menu/MenuInterface.hpp>
 #include <iscore/selection/Selection.hpp>
-
+#include <Scenario/Application/Menus/ObjectsActions/EventActions.hpp>
+#include <Scenario/Application/Menus/ObjectsActions/ConstraintActions.hpp>
+#include <Scenario/Application/Menus/ObjectsActions/StateActions.hpp>
+#include <iscore/actions/Action.hpp>
 class QAction;
 class QMenu;
 class QToolBar;
-
-namespace iscore {
-class MenubarManager;
-}  // namespace iscore
 
 namespace Scenario
 {
 struct Point;
 class ScenarioApplicationPlugin;
 class TemporalScenarioPresenter;
-class EventActions;
-class ConstraintActions;
-class StateActions;
-class ISCORE_PLUGIN_SCENARIO_EXPORT ObjectMenuActions final : public ScenarioActions
+class ISCORE_PLUGIN_SCENARIO_EXPORT ObjectMenuActions : public QObject
 {
     public:
-        ObjectMenuActions(iscore::ToplevelMenuElement, ScenarioApplicationPlugin* parent);
-        void fillMenuBar(iscore::MenubarManager *menu) override;
-        void fillContextMenu(QMenu* menu, const Selection&, const TemporalScenarioPresenter& pres, const QPoint&, const QPointF&) override;
-        void setEnabled(bool) override;
-        bool populateToolBar(QToolBar*) override;
+        ObjectMenuActions(ScenarioApplicationPlugin* parent);
 
+        void makeGUIElements(iscore::GUIElements& ref);
+        void setupContextMenu(Process::LayerContextMenuManager& ctxm);
 
-        QList<QAction*> actions() const override;
         CommandDispatcher<> dispatcher() const;
 
-        EventActions* eventActions() const
-        { return m_eventActions; }
-        ConstraintActions* constraintActions() const
-        { return m_cstrActions; }
-        StateActions* stateActions() const
-        { return m_stateActions; }
-
-        QAction* clearContent()
-        { return m_clearElements; }
-        QAction* copyContent()
-        { return m_copyContent; }
-        QAction* pasteContent()
-        { return m_pasteContent; }
-        QAction* elementsToJson()
-        { return m_elementsToJson; }
-
+        auto appPlugin() const
+        { return m_parent; }
     private:
         QJsonObject copySelectedElementsToJson();
         QJsonObject cutSelectedElementsToJson();
         void pasteElements(const QJsonObject& obj, const Scenario::Point& origin);
         void writeJsonToSelectedElements(const QJsonObject &obj);
 
+        ScenarioApplicationPlugin* m_parent{};
 
-        EventActions* m_eventActions{};
-        ConstraintActions* m_cstrActions{};
-        StateActions* m_stateActions{};
+        EventActions m_eventActions;
+        ConstraintActions m_cstrActions;
+        StateActions m_stateActions;
 
-        QAction* m_removeElements{};
+        QAction *m_removeElements{};
         QAction *m_clearElements{};
         QAction *m_copyContent{};
         QAction *m_cutContent{};
         QAction *m_pasteContent{};
         QAction *m_elementsToJson{};
+        QAction* m_mergeTimeNodes{};
 };
 }

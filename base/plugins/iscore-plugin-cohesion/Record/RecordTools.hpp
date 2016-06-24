@@ -61,11 +61,16 @@ struct Box
         Id<Scenario::EventModel> endEvent;
 };
 
+// Only the selected addresses
 std::vector<std::vector<Device::FullAddressSettings>> GetAddressesToRecord(
         Explorer::DeviceExplorerModel& m_explorer);
 
+// The selected addresses and all their children
+std::vector<std::vector<Device::FullAddressSettings> > GetAddressesToRecordRecursive(
+        Explorer::DeviceExplorerModel& explorer);
+
 Box CreateBox(
-        Scenario::ScenarioModel& scenar,
+        const Scenario::ScenarioModel& scenar,
         Scenario::Point pt,
         RecordCommandDispatcher& dispatcher);
 

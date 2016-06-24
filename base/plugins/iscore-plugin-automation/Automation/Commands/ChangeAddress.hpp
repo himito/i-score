@@ -3,9 +3,10 @@
 #include <Device/Address/AddressSettings.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 #include <iscore/tools/ModelPath.hpp>
+#include <Curve/Palette/CurvePoint.hpp>
 
-class DataStreamInput;
-class DataStreamOutput;
+struct DataStreamInput;
+struct DataStreamOutput;
 namespace State {
 struct Address;
 }  // namespace iscore
@@ -32,6 +33,9 @@ class ChangeAddress final : public iscore::SerializableCommand
     private:
         Path<ProcessModel> m_path;
         Device::FullAddressSettings m_old, m_new;
+
+        Curve::Point m_oldFirst, m_oldLast,
+                     m_newFirst, m_newLast;
 };
 
 }

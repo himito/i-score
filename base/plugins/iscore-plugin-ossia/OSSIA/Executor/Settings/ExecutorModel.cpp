@@ -1,50 +1,40 @@
 #include "ExecutorModel.hpp"
-#include <QSettings>
-
+#include <OSSIA/Executor/ClockManager/DefaultClockManager.hpp>
 namespace RecreateOnPlay
 {
 namespace Settings
 {
 
-const QString Keys::rate = QStringLiteral("iscore_plugin_ossia/ExecutionRate");
-
-
-Model::Model()
+namespace Parameters
 {
-    QSettings s;
+        const iscore::sp<ModelRateParameter> Rate{
+            QStringLiteral("iscore_plugin_ossia/ExecutionRate"),
+                    50};
+        const iscore::sp<ModelClockParameter> Clock{
+            QStringLiteral("iscore_plugin_ossia/Clock"),
+                    DefaultClockManagerFactory::static_concreteFactoryKey()};
 
-    if(!s.contains(Keys::rate))
-    {
-        setFirstTimeSettings();
-    }
-
-    m_rate = s.value(Keys::rate).toInt();
+        auto list() {
+            return std::tie(Rate, Clock);
+        }
 }
 
-int Model::getRate() const
+Model::Model(QSettings& set, const iscore::ApplicationContext& ctx):
+    m_clockFactories{ctx.components.factory<ClockManagerFactoryList>()}
 {
-    return m_rate;
+    iscore::setupDefaultSettings(set, Parameters::list(), *this);
 }
 
-void Model::setRate(int rate)
+std::unique_ptr<ClockManager> Model::makeClock(
+        const RecreateOnPlay::Context& ctx) const
 {
-    if (m_rate == rate)
-        return;
-
-    m_rate = rate;
-
-    QSettings s;
-    s.setValue(Keys::rate, m_rate);
-    emit RateChanged(rate);
+    auto it = m_clockFactories.find(m_Clock);
+    return it != m_clockFactories.end()
+                 ? it->make(ctx)
+                 : std::make_unique<DefaultClockManager>(ctx);
 }
 
-void Model::setFirstTimeSettings()
-{
-    m_rate = 50;
-
-    QSettings s;
-    s.setValue(Keys::rate, m_rate);
-}
-
+ISCORE_SETTINGS_PARAMETER_CPP(int, Model, Rate)
+ISCORE_SETTINGS_PARAMETER_CPP(ClockManagerFactory::ConcreteFactoryKey, Model, Clock)
 }
 }

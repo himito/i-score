@@ -5,7 +5,7 @@
 #include <Scenario/Document/Constraint/ViewModels/Temporal/TemporalConstraintPresenter.hpp>
 #include <Scenario/Palette/ScenarioPalette.hpp>
 #include <Scenario/Process/Temporal/ScenarioViewInterface.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/tools/IdentifiedObjectMap.hpp>
 #include <QObject>
 #include <QPoint>
@@ -71,6 +71,14 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
         const Process::LayerModel& layerModel() const override;
         const Id<Process::ProcessModel>& modelId() const override;
 
+        /**
+         * @brief toScenarioPoint
+         *
+         * Maps a point in item coordinates
+         * to a point in scenario model coordinates (time; y percentage)
+         */
+        Scenario::Point toScenarioPoint(QPointF pt) const;
+
         void setWidth(qreal width) override;
         void setHeight(qreal height) override;
         void putToFront() override;
@@ -90,17 +98,18 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
         { return m_states.at(id); }
         const auto& comment(const Id<CommentBlockModel>& id) const
         { return m_comments.at(id); }
-        const auto& events() const
+        const auto& getEvents() const
         { return m_events; }
-        const auto& timeNodes() const
+        const auto& getTimeNodes() const
         { return m_timeNodes; }
-        const auto& constraints() const
+        const auto& getConstraints() const
         { return m_constraints; }
-        const auto& states() const
+        const auto& getStates() const
         { return m_states; }
-        const auto& comments() const
+        const auto& getComments() const
         { return m_comments; }
 
+        const ScenarioModel& processModel() const;
         TemporalScenarioView& view() const
         { return *m_view; }
         const ZoomRatio& zoomRatio() const
@@ -111,15 +120,11 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
         auto& editionSettings() const
         { return m_editionSettings; }
 
-
         void fillContextMenu(
-                QMenu *,
-                const QPoint &pos,
-                const QPointF &scenepos) const override;
-
-        void handleDrop(
-                const QPointF& pos,
-                const QMimeData *mime);
+                QMenu&,
+                QPoint pos,
+                QPointF scenepos,
+                const Process::LayerContextMenuManager&) const override;
 
         bool event(QEvent* e) override
         {

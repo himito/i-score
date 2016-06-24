@@ -22,26 +22,24 @@ ApplicationRegistrar::ApplicationRegistrar(
         ApplicationComponentsData& comp,
         const iscore::ApplicationContext& ctx,
         iscore::View& view,
-        MenubarManager& menubar,
-        std::vector<OrderedToolbar>& toolbars):
+        MenuManager& m,
+        ToolbarManager& t,
+        ActionManager& a):
     m_components{comp},
     m_context{ctx},
     m_view{view},
-    m_menubar{menubar},
-    m_toolbars{toolbars}
+    m_menuManager{m},
+    m_toolbarManager{t},
+    m_actionManager{a}
 {
 
 }
 
 ISCORE_LIB_BASE_EXPORT
-void ApplicationRegistrar::registerPlugins(
-        const QStringList& pluginFiles,
-        const std::vector<iscore::Plugin_QtInterface*>& vec)
+void ApplicationRegistrar::registerAddons(
+        std::vector<iscore::Addon> vec)
 {
-    // We need a list for all the plug-ins present on the system even if we do not load them.
-    // Else we can't blacklist / unblacklist plug-ins.
-    m_components.pluginFiles = pluginFiles;
-    m_components.plugins = vec;
+    m_components.addons = std::move(vec);
 }
 
 ISCORE_LIB_BASE_EXPORT
@@ -49,10 +47,12 @@ void ApplicationRegistrar::registerApplicationContextPlugin(
         GUIApplicationContextPlugin* ctrl)
 {
     // GUI Presenter stuff...
-    ctrl->populateMenus(&m_menubar);
-    auto toolbars = ctrl->makeToolbars();
-    m_toolbars.insert(m_toolbars.end(), toolbars.begin(), toolbars.end());
+    auto ui = ctrl->makeGUIElements();
+    m_menuManager.insert(std::move(ui.menus));
+    m_toolbarManager.insert(std::move(ui.toolbars));
+    m_actionManager.insert(std::move(ui.actions.container));
 
+    // TODO do a for-loop instead in Presenter or something
     con(m_view, &iscore::View::activeWindowChanged,
            [=] () {
         ctrl->on_activeWindowChanged();

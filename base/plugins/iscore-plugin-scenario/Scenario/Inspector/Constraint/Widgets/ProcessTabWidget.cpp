@@ -49,13 +49,12 @@ ProcessTabWidget::ProcessTabWidget(const ConstraintInspectorWidget& parentCstr, 
     m_processSection->setObjectName("Processes");
 
     // add new process widget
-    QWidget* addProc = new QWidget(this);
-    QHBoxLayout* addProcLayout = new iscore::MarginLess<QHBoxLayout>{addProc};
+    auto addProc = new QWidget(this);
+    auto addProcLayout = new iscore::MarginLess<QHBoxLayout>{addProc};
 
-    QToolButton* addProcButton = new QToolButton;
+    auto addProcButton = new QToolButton;
     addProcButton->setText("+");
-    QIcon addIcon;
-    makeIcons(&addIcon, QString(":/icons/condition_add_on.png"), QString(":/icons/condition_add_off.png"));
+    QIcon addIcon = makeIcons(":/icons/condition_add_on.png", ":/icons/condition_add_off.png");
     addProcButton->setIcon(addIcon);
     addProcButton->setObjectName("addAProcess");
     addProcButton->setAutoRaise(true);
@@ -125,6 +124,7 @@ void ProcessTabWidget::displaySharedProcess(const Process::ProcessModel& process
     // delete process
 
     auto delAct = newProc->menu()->addAction(tr("Remove Process"));
+    delAct->setIcon(genIconFromPixmaps(QString(":/icons/delete_on.png"), QString(":/icons/delete_off.png")));
     connect(delAct, &QAction::triggered,
             this, [=,id=process.id()] ()
         {
@@ -153,8 +153,8 @@ void ProcessTabWidget::displaySharedProcess(const Process::ProcessModel& process
    });
 
     // Start & end state
-    QWidget* stateWidget = new QWidget;
-    QFormLayout* stateLayout = new iscore::MarginLess<QFormLayout>{stateWidget};
+    auto stateWidget = new QWidget;
+    auto stateLayout = new iscore::MarginLess<QFormLayout>{stateWidget};
 
     if(auto start = process.startStateData())
     {
@@ -173,20 +173,20 @@ void ProcessTabWidget::displaySharedProcess(const Process::ProcessModel& process
     newProc->addContent(stateWidget);
 
     // Durations
-    QPointer<TimeSpinBox> durWidg = new TimeSpinBox;
+    auto durWidg = new TimeSpinBox;
     durWidg->setTime(process.duration().toQTime());
     con(process, &Process::ProcessModel::durationChanged,
-        this, [=] (const TimeValue& tv)
+        durWidg, [=] (const TimeValue& tv)
     {
         if(durWidg)
             durWidg->setTime(tv.toQTime());
-    });
+    }, Qt::QueuedConnection);
     connect(durWidg, &TimeSpinBox::editingFinished,
             this, [&,durWidg]
     {
         auto cmd = new Command::SetProcessDuration{process, TimeValue(durWidg->time())};
         m_constraintWidget.commandDispatcher()->submitCommand(cmd);
-    });
+    }, Qt::QueuedConnection);
     stateLayout->addRow(tr("Duration"), durWidg);
 
 

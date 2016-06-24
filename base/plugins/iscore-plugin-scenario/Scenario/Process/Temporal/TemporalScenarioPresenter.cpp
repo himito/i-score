@@ -1,25 +1,12 @@
-#include <Scenario/Commands/Scenario/Creations/CreateStateMacro.hpp>
-#include <Scenario/Commands/Scenario/Creations/CreateTimeNode_Event_State.hpp>
 #include <Scenario/Commands/Scenario/Displacement/MoveCommentBlock.hpp>
 #include <Scenario/Commands/Comment/SetCommentText.hpp>
 #include <Scenario/Document/Constraint/ViewModels/Temporal/TemporalConstraintViewModel.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioLayerModel.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioView.hpp>
 #include <State/MessageListSerialization.hpp>
+#include <Scenario/Commands/Scenario/Creations/CreateCommentBlock.hpp>
 
-#include <boost/iterator/indirect_iterator.hpp>
-#include <boost/iterator/iterator_facade.hpp>
-#include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/multi_index/hashed_index.hpp>
-#include <boost/operators.hpp>
-#include <iscore/command/Dispatchers/MacroCommandDispatcher.hpp>
 #include <iscore/widgets/GraphicsItem.hpp>
-#include <QGraphicsItem>
-#include <QMimeData>
-#include <QRect>
-#include <QSize>
-#include <QStringList>
-
 #include <Process/LayerModel.hpp>
 #include <Process/LayerPresenter.hpp>
 #include <Process/Process.hpp>
@@ -38,6 +25,8 @@
 #include <Scenario/Process/AbstractScenarioLayerModel.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
 #include <Scenario/Process/Temporal/ScenarioViewInterface.hpp>
+#include <Scenario/Application/ScenarioActions.hpp>
+#include <Scenario/Application/Drops/ScenarioDropHandler.hpp>
 #include <State/Message.hpp>
 #include "TemporalScenarioPresenter.hpp"
 #include <iscore/document/DocumentContext.hpp>
@@ -136,7 +125,13 @@ TemporalScenarioPresenter::TemporalScenarioPresenter(
     connect(m_view, &TemporalScenarioView::askContextMenu,
             this,   &TemporalScenarioPresenter::contextMenuRequested);
     connect(m_view, &TemporalScenarioView::dropReceived,
-            this,   &TemporalScenarioPresenter::handleDrop);
+            this, [=] (
+            const QPointF &pos,
+            const QMimeData *mime) {
+        m_context.context.app.components
+               .factory<Scenario::DropHandlerList>()
+               .handle(*this, pos, mime);
+    });
 
     con(model(m_layer), &Scenario::ScenarioModel::locked,
             m_view,     &TemporalScenarioView::lock);
@@ -182,6 +177,11 @@ const Id<Process::ProcessModel>& TemporalScenarioPresenter::modelId() const
     return m_layer.processModel().id();
 }
 
+Point TemporalScenarioPresenter::toScenarioPoint(QPointF pt) const
+{
+    return ConvertToScenarioPoint(pt, zoomRatio(), view().boundingRect().size().height());
+}
+
 void TemporalScenarioPresenter::setWidth(qreal width)
 {
     m_view->setWidth(width);
@@ -224,12 +224,51 @@ void TemporalScenarioPresenter::on_zoomRatioChanged(ZoomRatio val)
     }
 }
 
-void TemporalScenarioPresenter::fillContextMenu(
-        QMenu* menu,
-        const QPoint& pos,
-        const QPointF& scenepos) const
+const ScenarioModel &TemporalScenarioPresenter::processModel() const
 {
-    ScenarioContextMenuManager::createScenarioContextMenu(m_context.context, *menu, pos, scenepos, *this);
+    return ::model(m_layer);
+}
+
+void TemporalScenarioPresenter::fillContextMenu(
+        QMenu& menu,
+        QPoint pos,
+        QPointF scenepos,
+        const Process::LayerContextMenuManager& cm) const
+{
+    auto& ctx = m_context.context;
+    auto& actions = ctx.app.actions;
+
+    // Get ScenarioModel actions
+    cm.menu<ContextMenus::ScenarioModelContextMenu>()
+            .build(menu, pos, scenepos, this->context());
+    menu.addSeparator();
+    cm.menu<ContextMenus::ConstraintContextMenu>()
+            .build(menu, pos, scenepos, this->context());
+    cm.menu<ContextMenus::EventContextMenu>()
+            .build(menu, pos, scenepos, this->context());
+    cm.menu<ContextMenus::StateContextMenu>()
+            .build(menu, pos, scenepos, this->context());
+
+    menu.addSeparator();
+
+    menu.addAction(actions.action<Actions::SelectAll>().action());
+    menu.addAction(actions.action<Actions::DeselectAll>().action());
+
+    auto createCommentAct = new QAction{"Add a Comment Block", &menu};
+    connect(createCommentAct, &QAction::triggered,
+            [&,scenepos,pos] ()
+    {
+        auto scenPoint = Scenario::ConvertToScenarioPoint(scenepos, zoomRatio(), view().height());
+
+        auto cmd = new Scenario::Command::CreateCommentBlock{
+                   static_cast<Scenario::ScenarioModel&>(layerModel().processModel()),
+                   scenPoint.date,
+                   scenPoint.y};
+        CommandDispatcher<>{ctx.commandStack}.submitCommand(cmd);
+    });
+
+    menu.addAction(createCommentAct);
+
 }
 
 template<typename Map, typename Id>
@@ -411,6 +450,7 @@ void TemporalScenarioPresenter::on_constraintViewModelCreated(const TemporalCons
 
 void TemporalScenarioPresenter::on_commentBlockCreated(const CommentBlockModel& comment_block_model)
 {
+    using namespace Scenario::Command;
     auto cmt_pres = new CommentBlockPresenter{
                     comment_block_model,
                     m_view,
@@ -479,80 +519,11 @@ void TemporalScenarioPresenter::updateAllElements()
     {
         m_viewInterface.on_timeNodeMoved(timenode);
     }
+
     for(auto& comment : m_comments)
     {
         m_viewInterface.on_commentMoved(comment);
     }
-/*
-    // They are updated by the event.
-    for(auto& state : m_states)
-    {
-        m_viewInterface.on_stateMoved(state);
-    }
-*/
 }
 
-void TemporalScenarioPresenter::handleDrop(const QPointF &pos, const QMimeData *mime)
-{
-    // If the mime data has states in it we can handle it.
-    if(mime->formats().contains(iscore::mime::messagelist()))
-    {
-        Mime<State::MessageList>::Deserializer des{*mime};
-        State::MessageList ml = des.deserialize();
-
-        MacroCommandDispatcher m(
-                    new  Scenario::Command::CreateStateMacro,
-                    m_context.context.commandStack);
-
-        const Scenario::ScenarioModel& scenar = ::model(m_layer);
-        Id<StateModel> createdState;
-        auto t = TimeValue::fromMsecs(pos.x() * zoomRatio());
-        auto y = pos.y() / (m_view->boundingRect().size().height() + 150);
-
-
-        auto state = furthestSelectedState(scenar);
-        if(state && (scenar.events.at(state->eventId()).date() < t))
-        {
-            if(state->nextConstraint())
-            {
-                // We create from the event instead
-                auto cmd1 = new Scenario::Command::CreateState{scenar, state->eventId(), y};
-                m.submitCommand(cmd1);
-
-                auto cmd2 = new Scenario::Command::CreateConstraint_State_Event_TimeNode{
-                            scenar, cmd1->createdState(), t, y};
-                m.submitCommand(cmd2);
-                createdState = cmd2->createdState();
-            }
-            else
-            {
-                auto cmd = new Scenario::Command::CreateConstraint_State_Event_TimeNode{
-                           scenar, state->id(), t, state->heightPercentage()};
-                m.submitCommand(cmd);
-                createdState = cmd->createdState();
-            }
-        }
-        else
-        {
-            // We create in the emptiness
-            auto cmd = new Scenario::Command::CreateTimeNode_Event_State(
-                           scenar, t, y);
-            m.submitCommand(cmd);
-            createdState = cmd->createdState();
-        }
-
-        auto state_path = make_path(scenar)
-                .extend(createdState)
-                .extend(Id<MessageItemModel>{});
-
-        auto cmd2 = new AddMessagesToState{
-                   std::move(state_path),
-                   ml};
-
-        m.submitCommand(cmd2);
-
-
-        m.commit();
-    }
-}
 }

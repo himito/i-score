@@ -39,6 +39,8 @@ ConstraintModel::ConstraintModel(
 
 ConstraintModel::~ConstraintModel()
 {
+    for(auto elt : components.map().get())
+        delete elt;
     for(auto elt : racks.map().get())
         delete elt;
     for(auto elt : processes.map().get())
@@ -212,6 +214,7 @@ void ConstraintModel::startExecution()
 }
 void ConstraintModel::stopExecution()
 {
+    duration.setExecutionSpeed(1.0);
     for(Process::ProcessModel& proc : processes)
     {
         proc.stopExecution();
@@ -221,6 +224,7 @@ void ConstraintModel::stopExecution()
 void ConstraintModel::reset()
 {
     duration.setPlayPercentage(0);
+    duration.setExecutionSpeed(1.0);
 
     for(Process::ProcessModel& proc : processes)
     {

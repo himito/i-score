@@ -24,7 +24,7 @@ class CurveProcessView;
 namespace Curve
 {
 template<typename LayerModel_T, typename LayerView_T>
-class ISCORE_PLUGIN_CURVE_EXPORT CurveProcessPresenter :
+class CurveProcessPresenter :
         public Process::LayerPresenter
 {
     public:
@@ -124,9 +124,10 @@ class ISCORE_PLUGIN_CURVE_EXPORT CurveProcessPresenter :
         }
 
         void fillContextMenu(
-                QMenu* menu,
-                const QPoint& pos,
-                const QPointF& scenepos) const override
+                QMenu& menu,
+                QPoint pos,
+                QPointF scenepos,
+                const Process::LayerContextMenuManager&) const override
         {
             m_curvepresenter->fillContextMenu(menu, pos, scenepos);
         }

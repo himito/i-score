@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QDebug>
 #include <QPointer>
 #include <iscore/tools/Todo.hpp>
@@ -34,7 +34,7 @@ class id_base_t
         }
 
         id_base_t(id_base_t && other):
-            m_id{other.m_id}
+            m_id{std::move(other.m_id)}
         {
 
         }
@@ -55,7 +55,7 @@ class id_base_t
 
         // TODO check if when an id is returned by value,
         // the pointer gets copied correctly
-        explicit id_base_t(value_type val) : m_id {val} { }
+        explicit id_base_t(value_type val) : m_id {std::move(val)} { }
 
         explicit id_base_t(tag& element):
             m_ptr{&element},
@@ -118,7 +118,7 @@ class id_base_t
 };
 
 template<typename tag, typename impl>
-using optional_tagged_id = id_base_t<tag, boost::optional<impl>>;
+using optional_tagged_id = id_base_t<tag, optional<impl>>;
 
 template<typename tag>
 using optional_tagged_int32_id = optional_tagged_id<tag, int32_t>;
@@ -126,19 +126,21 @@ using optional_tagged_int32_id = optional_tagged_id<tag, int32_t>;
 template<typename tag>
 using Id = optional_tagged_int32_id<tag>;
 
+namespace std
+{
 template<typename tag>
-struct id_hash
+struct hash<Id<tag>>
 {
     std::size_t operator()(const Id<tag>& id) const
     {
-        return std::hash<int32_t>()(*id.val());
+        return std::hash<int32_t>{}(*id.val());
     }
 };
-
+}
 template<typename T>
 uint qHash(const Id<T>& id, uint seed)
 {
-    return qHash(id.val().get(), seed);
+    return qHash(*id.val(), seed);
 }
 
 template<typename tag>

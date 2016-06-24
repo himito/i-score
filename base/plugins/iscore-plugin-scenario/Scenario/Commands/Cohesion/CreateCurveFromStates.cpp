@@ -3,7 +3,7 @@
 #include <Curve/Segment/Power/PowerCurveSegmentModel.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 
 #include <iscore/tools/SettableIdentifierGeneration.hpp>
@@ -17,7 +17,7 @@
 #include <Scenario/Commands/Constraint/Rack/Slot/AddLayerModelToSlot.hpp>
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/tools/ModelPath.hpp>
@@ -37,8 +37,8 @@ namespace Command
 CreateCurveFromStates::CreateCurveFromStates(
         Path<ConstraintModel>&& constraint,
         const std::vector<std::pair<Path<SlotModel>, Id<Process::LayerModel> > >& slotList,
-        const Id<Process::ProcessModel>& curveId,
-        const State::Address& address,
+        Id<Process::ProcessModel> curveId,
+        State::Address address,
         double start,
         double end,
         double min,
@@ -46,8 +46,8 @@ CreateCurveFromStates::CreateCurveFromStates(
     CreateProcessAndLayers<Automation::ProcessModel>{
         std::move(constraint),
         slotList,
-        curveId},
-    m_address(address),
+        std::move(curveId)},
+    m_address{std::move(address)},
     m_start{start},
     m_end{end},
     m_min{min},

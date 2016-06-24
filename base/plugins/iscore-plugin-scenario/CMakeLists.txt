@@ -13,6 +13,7 @@ if(ISCORE_WEBSOCKETS)
 find_package(Qt5 5.3 REQUIRED COMPONENTS WebSockets)
 endif()
 
+find_package(Threads)
 ### Dummy process ###
 add_subdirectory(DummyProcess)
 
@@ -24,6 +25,7 @@ file(GLOB_RECURSE HDRS
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Document/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Palette/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Panel/*.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Execution/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Process/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/ViewCommands/*.hpp"
     "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Settings/*.hpp"
@@ -140,18 +142,17 @@ set(SRCS ${SRCS}
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/ViewCommands/PutLayerModelToFront.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/Plugin/ScenarioActionsFactory.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ScenarioActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ToolMenuActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ScenarioCopy.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ObjectMenuActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/TransportActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/TextDialog.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ScenarioCommonContextMenuFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ScenarioContextMenuManager.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ObjectsActions/EventActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ObjectsActions/ConstraintActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ObjectsActions/StateActions.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Drops/ScenarioDropHandler.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Drops/MessageDropHandler.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/ScenarioApplicationPlugin.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/ScenarioEditionSettings.cpp"
 
@@ -272,7 +273,6 @@ set(SRCS ${SRCS}
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Settings/Model.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Settings/View.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Settings/Presenter.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Settings/Factory.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Tools/dataStructures.cpp"
 
@@ -334,7 +334,7 @@ target_link_libraries(iscore_plugin_scenario
   PUBLIC
     Qt5::Core Qt5::Widgets Qt5::Svg
         iscore_lib_base ColorWidgets-qt5
-    iscore_lib_process iscore_lib_device iscore_plugin_deviceexplorer iscore_lib_state iscore_plugin_curve iscore_plugin_automation pthread)
+    iscore_lib_process iscore_lib_device iscore_plugin_deviceexplorer iscore_lib_state iscore_plugin_curve iscore_plugin_automation Threads::Threads)
 
 if(ISCORE_OPENGL)
 target_link_libraries(iscore_plugin_scenario PRIVATE Qt5::OpenGL)

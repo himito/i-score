@@ -4,6 +4,8 @@
 #include <iscore/tools/IdentifiedObject.hpp>
 
 class QObject;
+template class IdentifiedObject<Curve::SegmentModel>;
+template class iscore::SerializableInterface<Curve::SegmentModel>;
 
 namespace Curve
 {
@@ -62,12 +64,12 @@ void SegmentModel::setHorizontalParameter(double p)
 
 }
 
-boost::optional<double> SegmentModel::verticalParameter() const
+optional<double> SegmentModel::verticalParameter() const
 {
     return {};
 }
 
-boost::optional<double> SegmentModel::horizontalParameter() const
+optional<double> SegmentModel::horizontalParameter() const
 {
     return {};
 }

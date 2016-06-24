@@ -18,9 +18,9 @@ class CommandStackFacade;
 namespace Curve
 {
 SetSegmentParametersCommandObject::SetSegmentParametersCommandObject(
-        Presenter *pres,
-        iscore::CommandStackFacade & stack):
-    m_presenter{pres},
+        const Model& m,
+        const iscore::CommandStackFacade& stack):
+    m_model{m},
     m_dispatcher{stack}
 {
 
@@ -29,31 +29,33 @@ SetSegmentParametersCommandObject::SetSegmentParametersCommandObject(
 void SetSegmentParametersCommandObject::press()
 {
     auto segment = m_state->clickedSegmentId;
-    const auto& seg = m_presenter->model().segments().at(segment);
+    const auto& seg = m_model.segments().at(segment);
     m_verticalOrig = seg.verticalParameter();
     m_horizontalOrig = seg.horizontalParameter();
 
     m_originalPress = m_state->currentPoint;
 
-    m_dispatcher.submitCommand(m_presenter->model(),
-    SegmentParameterMap{{m_state->clickedSegmentId, {m_verticalOrig.get_value_or(0), m_horizontalOrig.get_value_or(0)}}});
+    m_dispatcher.submitCommand(m_model,
+    SegmentParameterMap{{m_state->clickedSegmentId, {
+                             m_verticalOrig ? *m_verticalOrig : 0.,
+                             m_horizontalOrig ? *m_horizontalOrig : 0.}
+                        }});
 
 }
 
 void SetSegmentParametersCommandObject::move()
 {
-     double newVertical = m_verticalOrig
-      ? clamp(*m_verticalOrig + (m_state->currentPoint.y() - m_originalPress.y()), -1., 1.)
-      : 0;
+    const double amplitude = 2.;
+    double newVertical = m_verticalOrig
+            ? clamp(*m_verticalOrig + amplitude * (m_state->currentPoint.y() - m_originalPress.y()), -1., 1.)
+            : 0;
     double newHorizontal = m_horizontalOrig
-      ? clamp(*m_horizontalOrig + (m_state->currentPoint.x() - m_originalPress.x()) , -1., 1.)
-      : 0;
+            ? clamp(*m_horizontalOrig + amplitude * (m_state->currentPoint.x() - m_originalPress.x()) , -1., 1.)
+            : 0;
 
-    // OPTIMIZEME
     m_dispatcher.submitCommand(
-        Path<Model>{},
-        SegmentParameterMap{{m_state->clickedSegmentId, {newVertical, newHorizontal
-          }}});
+                m_model,
+                SegmentParameterMap{{m_state->clickedSegmentId, {newVertical, newHorizontal}}});
 }
 
 void SetSegmentParametersCommandObject::release()

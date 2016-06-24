@@ -3,7 +3,7 @@
 #include <Process/TimeValue.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
 #include <QObject>
-#include <map>
+#include <unordered_map>
 #include <memory>
 
 #include <OSSIA/Executor/ProcessElement.hpp>
@@ -43,6 +43,8 @@ class ISCORE_PLUGIN_OSSIA_EXPORT ConstraintElement final : public QObject
         Scenario::ConstraintModel& iscoreConstraint() const;
 
         void play(TimeValue t = TimeValue::zero());
+        void pause();
+        void resume();
         void stop();
 
         void executionStarted();
@@ -55,20 +57,21 @@ class ISCORE_PLUGIN_OSSIA_EXPORT ConstraintElement final : public QObject
                 const OSSIA::TimeValue& position,
                 const OSSIA::TimeValue& date,
                 const std::shared_ptr<OSSIA::StateElement>& state);
-        void flattenAndFilter(
-                const std::shared_ptr<OSSIA::StateElement>&);
 
         Scenario::ConstraintModel& m_iscore_constraint;
         std::shared_ptr<OSSIA::TimeConstraint> m_ossia_constraint;
 
-        std::map<Id<Process::ProcessModel>, OSSIAProcess> m_processes;
+        std::unordered_map<Id<Process::ProcessModel>, OSSIAProcess> m_processes;
 
         std::shared_ptr<OSSIA::Loop> m_loop;
 
         OSSIA::TimeValue m_offset;
-    
-        std::shared_ptr<OSSIA::State> m_state_on_play;
 
         const RecreateOnPlay::Context& m_ctx;
 };
+
+void flattenAndFilter(
+        const std::shared_ptr<OSSIA::StateElement>&,
+        std::shared_ptr<OSSIA::State>
+        );
 }

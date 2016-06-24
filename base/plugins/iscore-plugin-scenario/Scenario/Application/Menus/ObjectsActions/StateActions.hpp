@@ -1,26 +1,29 @@
 #pragma once
 
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 #include <iscore/menu/MenuInterface.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 
+#include <QAction>
+#include <iscore/actions/Action.hpp>
+#include <Process/Layer/LayerContextMenu.hpp>
+#include <iscore_plugin_scenario_export.h>
 namespace Scenario
 {
-class ISCORE_PLUGIN_SCENARIO_EXPORT StateActions final : public ScenarioActions
+class ScenarioApplicationPlugin;
+class TemporalScenarioPresenter;
+class ISCORE_PLUGIN_SCENARIO_EXPORT StateActions : public QObject
 {
     public:
-    StateActions(iscore::ToplevelMenuElement, ScenarioApplicationPlugin* parent);
-    void fillMenuBar(iscore::MenubarManager *menu) override;
-    void fillContextMenu(QMenu* menu, const Selection&, const TemporalScenarioPresenter& pres, const QPoint&, const QPointF&) override;
-    void setEnabled(bool) override;
+        StateActions(ScenarioApplicationPlugin* parent);
 
-    QList<QAction*> actions() const override;
+        void makeGUIElements(iscore::GUIElements& ref);
+        void setupContextMenu(Process::LayerContextMenuManager& ctxm);
 
-    QAction* updateStates() const
-    { return m_updateStates; }
     private:
-    CommandDispatcher<> dispatcher();
+        CommandDispatcher<> dispatcher();
 
-    QAction* m_updateStates{};
+        ScenarioApplicationPlugin* m_parent{};
+        QAction* m_refreshStates{};
 };
 }

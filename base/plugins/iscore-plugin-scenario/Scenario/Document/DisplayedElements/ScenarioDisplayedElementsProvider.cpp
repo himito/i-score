@@ -1,6 +1,6 @@
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QObject>
 
 #include <Scenario/Document/Event/EventModel.hpp>
@@ -28,7 +28,7 @@ bool ScenarioDisplayedElementsProvider::matches(
 }
 
 DisplayedElementsContainer ScenarioDisplayedElementsProvider::make(
-        const ConstraintModel& cst) const
+        ConstraintModel& cst) const
 {
     if(auto parent_scenario = dynamic_cast<Scenario::ScenarioModel*>(cst.parent()))
     {

@@ -4,14 +4,13 @@
 #include <QFlags>
 #include <QIODevice>
 #include <QStringList>
-#include <stdlib.h>
-
+#include <cstdlib>
 #include "RandomNameProvider.hpp"
 
 struct WordList :
         public QStringList
 {
-        WordList()
+        WordList() noexcept
         {
             QFile f(":/dict.txt");
             if(f.open(QFile::Text | QFile::ReadOnly))
@@ -34,8 +33,7 @@ QString RandomNameProvider::generateRandomName()
 {
     static WordList words;
 
-    return
-            words.at(std::abs(iscore::random_id_generator::getRandomId() % (words.size() - 1))) +
+    return  words.at(std::abs(iscore::random_id_generator::getRandomId() % (words.size() - 1))) +
             QString::number(std::abs(iscore::random_id_generator::getRandomId() % 99)) +
             words.at(std::abs(iscore::random_id_generator::getRandomId() % (words.size() - 1))) +
             QString::number(std::abs(iscore::random_id_generator::getRandomId() % 99));

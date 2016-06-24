@@ -29,15 +29,15 @@ const iscore::PanelStatus&PanelDelegate::defaultPanelStatus() const
         Qt::BottomDockWidgetArea,
                 10,
                 QObject::tr("Process"),
-                QObject::tr("Ctrl+P")};
+                QObject::tr("Ctrl+Shift+P")};
 
     return status;
 }
 
 
 void PanelDelegate::on_modelChanged(
-        iscore::PanelDelegate::maybe_document_t oldm,
-        iscore::PanelDelegate::maybe_document_t newm)
+        iscore::MaybeDocument oldm,
+        iscore::MaybeDocument newm)
 {
     if(oldm)
     {

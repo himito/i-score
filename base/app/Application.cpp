@@ -1,10 +1,11 @@
 #include "Application.hpp"
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <core/application/ApplicationRegistrar.hpp>
 #include <core/document/DocumentBackups.hpp>
 #include <core/presenter/Presenter.hpp>
 #include <core/undo/Panel/UndoPanelFactory.hpp>
+#include <core/presenter/CoreApplicationPlugin.hpp>
 #include <core/undo/UndoApplicationPlugin.hpp>
 #include <core/view/View.hpp>
 #include <QByteArray>
@@ -31,16 +32,16 @@
 #include <core/application/ApplicationSettings.hpp>
 #include <core/plugin/PluginManager.hpp>
 #include <core/presenter/DocumentManager.hpp>
-#include <core/settings/Settings.hpp>
 #include <iscore/selection/Selection.hpp>
 #include <iscore/tools/NamedObject.hpp>
 #include <iscore/tools/ObjectIdentifier.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/plugins/settingsdelegate/SettingsDelegateFactoryInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegateFactory.hpp>
 #include <iscore/plugins/documentdelegate/DocumentDelegateFactoryInterface.hpp>
 #include <iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.hpp>
 #include <iscore/plugins/panel/PanelDelegate.hpp>
 #include <iscore/widgets/OrderedToolbar.hpp>
+#include <core/document/DocumentModel.hpp>
 #include <core/undo/Panel/UndoPanelFactory.hpp>
 #include "iscore_git_info.hpp"
 
@@ -65,6 +66,7 @@ static void setQApplicationSettings(QApplication &m_app)
 
     qRegisterMetaType<ObjectIdentifierVector> ("ObjectIdentifierVector");
     qRegisterMetaType<Selection>("Selection");
+    qRegisterMetaType<Id<iscore::DocumentModel>>("Id<DocumentModel>");
 
     QFile stylesheet_file{":/qdarkstyle/qdarkstyle.qss"};
     stylesheet_file.open(QFile::ReadOnly);
@@ -76,56 +78,13 @@ static void setQApplicationSettings(QApplication &m_app)
 
 }  // namespace iscore
 
-#ifdef ISCORE_DEBUG
-
-static void myMessageOutput(
-        QtMsgType type,
-        const QMessageLogContext &context,
-        const QString &msg)
-{
-    auto basename_arr = QFileInfo(context.file).baseName().toUtf8();
-    auto basename = basename_arr.constData();
-
-    QByteArray localMsg = msg.toLocal8Bit();
-    switch (type) {
-    case QtDebugMsg:
-        fprintf(stderr, "Debug: %s (%s:%u, %s)\n", localMsg.constData(), basename, context.line, context.function);
-        break;
-
-#if (QT_VERSION >= QT_VERSION_CHECK(5, 5, 0))
-    case QtInfoMsg:
-        fprintf(stderr, "Info: %s (%s:%u, %s)\n", localMsg.constData(), basename, context.line, context.function);
-        break;
-#endif
-    case QtWarningMsg:
-        fprintf(stderr, "Warning: %s (%s:%u, %s)\n", localMsg.constData(), basename, context.line, context.function);
-        break;
-    case QtCriticalMsg:
-        fprintf(stderr, "Critical: %s (%s:%u, %s)\n", localMsg.constData(), basename, context.line, context.function);
-        break;
-    case QtFatalMsg:
-        fprintf(stderr, "Fatal: %s (%s:%u, %s)\n", localMsg.constData(), basename, context.line, context.function);
-        ISCORE_BREAKPOINT;
-        std::terminate();
-    }
-}
-
-#endif
-
 Application::Application(int& argc, char** argv) :
-    NamedObject {"Application", nullptr}
+    NamedObject {"Application", nullptr},
+    m_app{new SafeQApplication{argc, argv}}
 {
-#ifdef ISCORE_DEBUG
-    qInstallMessageHandler(myMessageOutput);
-#endif
-    // Application
-    // Crashes if put in member initialization list... :(
-    m_app = new SafeQApplication{argc, argv};
     m_instance = this;
 
-#if !defined(__native_client__)
     m_applicationSettings.parse();
-#endif
 }
 
 Application::Application(
@@ -133,14 +92,9 @@ Application::Application(
         int& argc,
         char** argv) :
     NamedObject {"Application", nullptr},
+    m_app{new SafeQApplication{argc, argv}},
     m_applicationSettings(appSettings)
 {
-#ifdef ISCORE_DEBUG
-    qInstallMessageHandler(myMessageOutput);
-#endif
-    // Application
-    // Crashes if put in member initialization list... :(
-    m_app = new SafeQApplication{argc, argv};
     m_instance = this;
 }
 
@@ -152,6 +106,7 @@ Application::~Application()
     delete m_presenter;
 
     iscore::DocumentBackups::clear();
+    QApplication::processEvents();
     delete m_app;
 }
 
@@ -173,12 +128,9 @@ void Application::init()
     this->setParent(qApp);
     iscore::setQApplicationSettings(*qApp);
 
-    // Settings
-    m_settings = std::make_unique<iscore::Settings> (this);
-
     // MVP
     m_view = new iscore::View{this};
-    m_presenter = new iscore::Presenter{m_applicationSettings, *m_settings, m_view, this};
+    m_presenter = new iscore::Presenter{m_applicationSettings, m_settings, m_view, this};
 
     // Plugins
     loadPluginData();
@@ -227,6 +179,12 @@ void Application::initDocuments()
                         Id<iscore::DocumentModel>{iscore::random_id_generator::getRandomId()},
                         *m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>().begin());
     }
+
+    connect(m_app, &SafeQApplication::fileOpened,
+            this, [&] (const QString& file) {
+        m_presenter->documentManager().loadFile(ctx, file);
+    });
+
 }
 
 void Application::loadPluginData()
@@ -236,8 +194,9 @@ void Application::loadPluginData()
         m_presenter->components(),
                 ctx,
                 *m_view,
-                m_presenter->menuBar(),
-                m_presenter->toolbars()};
+                m_presenter->menuManager(),
+                m_presenter->toolbarManager(),
+                m_presenter->actionManager()};
 
     registrar.registerFactory(std::make_unique<iscore::DocumentDelegateList>());
     auto panels = std::make_unique<iscore::PanelDelegateFactoryList>();
@@ -246,21 +205,18 @@ void Application::loadPluginData()
     registrar.registerFactory(std::make_unique<iscore::DocumentPluginFactoryList>());
     registrar.registerFactory(std::make_unique<iscore::SettingsDelegateFactoryList>());
 
+    registrar.registerApplicationContextPlugin(new iscore::CoreApplicationPlugin{ctx, *m_presenter});
+    registrar.registerApplicationContextPlugin(new iscore::UndoApplicationPlugin{ctx});
+
     iscore::PluginLoader::loadPlugins(registrar, ctx);
-
-    registrar.registerApplicationContextPlugin(new iscore::UndoApplicationPlugin{ctx, m_presenter});
-
     // Load the settings
+    QSettings s;
     for(auto& elt : ctx.components.factory<iscore::SettingsDelegateFactoryList>())
     {
-        m_settings->setupSettingsPlugin(elt);
+        m_settings.setupSettingsPlugin(s, ctx, elt);
     }
 
-    std::sort(m_presenter->toolbars().begin(), m_presenter->toolbars().end());
-    for(auto& toolbar : m_presenter->toolbars())
-    {
-        m_view->addToolBar(toolbar.bar);
-    }
+    m_presenter->setupGUI();
 
     for(iscore::GUIApplicationContextPlugin* app_plug : ctx.components.applicationPlugins())
     {
@@ -272,3 +228,8 @@ void Application::loadPluginData()
         registrar.registerPanel(panel_fac);
     }
 }
+
+
+int Application::exec()
+{ return m_app->exec(); }
+

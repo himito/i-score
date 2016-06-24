@@ -4,7 +4,7 @@
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/operators.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include <iscore/widgets/GraphicsItem.hpp>
 #include <QAction>
@@ -36,7 +36,7 @@
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/selection/Selectable.hpp>
 #include <iscore/tools/IdentifiedObject.hpp>
@@ -241,11 +241,11 @@ void Presenter::setupView()
 }
 
 void Presenter::fillContextMenu(
-        QMenu* menu,
+        QMenu& menu,
         const QPoint& pos,
         const QPointF& scenepos)
 {
-    menu->addSeparator();
+    menu.addSeparator();
 
     auto removeAct = new QAction{tr("Remove"), this};
     connect(removeAct, &QAction::triggered,
@@ -253,12 +253,12 @@ void Presenter::fillContextMenu(
         removeSelection();
     });
 
-    auto typeMenu = menu->addMenu(tr("Type"));
-    for(const auto& seg : m_curveSegments.list())
+    auto typeMenu = menu.addMenu(tr("Type"));
+    for(const auto& seg : m_curveSegments)
     {
-        auto act = typeMenu->addAction(seg->prettyName());
+        auto act = typeMenu->addAction(seg.prettyName());
         connect(act, &QAction::triggered,
-                this, [this,key=seg->concreteFactoryKey()] () {
+                this, [this,key=seg.concreteFactoryKey()] () {
             updateSegmentsType(key);
         });
     }
@@ -276,9 +276,9 @@ void Presenter::fillContextMenu(
     suppressAction->setCheckable(true);
     suppressAction->setChecked(m_editionSettings.suppressOnOverlap());
 
-    menu->addAction(removeAct);
-    menu->addAction(lockAction);
-    menu->addAction(suppressAction);
+    menu.addAction(removeAct);
+    menu.addAction(lockAction);
+    menu.addAction(suppressAction);
 }
 
 void Presenter::addPoint(PointView * pt_view)

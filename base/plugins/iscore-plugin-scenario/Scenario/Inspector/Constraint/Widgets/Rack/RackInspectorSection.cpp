@@ -1,7 +1,7 @@
 #include <Scenario/Commands/Constraint/Rack/AddSlotToRack.hpp>
 #include <Scenario/Commands/Metadata/ChangeElementName.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QBoxLayout>
 #include <QFrame>
 #include <QPushButton>
@@ -22,8 +22,9 @@
 #include <iscore/tools/SettableIdentifier.hpp>
 #include <iscore/tools/Todo.hpp>
 #include <iscore/widgets/MarginLess.hpp>
+#include <iscore/widgets/SetIcons.hpp>
 
-#include <Inspector/Separator.hpp>
+#include <iscore/widgets/Separator.hpp>
 
 #include <Scenario/Commands/Constraint/RemoveRackFromConstraint.hpp>
 #include <algorithm>
@@ -46,6 +47,7 @@ RackInspectorSection::RackInspectorSection(
 
     this->showMenu(true);
     auto del = this->menu()->addAction(tr("Remove Rack"));
+    del->setIcon(genIconFromPixmaps(QString(":/icons/delete_on.png"), QString(":/icons/delete_off.png")));
     connect(del, &QAction::triggered, this, [=] ()
     {
         auto cmd = new Command::RemoveRackFromConstraint{
@@ -100,7 +102,7 @@ void RackInspectorSection::ask_changeName(QString newName)
 
 void RackInspectorSection::addSlotInspectorSection(const SlotModel& slot)
 {
-    SlotInspectorSection* newSlot = new SlotInspectorSection {
+    auto newSlot = new SlotInspectorSection {
                                     slot.metadata.name(),
                                     slot,
                                     this};

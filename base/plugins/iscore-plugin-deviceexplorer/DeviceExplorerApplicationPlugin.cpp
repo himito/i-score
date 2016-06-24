@@ -13,8 +13,8 @@ struct VisitorVariant;
 namespace Explorer
 {
 DeviceExplorerApplicationPlugin::DeviceExplorerApplicationPlugin(
-        const iscore::ApplicationContext& app) :
-    GUIApplicationContextPlugin {app, "DeviceExplorerApplicationPlugin", nullptr}
+        const iscore::GUIApplicationContext& app) :
+    GUIApplicationContextPlugin {app}
 {
 
 }

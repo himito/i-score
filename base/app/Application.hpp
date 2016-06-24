@@ -4,6 +4,7 @@
 #include <iscore/application/ApplicationContext.hpp>
 #include <core/plugin/PluginManager.hpp>
 #include <iscore/tools/NamedObject.hpp>
+#include <core/settings/Settings.hpp>
 #include <QApplication>
 #include <memory>
 
@@ -11,6 +12,7 @@ namespace iscore {
 class Settings;
 }  // namespace iscore
 
+class SafeQApplication;
 namespace iscore
 {
     class Presenter;
@@ -44,11 +46,10 @@ class Application final :
         Application& operator= (const Application&) = delete;
         ~Application();
 
-        int exec()
-        { return m_app->exec(); }
+        int exec();
 
-        iscore::Settings* settings() const
-        { return m_settings.get(); }
+        const iscore::Settings& settings() const
+        { return m_settings; }
 
         const iscore::ApplicationContext& context() const override;
         void init(); // m_applicationSettings has to be set.
@@ -58,8 +59,8 @@ class Application final :
         void loadPluginData();
 
         // Base stuff.
-        QApplication* m_app;
-        std::unique_ptr<iscore::Settings> m_settings; // Global settings
+        SafeQApplication* m_app;
+        iscore::Settings m_settings; // Global settings
 
         // MVP
         iscore::View* m_view {};
@@ -67,6 +68,4 @@ class Application final :
 
         iscore::ApplicationSettings m_applicationSettings;
 };
-
-
 

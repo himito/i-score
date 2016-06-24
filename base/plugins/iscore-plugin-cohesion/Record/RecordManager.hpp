@@ -15,16 +15,21 @@ namespace Recording
 // to be able to send the curve at execution. Investigate why.
 class RecordManager final : public QObject
 {
+        Q_OBJECT
     public:
         RecordManager(const iscore::DocumentContext& ctx);
 
-        void recordInNewBox(Scenario::ScenarioModel& scenar, Scenario::Point pt);
+        void recordInNewBox(const Scenario::ScenarioModel& scenar, Scenario::Point pt);
         // TODO : recordInExstingBox; recordFromState.
         void stopRecording();
 
         void commit();
 
+    signals:
+        void requestPlay();
+
     private:
+        void takeSnapshot();
         void messageCallback(const State::Address& addr, const State::Value& val);
         void parameterCallback(const State::Address& addr, const State::Value& val);
 
@@ -41,6 +46,6 @@ class RecordManager final : public QObject
 
         std::unordered_map<
             Device::FullAddressSettings,
-            RecordData> records;
+        RecordData> records;
 };
 }

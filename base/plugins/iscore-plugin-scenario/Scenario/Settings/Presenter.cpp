@@ -15,7 +15,7 @@ Presenter::Presenter(
         Model& m,
         View& v,
         QObject *parent):
-    iscore::SettingsDelegatePresenterInterface{m, v, parent}
+    iscore::SettingsDelegatePresenter{m, v, parent}
 {
     con(v, &View::skinChanged,
         this, [&] (const auto& val) {
@@ -29,21 +29,21 @@ Presenter::Presenter(
     v.setSkin(m.getSkin());
 
     con(v, &View::zoomChanged,
-        this, [&] (const auto val) {
+        this, [&] (auto val) {
         if(val != m.getGraphicZoom())
         {
             m_disp.submitCommand<SetModelGraphicZoom>(this->model(this), 0.01*double(val));
         }
     });
     con(m, &Model::GraphicZoomChanged,
-        this, [&] (const double z) {
+        this, [&] (double z) {
         v.setZoom((100 * z));
     });
     v.setZoom(m.getGraphicZoom() * 100);
 
 
     con(v, &View::slotHeightChanged,
-        this, [&] (const int& h) {
+        this, [&] (int h) {
         if(h != m.getSlotHeight())
         {
             m_disp.submitCommand<SetModelSlotHeight>(this->model(this), qreal(h));
@@ -54,6 +54,20 @@ Presenter::Presenter(
         v.setSlotHeight(h);
     });
     v.setSlotHeight(qreal(m.getSlotHeight()));
+
+
+    con(v, &View::defaultDurationChanged,
+        this, [&] (const TimeValue& t) {
+        if(t != m.getDefaultDuration())
+        {
+            m_disp.submitCommand<SetModelDefaultDuration>(this->model(this), t);
+        }
+    });
+    con(m, &Model::DefaultDurationChanged,
+        this, [&] (const TimeValue& t) {
+        v.setDefaultDuration(t);
+    });
+    v.setDefaultDuration(m.getDefaultDuration());
 }
 
 QString Presenter::settingsName()

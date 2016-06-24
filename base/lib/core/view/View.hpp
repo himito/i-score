@@ -4,7 +4,7 @@
 #include <QPair>
 #include <QString>
 #include <vector>
-#include <core/presenter/Action.hpp>
+
 
 class QCloseEvent;
 class QDockWidget;
@@ -22,7 +22,7 @@ namespace iscore
     class PanelView;
     class PanelDelegate;
     class Presenter;
-
+    struct ApplicationContext;
     /**
      * @brief The View class
      *
@@ -40,18 +40,10 @@ namespace iscore
             void setupPanel(PanelDelegate* v);
 
             void closeDocument(iscore::DocumentView* doc);
-
+            void restoreLayout();
             void closeEvent(QCloseEvent*) override;
 
         signals:
-            /**
-             * @brief insertActionIntoMenubar
-             *
-             * A quick signal to add an action.
-             * Especially considering that we already know the presenter.
-             */
-            void insertActionIntoMenubar(PositionedMenuAction);
-
             void activeDocumentChanged(const Id<DocumentModel>&);
             void closeRequested(const Id<DocumentModel>&);
 

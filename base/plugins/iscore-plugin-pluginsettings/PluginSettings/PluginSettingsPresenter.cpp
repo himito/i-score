@@ -8,32 +8,55 @@
 #include "PluginSettingsPresenter.hpp"
 #include "PluginSettingsView.hpp"
 #include <iscore/command/Command.hpp>
-#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenterInterface.hpp>
+#include <PluginSettings/FileDownloader.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenter.hpp>
 #include "PluginSettings/commands/BlacklistCommand.hpp"
 
 namespace iscore {
-class SettingsDelegateModelInterface;
-class SettingsDelegateViewInterface;
+class SettingsDelegateModel;
+class SettingsDelegateView;
 class SettingsPresenter;
 }  // namespace iscore
 
 namespace PluginSettings
 {
+
 PluginSettingsPresenter::PluginSettingsPresenter(
-        iscore::SettingsDelegateModelInterface& model,
-        iscore::SettingsDelegateViewInterface& view,
+        iscore::SettingsDelegateModel& model,
+        iscore::SettingsDelegateView& view,
         QObject* parent) :
-    SettingsDelegatePresenterInterface {model, view, parent}
+    SettingsDelegatePresenter {model, view, parent}
 {
-    /*
     auto& ps_model = static_cast<PluginSettingsModel&>(model);
     auto& ps_view  = static_cast<PluginSettingsView&>(view);
 
-    ps_view.view()->setModel(ps_model.model());
+    ps_view.localView()->setModel(&ps_model.localPlugins);
+    ps_view.localView()->setColumnWidth(0, 150);
+    ps_view.localView()->setColumnWidth(1, 400);
+    ps_view.localView()->setColumnWidth(2, 400);
 
+    ps_view.remoteView()->setModel(&ps_model.remotePlugins);
+    ps_view.remoteView()->setColumnWidth(0, 150);
+    ps_view.remoteView()->setColumnWidth(1, 400);
+    ps_view.remoteView()->setSelectionModel(&ps_model.remoteSelection);
+
+    connect(&ps_model.remoteSelection, &QItemSelectionModel::currentRowChanged,
+            this, [&] (const QModelIndex &current, const QModelIndex &previous) {
+
+        RemoteAddon& addon = ps_model.remotePlugins.addons().at(current.row());
+
+        auto it = addon.architectures.find(iscore::addonArchitecture());
+        bool b = (it != addon.architectures.end()) && (it->second != QUrl{});
+
+        ps_view.installButton().setEnabled(b);
+    });
+
+    ps_view.installButton().setEnabled(false);
+
+
+/*
     con(ps_model,	&PluginSettingsModel::blacklistCommand,
-    this,		&PluginSettingsPresenter::setBlacklistCommand);
-    */
+    this,		&PluginSettingsPresenter::setBlacklistCommand);*/
 }
 
 

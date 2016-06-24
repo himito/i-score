@@ -14,7 +14,10 @@ namespace convert
 {
 
 template<typename To>
-ISCORE_LIB_STATE_EXPORT To value(const State::Value& val);
+To value(const State::Value& val)
+{
+    static_assert(sizeof(To) == -1, "Type not supported." );
+}
 
 template<>
 ISCORE_LIB_STATE_EXPORT QVariant value(const State::Value& val);
@@ -24,6 +27,8 @@ template<>
 ISCORE_LIB_STATE_EXPORT int value(const State::Value& val);
 template<>
 ISCORE_LIB_STATE_EXPORT float value(const State::Value& val);
+template<>
+ISCORE_LIB_STATE_EXPORT bool value(const State::Value& val);
 template<>
 ISCORE_LIB_STATE_EXPORT double value(const State::Value& val);
 template<>
@@ -49,6 +54,7 @@ ISCORE_LIB_STATE_EXPORT State::Value fromQJsonValue(const QJsonValue& val, const
 ISCORE_LIB_STATE_EXPORT QString prettyType(const State::Value& val); // For display to the user, translated
 ISCORE_LIB_STATE_EXPORT QString prettyType(State::ValueType); // For display to the user, translated
 ISCORE_LIB_STATE_EXPORT const QStringList& ValuePrettyTypesList(); // For display to the user, translated
+ISCORE_LIB_STATE_EXPORT const std::array<std::pair<QString, State::ValueType>, 7>& ValuePrettyTypesMap();
 }
 }
 

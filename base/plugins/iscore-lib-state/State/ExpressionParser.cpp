@@ -336,13 +336,18 @@ using expr_raw = boost::variant<
 
 template <typename tag> struct binop
 {
-    explicit binop(const expr_raw& l, const expr_raw& r) : oper1(l), oper2(r) { }
+    explicit binop(expr_raw l, expr_raw r) :
+            oper1(std::move(l)),
+            oper2(std::move(r))
+        { }
     expr_raw oper1, oper2;
 };
 
 template <typename tag> struct unop
 {
-    explicit unop(const expr_raw& o) : oper1(o) { }
+    explicit unop(expr_raw o) :
+            oper1(std::move(o))
+        { }
     expr_raw oper1;
 };
 
@@ -426,7 +431,7 @@ struct Expression_builder : boost::static_visitor<void>
 }
 
 
-    boost::optional<State::Expression> State::parseExpression(const QString& str)
+    iscore::optional<State::Expression> State::parseExpression(const QString& str)
     {
         auto input = str.toStdString();
         auto f(std::begin(input)), l(std::end(input));
@@ -459,12 +464,10 @@ struct Expression_builder : boost::static_visitor<void>
             //ISCORE_BREAKPOINT;
             return {};
         }
-
-        return {};
     }
 
 
-    boost::optional<State::Value> State::parseValue(const QString& str)
+    iscore::optional<State::Value> State::parseValue(const QString& str)
     {
         auto input = str.toStdString();
         auto f(std::begin(input)), l(std::end(input));
@@ -492,13 +495,11 @@ struct Expression_builder : boost::static_visitor<void>
             //ISCORE_BREAKPOINT;
             return {};
         }
-
-        return {};
     }
 
 
 
-    boost::optional<State::Address> State::parseAddress(const QString& str)
+    iscore::optional<State::Address> State::parseAddress(const QString& str)
     {
         auto input = str.toStdString();
         auto f(std::begin(input)), l(std::end(input));
@@ -526,11 +527,9 @@ struct Expression_builder : boost::static_visitor<void>
             //ISCORE_BREAKPOINT;
             return {};
         }
-
-        return {};
     }
 
-    boost::optional<State::AddressAccessor> State::parseAddressAccessor(const QString& str)
+    iscore::optional<State::AddressAccessor> State::parseAddressAccessor(const QString& str)
     {
         auto input = str.toStdString();
         auto f(std::begin(input)), l(std::end(input));
@@ -547,7 +546,7 @@ struct Expression_builder : boost::static_visitor<void>
             else
             {
                 // We try to get an address instead.
-                boost::optional<State::Address> res = State::parseAddress(str);
+                iscore::optional<State::Address> res = State::parseAddress(str);
                 if(res)
                 {
                     result.address = (*res);
@@ -573,6 +572,4 @@ struct Expression_builder : boost::static_visitor<void>
             //ISCORE_BREAKPOINT;
             return {};
         }
-
-        return {};
     }

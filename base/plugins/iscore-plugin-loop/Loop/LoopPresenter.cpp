@@ -31,7 +31,7 @@
 #include <iscore/application/ApplicationContext.hpp>
 #include <QMenu>
 #include <Scenario/Application/ScenarioApplicationPlugin.hpp>
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 namespace Process { class LayerModel; }
 namespace Process { class ProcessModel; }
 class QMenu;
@@ -162,8 +162,14 @@ void LayerPresenter::updateAllElements()
     m_viewUpdater.updateTimeNode(*m_endNodePresenter);
 }
 
-void LayerPresenter::fillContextMenu(QMenu* menu, const QPoint& pos, const QPointF& scenepos) const
+void LayerPresenter::fillContextMenu(
+        QMenu& menu,
+        QPoint pos,
+        QPointF scenepos,
+        const Process::LayerContextMenuManager&) const
 {
+    // TODO ACTIONS
+    /*
     auto selected = layerModel().processModel().selectedChildren();
 
     auto& appPlug = m_context.context.app.components.applicationPlugin<Scenario::ScenarioApplicationPlugin>();
@@ -177,6 +183,7 @@ void LayerPresenter::fillContextMenu(QMenu* menu, const QPoint& pos, const QPoin
             menu->addSeparator();
         }
     }
+    */
 }
 
 }

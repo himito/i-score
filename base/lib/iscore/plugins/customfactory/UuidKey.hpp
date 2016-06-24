@@ -14,7 +14,7 @@ using uuid_t = boost::uuids::uuid;
 }
 
 template<typename Tag>
-class ISCORE_LIB_BASE_EXPORT UuidKey : iscore::uuid_t
+class UuidKey : iscore::uuid_t
 {
         using this_type = UuidKey<Tag>;
 
@@ -32,27 +32,27 @@ class ISCORE_LIB_BASE_EXPORT UuidKey : iscore::uuid_t
         }
 
     public:
-        UuidKey() = default;
-        UuidKey(const UuidKey& other) = default;
-        UuidKey(UuidKey&& other) = default;
-        UuidKey& operator=(const UuidKey& other) = default;
-        UuidKey& operator=(UuidKey&& other) = default;
+        UuidKey() noexcept = default;
+        UuidKey(const UuidKey& other) noexcept = default;
+        UuidKey(UuidKey&& other) noexcept = default;
+        UuidKey& operator=(const UuidKey& other) noexcept = default;
+        UuidKey& operator=(UuidKey&& other) noexcept = default;
 
-        UuidKey(iscore::uuid_t other):
+        UuidKey(iscore::uuid_t other) noexcept :
             iscore::uuid_t(other)
         {
 
         }
 
-        UuidKey(const char* txt):
+        UuidKey(const char* txt) noexcept :
             iscore::uuid_t(boost::uuids::string_generator{}(txt))
         {
 
         }
 
         template<int N>
-        UuidKey(const char txt[N]):
-            iscore::uuid_t(boost::uuids::string_generator{}(txt))
+        UuidKey(const char txt[N]) noexcept :
+            iscore::uuid_t(boost::uuids::string_generator{}(txt, txt + N))
         {
 
         }
@@ -95,16 +95,14 @@ struct TSerializer<DataStream, void, UuidKey<U>>
                 DataStream::Serializer& s,
                 const UuidKey<U>& uid)
         {
-            for(auto val : uid.impl().data)
-                s.stream() << val;
+            s.stream().stream.writeRawData((const char*) uid.impl().data, sizeof(uid.impl().data));
         }
 
         static void writeTo(
                 DataStream::Deserializer& s,
                 UuidKey<U>& uid)
         {
-            for(auto& val : uid.impl().data)
-                s.stream() >> val;
+            s.stream().stream.readRawData((char*) uid.impl().data, sizeof(uid.impl().data));
         }
 };
 

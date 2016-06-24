@@ -2,9 +2,10 @@
 #include <QObject>
 #include <QShortcut>
 #include <iscore/document/DocumentContext.hpp>
-#include <boost/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore_lib_base_export.h>
 
+#include <boost/optional.hpp>
 class Selection;
 namespace iscore
 {
@@ -19,12 +20,12 @@ struct PanelStatus
                 bool isShown,
                 Qt::DockWidgetArea d,
                 int prio,
-                const QString& name,
+                QString name,
                 const QKeySequence& sc):
             shown{isShown},
             dock{d},
             priority{prio},
-            prettyName{name},
+            prettyName{std::move(name)},
             shortcut(sc)
         {}
 
@@ -38,7 +39,6 @@ struct PanelStatus
 class ISCORE_LIB_BASE_EXPORT PanelDelegate
 {
     public:
-        using maybe_document_t = boost::optional<const iscore::DocumentContext&>;
         PanelDelegate(
                 const iscore::ApplicationContext& ctx):
             m_context{ctx}
@@ -46,15 +46,25 @@ class ISCORE_LIB_BASE_EXPORT PanelDelegate
 
         }
 
-        void setModel(maybe_document_t model)
+        void setModel(const iscore::DocumentContext& model)
         {
             auto old = m_model;
             m_model = model;
-            on_modelChanged(old, model);
+            on_modelChanged(old, m_model);
+        }
+
+        void setModel(decltype(iscore::none) n)
+        {
+            auto old = m_model;
+            m_model = boost::none;
+            on_modelChanged(old, m_model);
         }
 
         auto document() const
         { return m_model; }
+
+        auto& context() const
+        { return m_context; }
 
 
         virtual ~PanelDelegate();
@@ -69,14 +79,14 @@ class ISCORE_LIB_BASE_EXPORT PanelDelegate
 
     protected:
         virtual void on_modelChanged(
-                maybe_document_t oldm,
-                maybe_document_t newm)
+                MaybeDocument oldm,
+                MaybeDocument newm)
         {
 
         }
 
     private:
         const iscore::ApplicationContext& m_context;
-        maybe_document_t m_model;
+        MaybeDocument m_model;
 };
 }

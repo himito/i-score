@@ -17,18 +17,16 @@ TemporalScenarioView::TemporalScenarioView(QGraphicsItem* parent) :
     LayerView {parent}
 {
     this->setFlags(ItemClipsChildrenToShape | ItemIsSelectable | ItemIsFocusable);
-    this->setCursor(Qt::ArrowCursor);
     setAcceptDrops(true);
 
     this->setZValue(1);
 }
 
-TemporalScenarioView::~TemporalScenarioView()
-{
-}
+TemporalScenarioView::~TemporalScenarioView() = default;
 
 void TemporalScenarioView::paint_impl(QPainter* painter) const
 {
+    painter->setRenderHint(QPainter::Antialiasing, false);
     if(m_lock)
     {
         painter->setBrush({Qt::red, Qt::DiagCrossPattern});
@@ -77,8 +75,6 @@ void TemporalScenarioView::mouseReleaseEvent(QGraphicsSceneMouseEvent* event)
 
 void TemporalScenarioView::contextMenuEvent(QGraphicsSceneContextMenuEvent* event)
 {
-    emit pressed(event->scenePos());
-    emit released(event->scenePos());
     emit askContextMenu(event->screenPos(), event->scenePos());
 
     event->accept();
@@ -105,14 +101,22 @@ void TemporalScenarioView::keyReleaseEvent(QKeyEvent *event)
     if(event->key() == Qt::Key_Shift || event->key() == Qt::Key_Control)
     {
         emit keyReleased(event->key());
+    }/*
+    else if( !event->isAutoRepeat())
+    {
+        if(event->key() == Qt::Key_C)
+        {
+            emit keyReleased(event->key());
+        }
     }
+    */
 
     event->accept();
 }
 
 void TemporalScenarioView::dropEvent(QGraphicsSceneDragDropEvent *event)
 {
-    emit dropReceived(event->scenePos(), event->mimeData());
+    emit dropReceived(event->pos(), event->mimeData());
 
     event->accept();
 }

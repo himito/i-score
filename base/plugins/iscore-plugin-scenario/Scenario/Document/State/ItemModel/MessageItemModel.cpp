@@ -1,7 +1,7 @@
 #include <Scenario/Commands/State/AddMessagesToState.hpp>
 #include <State/MessageListSerialization.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QFlags>
 #include <QJsonDocument>
 #include <QMap>
@@ -30,7 +30,7 @@ namespace Scenario
 {
 class StateModel;
 MessageItemModel::MessageItemModel(
-        iscore::CommandStackFacade& stack,
+        const iscore::CommandStackFacade& stack,
         const StateModel& sm,
         QObject* parent):
     TreeNodeBasedItemModel<Process::MessageNode>{parent},
@@ -118,12 +118,10 @@ QVariant MessageItemModel::data(const QModelIndex &index, int role) const
         case Column::Name:
         {
             return nameColumnData(node, role);
-            break;
         }
         case Column::Value:
         {
             return valueColumnData(node, role);
-            break;
         }
         default:
             break;

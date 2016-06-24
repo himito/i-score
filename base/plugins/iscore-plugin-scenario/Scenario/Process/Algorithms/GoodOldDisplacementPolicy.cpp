@@ -1,4 +1,4 @@
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QByteArray>
 #include <QMap>
 #include <QPair>
@@ -33,7 +33,7 @@ GoodOldDisplacementPolicy::computeDisplacement(
     // this old behavior supports only the move of one timenode
     if(draggedElements.length() != 1)
     {
-        qDebug("WARNING : computeDisplacement called with empty element list !");
+        qDebug() << "WARNING : computeDisplacement called with empty element list !";
         // move nothing, nothing to undo or redo
         return;
     }else

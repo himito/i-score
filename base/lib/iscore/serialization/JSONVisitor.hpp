@@ -71,7 +71,7 @@ class ISCORE_LIB_BASE_EXPORT Visitor<Reader<JSONObject>> : public AbstractVisito
                 const T<Args...>& obj,
                 typename std::enable_if_t<
                     is_template<T<Args...>>::value &&
-                   !is_abstract_base<T<Args...>>::value> * = 0)
+                   !is_abstract_base<T<Args...>>::value> * = nullptr)
         {
             TSerializer<JSONObject, T<Args...>>::readFrom(*this, obj);
         }
@@ -133,7 +133,7 @@ class ISCORE_LIB_BASE_EXPORT Visitor<Writer<JSONObject>> : public AbstractVisito
         template<
                 template<class...> class T,
                 typename... Args>
-        void writeTo(T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = 0)
+        void writeTo(T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = nullptr)
         {
             TSerializer<JSONObject, T<Args...>>::writeTo(*this, obj);
         }
@@ -178,17 +178,17 @@ struct TSerializer<JSONObject, IdentifiedObject<T>>
 
 
 template<>
-struct TSerializer<JSONObject, boost::optional<int32_t>>
+struct TSerializer<JSONObject, optional<int32_t>>
 {
         // TODO should not be used. Save as optional json value instead.
 
         static void readFrom(
                 JSONObject::Serializer& s,
-                const boost::optional<int32_t>& obj)
+                const optional<int32_t>& obj)
         {
             if(obj)
             {
-                s.m_obj[iscore::StringConstant().id] = get(obj);
+                s.m_obj[iscore::StringConstant().id] = *obj;
             }
             else
             {
@@ -198,11 +198,11 @@ struct TSerializer<JSONObject, boost::optional<int32_t>>
 
         static void writeTo(
                 JSONObject::Deserializer& s,
-                boost::optional<int32_t>& obj)
+                optional<int32_t>& obj)
         {
             if(s.m_obj[iscore::StringConstant().id].toString() == iscore::StringConstant().none)
             {
-                obj.reset();
+                obj = iscore::none;
             }
             else
             {

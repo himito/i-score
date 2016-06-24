@@ -2,12 +2,12 @@
 #include <Scenario/Commands/Scenario/Deletions/ClearConstraint.hpp>
 #include <Scenario/Commands/Scenario/Deletions/ClearState.hpp>
 #include <Scenario/Commands/Scenario/Deletions/RemoveSelection.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 #include <iscore/command/Dispatchers/MacroCommandDispatcher.hpp>
 #include <QDebug>
 #include <algorithm>
-
+#include <Scenario/Process/Algorithms/Accessors.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <Scenario/Document/State/StateModel.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
@@ -17,6 +17,8 @@
 #include <iscore/tools/NotifyingMap.hpp>
 #include <iscore/tools/utilsCPP11.hpp>
 
+#include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
+#include <Scenario/Commands/Scenario/Merge/MergeTimeNodes.hpp>
 namespace iscore {
 class CommandStackFacade;
 }  // namespace iscore
@@ -25,7 +27,7 @@ using namespace Scenario::Command;
 using namespace iscore::IDocument; // for ::path
 void Scenario::clearContentFromSelection(
         const Scenario::ScenarioModel& scenario,
-        iscore::CommandStackFacade& stack)
+        const iscore::CommandStackFacade& stack)
 {
     // 1. Select items
     auto constraintsToRemove = selectedElements(scenario.constraints);
@@ -51,7 +53,7 @@ void Scenario::clearContentFromSelection(
 
 void Scenario::removeSelection(
         const Scenario::ScenarioModel& scenario,
-        iscore::CommandStackFacade& stack)
+        const iscore::CommandStackFacade& stack)
 {
     Selection sel = scenario.selectedChildren();
 
@@ -69,14 +71,73 @@ void Scenario::removeSelection(
 
 void Scenario::removeSelection(
         const BaseScenario&,
-        iscore::CommandStackFacade&)
+        const iscore::CommandStackFacade&)
 {
     // Shall do nothing
 }
 
 void Scenario::clearContentFromSelection(
         const BaseScenario&,
-        iscore::CommandStackFacade&)
+        const iscore::CommandStackFacade&)
 {
     ISCORE_TODO;
+}
+
+template<typename T>
+struct DateComparator
+{
+        const Scenario::ScenarioModel& scenario;
+        bool operator()(const T* lhs, const T* rhs)
+        {
+            return Scenario::date(*lhs, scenario) < Scenario::date(*rhs, scenario);
+        }
+};
+
+template<typename T>
+auto make_ordered(const Scenario::ScenarioModel& scenario)
+{
+    using comp_t = DateComparator<T>;
+    using set_t = std::set<const T*, comp_t>;
+
+    set_t the_set(comp_t{scenario});
+
+    auto cont = Scenario::ScenarioElementTraits<Scenario::ScenarioModel, T>::accessor;
+    for(auto& tn : selectedElements(cont(scenario)))
+    {
+        the_set.insert(tn);
+    }
+    return the_set;
+}
+
+void Scenario::mergeTimeNodes(
+        const Scenario::ScenarioModel & scenario,
+        const iscore::CommandStackFacade & f)
+{
+    // We merge all the furthest timenodes to the first one.
+    auto timenodes = make_ordered<TimeNodeModel>(scenario);
+    auto states = make_ordered<StateModel>(scenario);
+    auto events = make_ordered<EventModel>(scenario);
+
+    if(timenodes.size() < 2)
+    {
+        if(states.size() == 2)
+        {
+            auto it = states.begin();
+            auto& first = Scenario::parentTimeNode(**it, scenario);
+            auto& second = Scenario::parentTimeNode(**(++it), scenario);
+
+            auto cmd = new Command::MergeTimeNodes<ScenarioModel>(scenario, second.id(), first.id());
+            f.redoAndPush(cmd);
+        }
+    }
+    else
+    {
+        auto it = timenodes.begin();
+        auto first_tn = (*it)->id();
+        for(++it; it != timenodes.end(); ++it)
+        {
+            auto cmd = new Command::MergeTimeNodes<ScenarioModel>(scenario, first_tn, (*it)->id());
+            f.redoAndPush(cmd);
+        }
+    }
 }

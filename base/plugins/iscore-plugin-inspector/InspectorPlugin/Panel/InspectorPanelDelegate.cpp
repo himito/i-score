@@ -29,14 +29,14 @@ const iscore::PanelStatus&PanelDelegate::defaultPanelStatus() const
         Qt::RightDockWidgetArea,
                 10,
                 QObject::tr("Inspector"),
-                QObject::tr("Ctrl+I")};
+                QObject::tr("Ctrl+Shift+I")};
 
     return status;
 }
 
 void PanelDelegate::on_modelChanged(
-        iscore::PanelDelegate::maybe_document_t oldm,
-        iscore::PanelDelegate::maybe_document_t newm)
+        iscore::MaybeDocument oldm,
+        iscore::MaybeDocument newm)
 {
     using namespace iscore;
     delete m_stack;

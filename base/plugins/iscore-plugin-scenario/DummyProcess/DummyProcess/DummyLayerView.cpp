@@ -25,10 +25,11 @@
 */
 namespace Dummy
 {
-class TextItem : public QGraphicsItem
+// TODO MOVEME in iscore/widgets
+class DummyTextItem final : public QGraphicsItem
 {
     public:
-        TextItem(QGraphicsItem* parent):
+        DummyTextItem(QGraphicsItem* parent):
             QGraphicsItem{parent}
         {
 
@@ -65,12 +66,15 @@ class TextItem : public QGraphicsItem
         QString m_text;
         QFont m_font;
 };
-
 DummyLayerView::DummyLayerView(QGraphicsItem* parent):
     LayerView{parent},
-    m_text{new TextItem{this}}
+    m_text{new DummyTextItem{this}}
 {
     m_text->setFont(Skin::instance().SansFont);
+    connect(this, &DummyLayerView::heightChanged,
+            this, &DummyLayerView::updateText);
+    connect(this, &DummyLayerView::widthChanged,
+            this, &DummyLayerView::updateText);
     /*
     m_view = new QQuickView();
     m_view->setSource(QUrl("qrc:/DummyProcess.qml"));
@@ -99,7 +103,7 @@ void DummyLayerView::setText(const QString& text)
     update();
 }
 
-void DummyLayerView::paint_impl(QPainter* painter) const
+void DummyLayerView::updateText()
 {
     auto w = width();
     auto h = height();
@@ -121,7 +125,10 @@ void DummyLayerView::paint_impl(QPainter* painter) const
     }
 
     m_text->setPos(w / 2., h / 2.);
+}
 
+void DummyLayerView::paint_impl(QPainter* painter) const
+{
     /*
     painter->drawImage(0, 0, m_view->grabWindow());
     */

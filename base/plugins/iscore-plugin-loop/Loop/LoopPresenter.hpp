@@ -32,12 +32,12 @@ struct DocumentContext;
 
 namespace Loop
 {
-inline void removeSelection(const Loop::ProcessModel& model, iscore::CommandStackFacade& )
+inline void removeSelection(const Loop::ProcessModel& model, const iscore::CommandStackFacade& )
 {
 
 }
 
-inline void clearContentFromSelection(const Loop::ProcessModel& model, iscore::CommandStackFacade& )
+inline void clearContentFromSelection(const Loop::ProcessModel& model, const iscore::CommandStackFacade& )
 {
     ISCORE_TODO;
 }
@@ -80,7 +80,10 @@ class LayerPresenter final :
         ZoomRatio zoomRatio() const
         { return m_zoomRatio; }
 
-        void fillContextMenu(QMenu*, const QPoint& pos, const QPointF& scenepos) const override;
+        void fillContextMenu(QMenu&,
+                             QPoint pos,
+                             QPointF scenepos,
+                             const Process::LayerContextMenuManager&) const override;
 
     signals:
         void pressed(QPointF);

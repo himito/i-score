@@ -4,7 +4,7 @@
 #include <utility>
 #include <Process/Style/Skin.hpp>
 #include <eggs/variant.hpp>
-#include <boost/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 struct ISCORE_LIB_PROCESS_EXPORT ColorRef
 {
@@ -21,7 +21,9 @@ struct ISCORE_LIB_PROCESS_EXPORT ColorRef
     public:
         ColorRef() = default;
         ColorRef(const ColorRef& other) = default;
+        ColorRef(ColorRef&& other) = default;
         ColorRef& operator=(const ColorRef& other) = default;
+        ColorRef& operator=(ColorRef&& other) = default;
 
         ColorRef(QColor Skin::*s):
             ref{&(Skin::instance().*s)}
@@ -57,8 +59,8 @@ struct ISCORE_LIB_PROCESS_EXPORT ColorRef
             return Skin::instance().toString(ref);
         }
 
-        static boost::optional<ColorRef> ColorFromString(const QString&);
-        static boost::optional<ColorRef> SimilarColor(QColor other);
+        static optional<ColorRef> ColorFromString(const QString&);
+        static optional<ColorRef> SimilarColor(QColor other);
 
     private:
         const QColor* ref{};

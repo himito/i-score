@@ -37,7 +37,7 @@ class iscore_plugin_ossia final :
 
     private:
         iscore::GUIApplicationContextPlugin* make_applicationPlugin(
-                const iscore::ApplicationContext& app) override;
+                const iscore::GUIApplicationContext& app) override;
 
         std::vector<std::unique_ptr<iscore::FactoryListInterface>> factoryFamilies() override;
 
@@ -47,6 +47,7 @@ class iscore_plugin_ossia final :
                 const iscore::AbstractFactoryKey& factoryName) const override;
 
         QStringList required() const override;
+        QStringList offered() const override;
         iscore::Version version() const override;
         UuidKey<iscore::Plugin> key() const override;
 };

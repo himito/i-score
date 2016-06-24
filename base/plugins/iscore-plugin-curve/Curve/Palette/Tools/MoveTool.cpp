@@ -1,5 +1,5 @@
 #include <Curve/Palette/CurvePalette.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/statemachine/StateMachineUtils.hpp>
 #include <QState>
 #include <QStateMachine>
@@ -73,7 +73,7 @@ void EditionToolForCreate::on_released(QPointF scenePoint, Curve::Point curvePoi
 
 SetSegmentTool::SetSegmentTool(Curve::ToolPalette &sm):
     EditionToolForCreate{sm},
-    m_co{&sm.presenter(), sm.context().context.commandStack}
+    m_co{sm.model(), sm.context().context.commandStack}
 {
     QState* waitState = new QState{&localSM()};
 

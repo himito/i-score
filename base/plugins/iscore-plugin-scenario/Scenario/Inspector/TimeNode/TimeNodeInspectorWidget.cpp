@@ -1,7 +1,7 @@
 #include "TimeNodeInspectorWidget.hpp"
 
 #include <Inspector/InspectorSectionWidget.hpp>
-#include <Inspector/Separator.hpp>
+#include <iscore/widgets/Separator.hpp>
 #include <Scenario/Commands/TimeNode/SplitTimeNode.hpp>
 #include <Scenario/Commands/TimeNode/TriggerCommandFactory/TriggerCommandFactoryList.hpp>
 #include <Scenario/Document/Event/EventModel.hpp>
@@ -10,7 +10,7 @@
 #include <Scenario/Inspector/Event/EventInspectorWidget.hpp>
 #include <Scenario/Inspector/MetadataWidget.hpp>
 #include <Scenario/Inspector/TimeNode/TriggerInspectorWidget.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/document/DocumentContext.hpp>
@@ -51,8 +51,8 @@ TimeNodeInspectorWidget::TimeNodeInspectorWidget(
     setParent(parent);
 
     // default date
-    QWidget* dateWid = new QWidget{this};
-    QHBoxLayout* dateLay = new QHBoxLayout{dateWid};
+    auto dateWid = new QWidget{this};
+    auto dateLay = new QHBoxLayout{dateWid};
 
     auto dateTitle = new QLabel{"Default date"};
     m_date = new QLabel{m_model.date().toString() };
@@ -96,6 +96,8 @@ TimeNodeInspectorWidget::TimeNodeInspectorWidget(
 
     con(m_model, &TimeNodeModel::newEvent,
         this, [&] (const Id<EventModel>&) {this->updateDisplayedValues();});
+    con(m_model, &TimeNodeModel::eventRemoved,
+        this, [&] (const Id<EventModel>& id) { this->removeEvent(id);});
 
 }
 
@@ -154,9 +156,10 @@ void TimeNodeInspectorWidget::addEvent(const EventModel& event)
     });
 }
 
-void TimeNodeInspectorWidget::removeEvent(const EventModel& event)
+void TimeNodeInspectorWidget::removeEvent(const Id<EventModel>& event)
 {
-    ISCORE_TODO;
+    // OPTIMIZEME
+    updateDisplayedValues();
 }
 
 QString TimeNodeInspectorWidget::tabName()

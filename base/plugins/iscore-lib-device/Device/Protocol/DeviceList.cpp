@@ -1,4 +1,5 @@
 #include <Device/Protocol/DeviceInterface.hpp>
+#include <iscore/tools/std/Algorithms.hpp>
 #include "DeviceList.hpp"
 
 namespace Device
@@ -8,9 +9,10 @@ static auto get_device_iterator_by_name(
         const QString& name,
         const TheList& devlist)
 {
-    return std::find_if(devlist.cbegin(),
-                        devlist.cend(),
-                        [&] (DeviceInterface* d) { return d->settings().name == name; });
+    return find_if(devlist,
+                   [&] (DeviceInterface* d) {
+        return d->settings().name == name;
+    });
 }
 
 DeviceInterface &DeviceList::device(const QString &name) const
@@ -24,6 +26,12 @@ DeviceInterface &DeviceList::device(const QString &name) const
 void DeviceList::addDevice(DeviceInterface *dev)
 {
     m_devices.push_back(dev);
+    connect(dev, &DeviceInterface::logInbound,
+            this, &DeviceList::logInbound);
+    connect(dev, &DeviceInterface::logOutbound,
+            this, &DeviceList::logOutbound);
+
+    dev->setLogging(m_logging);
 }
 
 void DeviceList::removeDevice(const QString &name)
@@ -38,5 +46,16 @@ void DeviceList::removeDevice(const QString &name)
 const std::vector<DeviceInterface *> &DeviceList::devices() const
 {
     return m_devices;
+}
+
+void DeviceList::setLogging(bool b)
+{
+    if(m_logging == b)
+        return;
+    m_logging = b;
+
+    for(DeviceInterface* dev : m_devices)
+        dev->setLogging(b);
+
 }
 }

@@ -22,7 +22,6 @@ FullViewConstraintView::FullViewConstraintView(FullViewConstraintPresenter& pres
 {
     this->setParentItem(parent);
     this->setFlag(ItemIsSelectable);
-    this->setCursor(Qt::CrossCursor);
 
     this->setZValue(1);
     this->setY(2*constraintAndRackHeight());
@@ -37,6 +36,7 @@ void FullViewConstraintView::paint(QPainter* painter,
                                    const QStyleOptionGraphicsItem* option,
                                    QWidget* widget)
 {
+    painter->setRenderHint(QPainter::Antialiasing, false);
     int min_w = static_cast<int>(minWidth());
     int max_w = static_cast<int>(maxWidth());
     int def_w = static_cast<int>(defaultWidth());

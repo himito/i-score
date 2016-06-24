@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QVariant>
 
 
@@ -21,7 +21,10 @@ struct ISCORE_PLUGIN_CURVE_EXPORT PowerSegmentData
 
         }
 
-        double gamma = 12.05;
+
+        // Value of gamma for which the pow will be == 1.
+        static const constexpr double linearGamma = 11.05;
+        double gamma = linearGamma;
 };
 
 class ISCORE_PLUGIN_CURVE_EXPORT PowerSegment final :
@@ -41,7 +44,7 @@ class ISCORE_PLUGIN_CURVE_EXPORT PowerSegment final :
             vis.writeTo(*this);
         }
 
-        double gamma = 12.05; // TODO private
+        double gamma = PowerSegmentData::linearGamma; // TODO private
     private:
         SegmentModel* clone(
                 const Id<SegmentModel>& id,
@@ -54,7 +57,7 @@ class ISCORE_PLUGIN_CURVE_EXPORT PowerSegment final :
         void updateData(int numInterp) const override;
         double valueAt(double x) const override;
 
-        boost::optional<double> verticalParameter() const override;
+        optional<double> verticalParameter() const override;
         void setVerticalParameter(double p) override;
 
         QVariant toSegmentSpecificData() const override

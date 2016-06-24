@@ -13,50 +13,46 @@
 #include <Scenario/Palette/ScenarioPoint.hpp>
 
 #include <iscore/application/ApplicationContext.hpp>
-#include <core/presenter/MenubarManager.hpp>
+
 #include <core/document/Document.hpp>
 #include <iscore/plugins/application/GUIApplicationContextPlugin.hpp>
 #include <iscore/widgets/OrderedToolbar.hpp>
 #include <iscore/widgets/SetIcons.hpp>
 #include <Scenario/Commands/Cohesion/DoForSelectedConstraints.hpp>
+#include <OSSIA/OSSIAApplicationPlugin.hpp>
+#include <Curve/Settings/Model.hpp>
+#include <Scenario/Application/ScenarioActions.hpp>
+#include <QApplication>
+#include <QMainWindow>
+ISCORE_DECLARE_ACTION(Snapshot,"Snapshot in Event", Scenario, QKeySequence(QObject::tr("Ctrl+L")))
+ISCORE_DECLARE_ACTION(CreateCurves, "Create Curves", Scenario, QKeySequence(QObject::tr("Ctrl+J")))
 
-namespace iscore {
-
-}  // namespace iscore
-
-IScoreCohesionApplicationPlugin::IScoreCohesionApplicationPlugin(const iscore::ApplicationContext& ctx) :
-    iscore::GUIApplicationContextPlugin {ctx, "IScoreCohesionApplicationPlugin", nullptr}
+IScoreCohesionApplicationPlugin::IScoreCohesionApplicationPlugin(
+        const iscore::GUIApplicationContext& ctx) :
+    iscore::GUIApplicationContextPlugin {ctx}
 {
     using namespace Scenario;
     // Since we have declared the dependency, we can assume
     // that ScenarioApplicationPlugin is instantiated already.
-    auto& appPlugin = ctx.components.applicationPlugin<ScenarioApplicationPlugin>();
-    connect(&appPlugin, &ScenarioApplicationPlugin::startRecording,
+    auto& scenario_plugin = ctx.components.applicationPlugin<ScenarioApplicationPlugin>();
+    connect(&scenario_plugin.execution(), &ScenarioExecution::startRecording,
             this, &IScoreCohesionApplicationPlugin::record);
-    connect(&appPlugin, &ScenarioApplicationPlugin::startRecordingMessages,
+    connect(&scenario_plugin.execution(), &ScenarioExecution::startRecordingMessages,
             this, &IScoreCohesionApplicationPlugin::recordMessages);
-    connect(&appPlugin, &ScenarioApplicationPlugin::stopRecording, // TODO this seems useless
+    connect(&scenario_plugin.execution(), &ScenarioExecution::stopRecording, // TODO this seems useless
             this, &IScoreCohesionApplicationPlugin::stopRecord);
 
 
-    auto acts = appPlugin.actions();
-    for(const auto& act : acts)
-    {
-        if(act->objectName() == "Stop")
-        {
-            m_stopAction = act;
-            connect(m_stopAction, &QAction::triggered,
-                    this, [&] {
-                stopRecord();
-            });
-        }
-    }
+    m_ossiaplug = &ctx.components.applicationPlugin<OSSIAApplicationPlugin>();
 
-    m_snapshot = new QAction {tr("Snapshot in Event"), this};
-    m_snapshot->setShortcutContext(Qt::ApplicationShortcut);
-    m_snapshot->setShortcut(tr("Ctrl+J"));
-    m_snapshot->setToolTip(tr("Snapshot in Event (Ctrl+J)"));
-    m_snapshot->setWhatsThis(iscore::MenuInterface::name(iscore::ContextMenu::State));
+    auto& stop_action = ctx.actions.action<Actions::Stop>();
+    m_stopAction = stop_action.action();
+    connect(m_stopAction, &QAction::triggered,
+            this, [&] { stopRecord(); });
+
+    m_snapshot = new QAction {this};
+    m_snapshot->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    ctx.mainWindow.addAction(m_snapshot);
 
     setIcons(m_snapshot, QString(":/icons/snapshot_on.png"), QString(":/icons/snapshot_off.png"));
 
@@ -67,11 +63,9 @@ IScoreCohesionApplicationPlugin::IScoreCohesionApplicationPlugin(const iscore::A
     });
     m_snapshot->setEnabled(false);
 
-    m_curves = new QAction {tr("Create Curves"), this};
-    m_curves->setShortcutContext(Qt::ApplicationShortcut);
-    m_curves->setShortcut(tr("Ctrl+L"));
-    m_curves->setToolTip(tr("Create Curves (Ctrl+L)"));
-    m_curves->setWhatsThis(iscore::MenuInterface::name(iscore::ContextMenu::Constraint));
+    m_curves = new QAction{this};
+    m_curves->setShortcutContext(Qt::WidgetWithChildrenShortcut);
+    ctx.mainWindow.addAction(m_curves);
 
     setIcons(m_curves, QString(":/icons/create_curve_on.png"), QString(":/icons/create_curve_off.png"));
 
@@ -84,42 +78,75 @@ IScoreCohesionApplicationPlugin::IScoreCohesionApplicationPlugin(const iscore::A
 
 }
 
-void IScoreCohesionApplicationPlugin::populateMenus(iscore::MenubarManager* menu)
+iscore::GUIElements IScoreCohesionApplicationPlugin::makeGUIElements()
 {
-    // If there is the Curve plug-in, the Device Explorer, and the Scenario plug-in,
-    // We can add an option in the menu to generate curves from the selected addresses
-    // in the current constraint.
+    using namespace iscore;
 
-    menu->insertActionIntoToplevelMenu(iscore::ToplevelMenuElement::ObjectMenu,
-                                       m_curves);
+    GUIElements e;
 
-    menu->insertActionIntoToplevelMenu(iscore::ToplevelMenuElement::ObjectMenu,
-                                       m_snapshot);
+    Menu& object = context.menus.get().at(Menus::Object());
+    object.menu()->addAction(m_snapshot);
+    object.menu()->addAction(m_curves);
+    {
+        iscore::Toolbar& bar = context.toolbars.get().at(StringKey<iscore::Toolbar>("Constraint"));
+        bar.toolbar()->addAction(m_snapshot);
+        bar.toolbar()->addAction(m_curves);
+    }
 
-}
+    e.actions.add<Actions::Snapshot>(m_snapshot);
+    e.actions.add<Actions::CreateCurves>(m_curves);
 
-std::vector<iscore::OrderedToolbar> IScoreCohesionApplicationPlugin::makeToolbars()
-{
-    QToolBar* bar = new QToolBar;
-    bar->addActions({m_curves, m_snapshot});
-    return std::vector<iscore::OrderedToolbar>{iscore::OrderedToolbar(2, bar)};
+    auto& cstr_cond = context.actions.condition<iscore::EnableWhenSelectionContains<Scenario::ConstraintModel>>();
+    auto& state_cond = context.actions.condition<iscore::EnableWhenSelectionContains<Scenario::StateModel>>();
+
+    state_cond.add<Actions::Snapshot>();
+    cstr_cond.add<Actions::CreateCurves>();
+
+    return e;
 }
 
 void IScoreCohesionApplicationPlugin::record(
-        Scenario::ScenarioModel& scenar,
+        const Scenario::ScenarioModel& scenar,
         Scenario::Point pt)
 {
+    m_stopAction->trigger();
+    QApplication::processEvents();
+
     m_recManager = std::make_unique<Recording::RecordManager>(
                 iscore::IDocument::documentContext(scenar));
+
+    if(context.settings<Curve::Settings::Model>().getPlayWhileRecording())
+    {
+        connect(m_recManager.get(), &Recording::RecordManager::requestPlay,
+                this, [=] ()
+        {
+            m_ossiaplug->on_record(pt.date);
+        }, Qt::QueuedConnection);
+    }
+
     m_recManager->recordInNewBox(scenar, pt);
+
 }
 
 void IScoreCohesionApplicationPlugin::recordMessages(
-        Scenario::ScenarioModel& scenar,
+        const Scenario::ScenarioModel& scenar,
         Scenario::Point pt)
 {
+    m_stopAction->trigger();
+    QApplication::processEvents();
+
     m_recMessagesManager = std::make_unique<Recording::RecordMessagesManager>(
                 iscore::IDocument::documentContext(scenar));
+
+    if(context.settings<Curve::Settings::Model>().getPlayWhileRecording())
+    {
+        connect(m_recMessagesManager.get(), &Recording::RecordMessagesManager::requestPlay,
+                this, [=] ()
+        {
+            m_ossiaplug->on_record(pt.date);
+        }, Qt::QueuedConnection);
+    }
+
     m_recMessagesManager->recordInNewBox(scenar, pt);
 }
 
@@ -128,12 +155,12 @@ void IScoreCohesionApplicationPlugin::stopRecord()
     if(m_recManager)
     {
         m_recManager->stopRecording();
-        m_recManager.release();
+        m_recManager.reset();
     }
 
     if(m_recMessagesManager)
     {
         m_recMessagesManager->stopRecording();
-        m_recMessagesManager.release();
+        m_recMessagesManager.reset();
     }
 }

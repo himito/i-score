@@ -19,8 +19,6 @@
 #include <Scenario/Palette/Tools/ScenarioRollbackStrategy.hpp>
 #include <QFinalState>
 
-using namespace Scenario::Command;
-
 namespace Scenario
 {
 template<typename Scenario_T, typename ToolPalette_T>
@@ -30,7 +28,7 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
         Creation_FromTimeNode(
                 const ToolPalette_T& stateMachine,
                 const Path<Scenario_T>& scenarioPath,
-                iscore::CommandStackFacade& stack,
+                const iscore::CommandStackFacade& stack,
                 QState* parent):
             CreationState<Scenario_T, ToolPalette_T>{stateMachine, stack, std::move(scenarioPath), parent}
         {
@@ -41,7 +39,7 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
                 this->clearCreatedIds();
             });
 
-            QState* mainState = new QState{this};
+            auto mainState = new QState{this};
             {
                 auto pressed = new QState{mainState};
                 auto released = new QState{mainState};
@@ -190,6 +188,12 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
                         this->rollback();
                         return;
                     }
+
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        this->currentPoint.date = this->m_clickedPoint.date + TimeValue::fromMsecs(10);;
+                    }
+
                     // Move the timenode
                     this->m_dispatcher.template submitCommand<MoveNewEvent>(
                                 Path<Scenario_T>{this->m_scenarioPath},
@@ -208,6 +212,11 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
                         return;
                     }
 
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        return;
+                    }
+
                     this->m_dispatcher.template submitCommand<MoveEventMeta>(
                                 Path<Scenario_T>{this->m_scenarioPath},
                                 this->createdEvents.last(),
@@ -223,7 +232,7 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
                 });
             }
 
-            QState* rollbackState = new QState{this};
+            auto rollbackState = new QState{this};
             iscore::make_transition<iscore::Cancel_Transition>(mainState, rollbackState);
             rollbackState->addTransition(finalState);
             QObject::connect(rollbackState, &QState::entered, [&] ()
@@ -237,7 +246,7 @@ class Creation_FromTimeNode final : public CreationState<Scenario_T, ToolPalette
     private:
         void createInitialEventAndState()
         {
-            auto cmd = new CreateEvent_State{
+            auto cmd = new Command::CreateEvent_State{
                     this->m_scenarioPath,
                     this->clickedTimeNode,
                     this->currentPoint.y};

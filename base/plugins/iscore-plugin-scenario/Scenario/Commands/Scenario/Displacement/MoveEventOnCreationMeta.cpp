@@ -20,14 +20,14 @@ namespace Command
 
 MoveEventOnCreationMeta::MoveEventOnCreationMeta(
         Path<Scenario::ScenarioModel>&& scenarioPath,
-        const Id<EventModel>& eventId,
-        const TimeValue& newDate,
+        Id<EventModel> eventId,
+        TimeValue newDate,
         ExpandMode mode):
     SerializableMoveEvent{},
     m_moveEventImplementation(
         context.components.factory<MoveEventList>()
         .get(context, MoveEventFactoryInterface::Strategy::CREATION)
-        .make(std::move(scenarioPath), eventId, newDate, mode))
+        .make(std::move(scenarioPath), std::move(eventId), std::move(newDate), mode))
 {
 }
 
@@ -38,7 +38,6 @@ void MoveEventOnCreationMeta::undo() const
 
 void MoveEventOnCreationMeta::redo() const
 {
-
     m_moveEventImplementation->redo();
 }
 
@@ -65,12 +64,11 @@ void MoveEventOnCreationMeta::deserializeImpl(DataStreamOutput& qDataStream)
     m_moveEventImplementation->deserialize(cmdData);
 }
 
-void MoveEventOnCreationMeta::update(const Path<Scenario::ScenarioModel>& scenarioPath,
-                                     const Id<EventModel>& eventId,
+void MoveEventOnCreationMeta::update(const Id<EventModel>& eventId,
                                      const TimeValue& newDate, double y,
                                      ExpandMode mode)
 {
-    m_moveEventImplementation->update(scenarioPath, eventId, newDate, y, mode);
+    m_moveEventImplementation->update( eventId, newDate, y, mode);
 }
 }
 }

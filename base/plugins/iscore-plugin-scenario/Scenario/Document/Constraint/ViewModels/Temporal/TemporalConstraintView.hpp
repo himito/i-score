@@ -3,6 +3,7 @@
 #include <Scenario/Document/Constraint/ViewModels/ConstraintView.hpp>
 #include <Scenario/Document/Constraint/ExecutionState.hpp>
 #include <Scenario/Document/CommentBlock/TextItem.hpp>
+#include <Process/TimeValue.hpp>
 #include <QColor>
 #include <QtGlobal>
 #include <QPoint>
@@ -10,8 +11,10 @@
 #include <QString>
 #include <QPainter>
 
+class QMimeData;
 class QGraphicsObject;
 class QGraphicsSceneHoverEvent;
+class QGraphicsSceneDragDropEvent;
 class QPainter;
 class QStyleOptionGraphicsItem;
 class QWidget;
@@ -65,14 +68,17 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalConstraintView final :
 
         void setHeightScale(double);
         void setExecutionState(ConstraintExecutionState);
+        void setExecutionDuration(TimeValue progress);
 
     signals:
         void constraintHoverEnter();
         void constraintHoverLeave();
+        void dropReceived(const QPointF& pos, const QMimeData*);
 
     protected:
         void hoverEnterEvent(QGraphicsSceneHoverEvent* h) override;
         void hoverLeaveEvent(QGraphicsSceneHoverEvent* h) override;
+        void dropEvent(QGraphicsSceneDragDropEvent *event) override;
 
     private:
         QPointF m_clickedPoint {};

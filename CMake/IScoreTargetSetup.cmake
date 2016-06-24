@@ -146,7 +146,8 @@ function(iscore_set_unix_compile_options theTarget)
     "$<$<CONFIG:Debug>:-g>"
 
     # Release options
-    "$<$<CONFIG:Release>:-Ofast>"
+    "$<$<AND:$<CONFIG:Release>,$<BOOL:${NACL}>>:-O3>"
+    "$<$<AND:$<CONFIG:Release>,$<NOT:$<BOOL:${NACL}>>>:-Ofast>"
     "$<$<AND:$<CONFIG:Release>,$<BOOL:${ISCORE_ENABLE_OPTIMIZE_CUSTOM}>>:-march=native>"
     )
 
@@ -257,6 +258,7 @@ function(setup_iscore_library PluginName)
   setup_iscore_common_lib_features("${PluginName}")
 
   set(ISCORE_LIBRARIES_LIST ${ISCORE_LIBRARIES_LIST} "${PluginName}" CACHE INTERNAL "List of libraries")
+  set_target_properties(${PluginName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/")
 
   if(NOT ISCORE_STATIC_PLUGINS)
     if(ISCORE_BUILD_FOR_PACKAGE_MANAGER)
@@ -280,6 +282,7 @@ function(setup_iscore_plugin PluginName)
 
   set(ISCORE_PLUGINS_LIST ${ISCORE_PLUGINS_LIST} "${PluginName}" CACHE INTERNAL "List of plugins")
 
+  set_target_properties(${PluginName} PROPERTIES LIBRARY_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/plugins/")
   if(NOT ISCORE_STATIC_PLUGINS)
     if(ISCORE_BUILD_FOR_PACKAGE_MANAGER)
       install(TARGETS "${PluginName}"

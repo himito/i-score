@@ -4,7 +4,7 @@
 #include <iscore/plugins/documentdelegate/DocumentDelegateModelInterface.hpp>
 
 #include <QPointer>
-
+#include <core/document/Document.hpp>
 #include <iscore/selection/Selection.hpp>
 #include <iscore/serialization/VisitorInterface.hpp>
 
@@ -26,11 +26,17 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ScenarioDocumentModel final :
         ISCORE_SERIALIZE_FRIENDS(Scenario::ScenarioDocumentModel, DataStream)
         ISCORE_SERIALIZE_FRIENDS(Scenario::ScenarioDocumentModel, JSONObject)
     public:
-        ScenarioDocumentModel(QObject* parent);
+        ScenarioDocumentModel(
+                const iscore::DocumentContext& ctx,
+                QObject* parent);
 
         template<typename Impl>
-        ScenarioDocumentModel(Deserializer<Impl>& vis, QObject* parent) :
-            iscore::DocumentDelegateModelInterface {vis, parent}
+        ScenarioDocumentModel(
+                Deserializer<Impl>& vis,
+                const iscore::DocumentContext& ctx,
+                QObject* parent) :
+            iscore::DocumentDelegateModelInterface {vis, parent},
+            m_focusManager{ctx.document.focusManager()}
         {
             vis.writeTo(*this);
             init();
@@ -52,7 +58,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ScenarioDocumentModel final :
         const Process::ProcessFocusManager& focusManager() const
         { return m_focusManager; }
 
-        void setDisplayedConstraint(const ConstraintModel& constraint);
+        void setDisplayedConstraint(Scenario::ConstraintModel& constraint);
 
         void on_viewModelDefocused(const Process::LayerModel* vm);
         void on_viewModelFocused(const Process::LayerModel* vm);

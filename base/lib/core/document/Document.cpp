@@ -28,9 +28,10 @@ DocumentContext DocumentContext::fromDocument(Document &d)
 DocumentContext::DocumentContext(Document& d):
     app{iscore::AppContext()},
     document{d},
-    commandStack{d.m_commandStackFacade},
+    commandStack{d.m_commandStack},
     selectionStack{d.selectionStack()},
-    objectLocker{d.locker()}
+    objectLocker{d.locker()},
+    focus{d.m_focus}
 {
 }
 
@@ -49,7 +50,8 @@ Document::Document(
     NamedObject {"Document", parent},
     m_objectLocker{this},
     m_backupMgr{new DocumentBackupManager{*this}},
-    m_context{DocumentContext::fromDocument(*this)}
+    m_context{DocumentContext::fromDocument(*this)},
+    m_virgin{true}
 {
     metadata.setFileName(name);
     /// Construction of the document model
@@ -59,7 +61,7 @@ Document::Document(
     // which requires the pointer to m_model to be intialized.
     std::allocator<DocumentModel> allocator;
     m_model = allocator.allocate(1);
-    allocator.construct(m_model, id, factory, this);
+    allocator.construct(m_model, id, m_context, factory, this);
     m_view = new DocumentView{factory, *this, parentview};
     m_presenter = new DocumentPresenter{factory,
             *m_model,

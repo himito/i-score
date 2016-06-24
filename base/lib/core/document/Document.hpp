@@ -3,6 +3,7 @@
 #include <iscore/document/DocumentContext.hpp>
 #include <iscore/locking/ObjectLocker.hpp>
 #include <iscore/selection/SelectionStack.hpp>
+#include <iscore/selection/FocusManager.hpp>
 #include <iscore/tools/NamedObject.hpp>
 #include <core/document/DocumentMetadata.hpp>
 #include <QByteArray>
@@ -49,6 +50,10 @@ class ISCORE_LIB_BASE_EXPORT Document final : public NamedObject
         SelectionStack& selectionStack()
         { return m_selectionStack; }
 
+        FocusManager& focusManager()
+        { return m_focus; }
+
+
         ObjectLocker& locker()
         { return m_objectLocker; }
 
@@ -75,6 +80,9 @@ class ISCORE_LIB_BASE_EXPORT Document final : public NamedObject
 
         void setBackupMgr(DocumentBackupManager* backupMgr);
 
+        bool virgin() const
+        { return m_virgin && !m_commandStack.canUndo() && !m_commandStack.canRedo(); }
+
     signals:
         void aboutToClose();
 
@@ -96,10 +104,10 @@ class ISCORE_LIB_BASE_EXPORT Document final : public NamedObject
         void init();
 
         CommandStack m_commandStack;
-        CommandStackFacade m_commandStackFacade{m_commandStack};
 
         SelectionStack m_selectionStack;
         ObjectLocker m_objectLocker;
+        FocusManager m_focus;
 
         DocumentModel* m_model{};
         DocumentView* m_view{};
@@ -108,6 +116,9 @@ class ISCORE_LIB_BASE_EXPORT Document final : public NamedObject
         DocumentBackupManager* m_backupMgr{};
 
         DocumentContext m_context;
+
+        bool m_virgin{false}; // Used to check if we can safely close it
+        // if we want to load a document instead upon opening i-score.
 };
 
 

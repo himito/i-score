@@ -40,7 +40,7 @@
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/document/DocumentContext.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
 #include <iscore/serialization/MimeVisitor.hpp>
@@ -70,7 +70,7 @@ DeviceExplorerModel::DeviceExplorerModel(
       m_lastCutNodeIsCopied{false},
       m_devicePlugin{plug},
       m_rootNode{plug.rootNode()},
-      m_cmdQ{&plug.context().commandStack}
+      m_cmdQ{plug.context().commandStack}
 {
     this->setObjectName("DeviceExplorerModel");
 
@@ -588,7 +588,7 @@ bool DeviceExplorerModel::setData(
             if(settings != n.get<Device::AddressSettings>())
             {
                 // We changed
-                m_cmdQ->redoAndPush(new Explorer::Command::UpdateAddressSettings{
+                m_cmdQ.redoAndPush(new Explorer::Command::UpdateAddressSettings{
                                         this->deviceModel(),
                                         Device::NodePath{n},
                                         settings});
@@ -727,9 +727,8 @@ SelectedNodes DeviceExplorerModel::uniqueSelectedNodes(
         const QModelIndexList& indexes) const
 {
     SelectedNodes nodes;
-    std::transform(indexes.begin(), indexes.end(),
-                   std::back_inserter(nodes.parents),
-                   [&] (const QModelIndex& idx) {
+    transform(indexes, std::back_inserter(nodes.parents),
+              [&] (const QModelIndex& idx) {
         return &nodeFromModelIndex(idx);
     });
 
@@ -918,7 +917,7 @@ DeviceExplorerModel::dropMimeData(const QMimeData* mimeData,
                        deviceModel(),
                        std::move(n)};
 
-            m_cmdQ->redoAndPush(cmd);
+            m_cmdQ.redoAndPush(cmd);
         }
 
         return true;

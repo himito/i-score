@@ -2,9 +2,15 @@
 #include <Scenario/Application/ScenarioEditionSettings.hpp>
 #include <iscore/plugins/application/GUIApplicationContextPlugin.hpp>
 
+#include <Scenario/Application/Menus/ObjectMenuActions.hpp>
+#include <Scenario/Application/Menus/ToolMenuActions.hpp>
+#include <Scenario/Application/Menus/TransportActions.hpp>
+
 #include <QVector>
 #include <vector>
+#include <Process/Layer/LayerContextMenu.hpp>
 #include <Scenario/Palette/ScenarioPoint.hpp>
+#include <Scenario/Execution/ScenarioExecution.hpp>
 #include <iscore_plugin_scenario_export.h>
 
 namespace Process {
@@ -13,7 +19,6 @@ class ProcessFocusManager;
 }
 namespace iscore {
 class Document;
-class MenubarManager;
 struct OrderedToolbar;
 }  // namespace iscore
 
@@ -34,18 +39,12 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ScenarioApplicationPlugin final :
         Q_OBJECT
         friend class ScenarioContextMenuManager;
     public:
-        ScenarioApplicationPlugin(const iscore::ApplicationContext& app);
+        ScenarioApplicationPlugin(
+                const iscore::GUIApplicationContext& app);
         ~ScenarioApplicationPlugin();
 
-        void populateMenus(iscore::MenubarManager*) override;
-        std::vector<iscore::OrderedToolbar> makeToolbars() override;
-        std::vector<QAction*> actions() override;
+        GUIElements makeGUIElements() override;
 
-        QVector<ScenarioActions*>& pluginActions()
-        { return m_pluginActions; }
-
-        const Scenario::ScenarioModel* focusedScenarioModel() const;
-        const Scenario::ScenarioInterface* focusedScenarioInterface() const;
         TemporalScenarioPresenter* focusedPresenter() const;
 
         void reinit_tools();
@@ -54,17 +53,17 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ScenarioApplicationPlugin final :
         { return m_editionSettings; }
 
         Process::ProcessFocusManager* processFocusManager() const;
+        Process::LayerContextMenuManager& layerContextMenuRegistrar()
+        { return m_layerCtxMenuManager; }
+        const Process::LayerContextMenuManager& layerContextMenuRegistrar() const
+        { return m_layerCtxMenuManager; }
+
+        Scenario::ScenarioExecution& execution()
+        { return m_execution; }
 
     signals:
         void keyPressed(int);
         void keyReleased(int);
-
-        void startRecording(Scenario::ScenarioModel&, Scenario::Point);
-        void startRecordingMessages(Scenario::ScenarioModel&, Scenario::Point);
-        void stopRecording();
-
-        void playState(Id<StateModel>);
-        void playAtDate(const TimeValue&);
 
     protected:
         void prepareNewDocument() override;
@@ -78,10 +77,12 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ScenarioApplicationPlugin final :
     private:
         QMetaObject::Connection m_focusConnection, m_defocusConnection, m_contextMenuConnection;
         Scenario::EditionSettings m_editionSettings;
+        Process::LayerContextMenuManager m_layerCtxMenuManager;
+        ScenarioExecution m_execution;
 
-        ObjectMenuActions* m_objectAction{};
-        ToolMenuActions* m_toolActions{};
-        QVector<ScenarioActions*> m_pluginActions;
+        ObjectMenuActions m_objectActions{this};
+        ToolMenuActions m_toolActions{this};
+        TransportActions m_transportActions{context};
 
         QAction *m_selectAll{};
         QAction *m_deselectAll{};

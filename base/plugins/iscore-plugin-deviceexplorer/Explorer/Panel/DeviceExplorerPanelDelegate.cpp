@@ -25,14 +25,14 @@ const iscore::PanelStatus&PanelDelegate::defaultPanelStatus() const
         Qt::LeftDockWidgetArea,
                 10,
                 QObject::tr("Device Explorer"),
-                QObject::tr("Ctrl+E")};
+                QObject::tr("Ctrl+Shift+E")};
 
     return status;
 }
 
 void PanelDelegate::on_modelChanged(
-        iscore::PanelDelegate::maybe_document_t oldm,
-        iscore::PanelDelegate::maybe_document_t newm)
+        iscore::MaybeDocument oldm,
+        iscore::MaybeDocument newm)
 {
     // DeviceExplorerModel ownership goes to document plugin
     if(oldm)

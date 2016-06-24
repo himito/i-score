@@ -18,7 +18,7 @@
 #include "AddOnlyProcessToConstraint.hpp"
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/tools/ModelPathSerialization.hpp>
@@ -32,7 +32,7 @@ namespace Command
 {
 AddOnlyProcessToConstraint::AddOnlyProcessToConstraint(
         Path<ConstraintModel>&& constraintPath,
-        const UuidKey<Process::ProcessFactory>& process) :
+        UuidKey<Process::ProcessFactory> process) :
     AddOnlyProcessToConstraint{
         std::move(constraintPath),
         getStrongId(constraintPath.find().processes),
@@ -43,11 +43,11 @@ AddOnlyProcessToConstraint::AddOnlyProcessToConstraint(
 
 AddOnlyProcessToConstraint::AddOnlyProcessToConstraint(
         Path<ConstraintModel>&& constraintPath,
-        const Id<Process::ProcessModel>& processId,
-        const UuidKey<Process::ProcessFactory>& process):
+        Id<Process::ProcessModel> processId,
+        UuidKey<Process::ProcessFactory> process):
     m_path{std::move(constraintPath)},
     m_processName{process},
-    m_createdProcessId{processId}
+    m_createdProcessId{std::move(processId)}
 {
 }
 

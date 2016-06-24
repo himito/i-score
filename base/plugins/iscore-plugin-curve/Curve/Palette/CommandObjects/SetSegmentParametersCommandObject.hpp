@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/Dispatchers/SingleOngoingCommandDispatcher.hpp>
 #include <QPoint>
 
@@ -11,12 +11,15 @@ class CommandStackFacade;
 
 namespace Curve
 {
+class Model;
 class Presenter;
 class StateBase;
 class SetSegmentParametersCommandObject
 {
     public:
-        SetSegmentParametersCommandObject(Presenter* pres, iscore::CommandStackFacade&);
+        SetSegmentParametersCommandObject(
+                const Model&,
+                const iscore::CommandStackFacade&);
 
         void setCurveState(Curve::StateBase* stateBase) { m_state = stateBase; }
 
@@ -29,11 +32,11 @@ class SetSegmentParametersCommandObject
         void cancel();
 
     private:
-        Presenter* m_presenter{};
+        const Model& m_model;
         SingleOngoingCommandDispatcher<SetSegmentParameters> m_dispatcher;
 
         Curve::StateBase* m_state{};
         QPointF m_originalPress;
-        boost::optional<double> m_verticalOrig, m_horizontalOrig;
+        optional<double> m_verticalOrig, m_horizontalOrig;
 };
 }

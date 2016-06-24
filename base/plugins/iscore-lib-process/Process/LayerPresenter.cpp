@@ -1,10 +1,7 @@
 #include "LayerPresenter.hpp"
 namespace Process
 {
-LayerPresenter::~LayerPresenter()
-{
-
-}
+LayerPresenter::~LayerPresenter() = default;
 
 bool LayerPresenter::focused() const
 {
@@ -18,6 +15,15 @@ void LayerPresenter::setFocus(bool focus)
 }
 
 void LayerPresenter::on_focusChanged()
+{
+
+}
+
+void LayerPresenter::fillContextMenu(
+        QMenu&,
+        QPoint pos,
+        QPointF scenepos,
+        const LayerContextMenuManager&) const
 {
 
 }

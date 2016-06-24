@@ -1,5 +1,5 @@
 #pragma once
-#include <iscore/plugins/settingsdelegate/SettingsDelegateModelInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegateModel.hpp>
 #include <iscore_plugin_curve_export.h>
 
 namespace Curve
@@ -7,53 +7,47 @@ namespace Curve
 namespace Settings
 {
 
-enum class Mode
+enum Mode
 {
     Parameter, Message
 };
+}
+}
 
-struct Keys
+Q_DECLARE_METATYPE(Curve::Settings::Mode)
+
+namespace Curve
 {
-        static const QString simplificationRatio;
-        static const QString simplify;
-        static const QString mode;
-};
-
+namespace Settings
+{
 class ISCORE_PLUGIN_CURVE_EXPORT Model :
-        public iscore::SettingsDelegateModelInterface
+        public iscore::SettingsDelegateModel
 {
         Q_OBJECT
-        Q_PROPERTY(int simplificationRatio READ getSimplificationRatio WRITE setSimplificationRatio NOTIFY SimplificationRatioChanged)
-        Q_PROPERTY(bool simplify READ getSimplify WRITE setSimplify NOTIFY SimplifyChanged)
-        Q_PROPERTY(Mode mode READ getMode WRITE setMode NOTIFY ModeChanged)
+        Q_PROPERTY(int SimplificationRatio READ getSimplificationRatio WRITE setSimplificationRatio NOTIFY SimplificationRatioChanged FINAL)
+        Q_PROPERTY(bool Simplify READ getSimplify WRITE setSimplify NOTIFY SimplifyChanged FINAL)
+        Q_PROPERTY(Mode CurveMode READ getCurveMode WRITE setCurveMode NOTIFY CurveModeChanged FINAL)
+        Q_PROPERTY(bool PlayWhileRecording READ getPlayWhileRecording WRITE setPlayWhileRecording NOTIFY PlayWhileRecordingChanged FINAL)
 
     public:
-        Model();
+        Model(QSettings& set, const iscore::ApplicationContext& ctx);
 
-        int getSimplificationRatio() const;
-        void setSimplificationRatio(int getSimplificationRatio);
 
-        bool getSimplify() const;
-        void setSimplify(bool simplify);
-
-        Mode getMode() const;
-        void setMode(Mode getMode);
-
-    signals:
-        void SimplificationRatioChanged(int getSimplificationRatio);
-        void SimplifyChanged(bool simplify);
-        void ModeChanged(Mode getMode);
-
+        ISCORE_SETTINGS_PARAMETER_HPP(int, SimplificationRatio)
+        ISCORE_SETTINGS_PARAMETER_HPP(bool, Simplify)
+        ISCORE_SETTINGS_PARAMETER_HPP(Curve::Settings::Mode, CurveMode)
+        ISCORE_SETTINGS_PARAMETER_HPP(bool, PlayWhileRecording)
     private:
-        void setFirstTimeSettings() override;
-        int m_simplificationRatio = 50;
-        bool m_simplify = true;
-        Mode m_mode = Mode::Parameter;
+        int m_SimplificationRatio;
+        bool m_Simplify = true;
+        Mode m_CurveMode = Mode::Parameter;
+        bool m_PlayWhileRecording;
 };
 
 ISCORE_SETTINGS_PARAMETER(Model, SimplificationRatio)
 ISCORE_SETTINGS_PARAMETER(Model, Simplify)
-ISCORE_SETTINGS_PARAMETER(Model, Mode)
+ISCORE_SETTINGS_PARAMETER(Model, CurveMode)
+ISCORE_SETTINGS_PARAMETER(Model, PlayWhileRecording)
 
 }
 }

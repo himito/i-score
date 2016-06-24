@@ -1,38 +1,37 @@
 #pragma once
-#include <iscore/plugins/settingsdelegate/SettingsDelegateModelInterface.hpp>
-
+#include <iscore/plugins/settingsdelegate/SettingsDelegateModel.hpp>
+#include <OSSIA/Executor/ClockManager/ClockManagerFactory.hpp>
 
 namespace RecreateOnPlay
 {
 namespace Settings
 {
-
-struct Keys
-{
-        static const QString rate;
-};
-
 class Model :
-        public iscore::SettingsDelegateModelInterface
+        public iscore::SettingsDelegateModel
 {
         Q_OBJECT
         Q_PROPERTY(int rate READ getRate WRITE setRate NOTIFY RateChanged)
+        Q_PROPERTY(ClockManagerFactory::ConcreteFactoryKey clock READ getClock WRITE setClock NOTIFY ClockChanged)
+
+        int m_Rate;
+        ClockManagerFactory::ConcreteFactoryKey m_Clock;
+
+        const ClockManagerFactoryList& m_clockFactories;
 
     public:
-        Model();
+        Model(QSettings& set, const iscore::ApplicationContext& ctx);
 
-        int getRate() const;
-        void setRate(int getRate);
+        const ClockManagerFactoryList& clockFactories() const
+        { return m_clockFactories; }
 
-    signals:
-        void RateChanged(int getRate);
+        std::unique_ptr<ClockManager> makeClock(const RecreateOnPlay::Context& ctx) const;
 
-    private:
-        void setFirstTimeSettings() override;
-        int m_rate = 50;
+        ISCORE_SETTINGS_PARAMETER_HPP(int, Rate)
+        ISCORE_SETTINGS_PARAMETER_HPP(ClockManagerFactory::ConcreteFactoryKey, Clock)
 };
 
 ISCORE_SETTINGS_PARAMETER(Model, Rate)
+ISCORE_SETTINGS_PARAMETER(Model, Clock)
 
 }
 }

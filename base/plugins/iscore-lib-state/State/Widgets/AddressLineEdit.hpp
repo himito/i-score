@@ -15,7 +15,7 @@ namespace State
  * Used to input an address. Changes colors to red-ish if it is invalid.
  */
 template<class Validator_T>
-class ISCORE_LIB_STATE_EXPORT AddressLineEditBase :
+class AddressLineEditBase :
         public QLineEdit
 {
     public:
@@ -55,7 +55,7 @@ class ISCORE_LIB_STATE_EXPORT AddressLineEditBase :
             {
                 Mime<State::MessageList>::Deserializer des{*mime};
                 State::MessageList ml = des.deserialize();
-                if(ml.size() > 0)
+                if(!ml.empty())
                 {
                     this->setText(ml[0].address.toString());
                 }
@@ -64,18 +64,22 @@ class ISCORE_LIB_STATE_EXPORT AddressLineEditBase :
         Validator_T m_validator;
 };
 
-class ISCORE_LIB_STATE_EXPORT AddressLineEdit :
+class ISCORE_LIB_STATE_EXPORT AddressLineEdit final :
         public AddressLineEditBase<AddressValidator>
 {
+    public:
         using AddressLineEditBase<AddressValidator>::AddressLineEditBase;
+        virtual ~AddressLineEdit();
 };
-class ISCORE_LIB_STATE_EXPORT AddressAccessorLineEdit :
+class ISCORE_LIB_STATE_EXPORT AddressAccessorLineEdit final :
         public AddressLineEditBase<AddressAccessorValidator>
 {
+    public:
         using AddressLineEditBase<AddressAccessorValidator>::AddressLineEditBase;
+        virtual ~AddressAccessorLineEdit();
 };
 
-class ISCORE_LIB_STATE_EXPORT AddressFragmentLineEdit :
+class ISCORE_LIB_STATE_EXPORT AddressFragmentLineEdit final :
         public QLineEdit
 {
     public:
@@ -84,5 +88,7 @@ class ISCORE_LIB_STATE_EXPORT AddressFragmentLineEdit :
         {
             setValidator(new AddressFragmentValidator{this});
         }
+
+        virtual ~AddressFragmentLineEdit();
 };
 }

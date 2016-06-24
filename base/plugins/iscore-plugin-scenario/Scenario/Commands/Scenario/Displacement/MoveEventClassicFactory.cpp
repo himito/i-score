@@ -2,7 +2,7 @@
 #include <Scenario/Commands/Scenario/Displacement/MoveEventClassicFactory.hpp>
 #include <Scenario/Process/Algorithms/GoodOldDisplacementPolicy.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QString>
 #include <algorithm>
 
@@ -22,11 +22,15 @@ class SerializableMoveEvent;
 
 SerializableMoveEvent* MoveEventClassicFactory::make(
         Path<Scenario::ScenarioModel>&& scenarioPath,
-        const Id<EventModel>& eventId,
-        const TimeValue& newDate,
+        Id<EventModel> eventId,
+        TimeValue newDate,
         ExpandMode mode)
 {
-    return new MoveEvent<GoodOldDisplacementPolicy>(std::move(scenarioPath), eventId, newDate, mode);
+    return new MoveEvent<GoodOldDisplacementPolicy>(
+                std::move(scenarioPath),
+                std::move(eventId),
+                std::move(newDate),
+                mode);
 }
 
 SerializableMoveEvent* MoveEventClassicFactory::make()

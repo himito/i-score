@@ -1,7 +1,7 @@
 #include <Device/Address/AddressSettings.hpp>
 #include <Explorer/Explorer/DeviceExplorerModel.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QDebug>
 #include <QStringList>
 #include <algorithm>
@@ -45,14 +45,15 @@ void NodeUpdateProxy::addDevice(const Device::DeviceSettings& dev)
 void NodeUpdateProxy::loadDevice(const Device::Node& node)
 {
     auto n = devModel.loadDeviceFromNode(node);
+    auto actual_node = n ? *n : node;
 
     if(deviceExplorer)
     {
-        deviceExplorer->addDevice(std::move(node));
+        deviceExplorer->addDevice(std::move(actual_node));
     }
     else
     {
-        devModel.rootNode().push_back(std::move(node));
+        devModel.rootNode().push_back(std::move(actual_node));
     }
 }
 

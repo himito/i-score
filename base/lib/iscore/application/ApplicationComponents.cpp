@@ -19,15 +19,17 @@ ApplicationComponentsData::~ApplicationComponentsData()
 
     for(auto& elt : appPlugins)
     {
+        // TODO some have the presenter in parent,
+        // check that it won't cause crashes.
         delete elt;
     }
 
     // FIXME do not delete static plug-ins ?
-    for(auto& elt : plugins)
+    for(auto& elt : addons)
     {
-        if(elt)
+        if(elt.plugin)
         {
-            dynamic_cast<QObject*>(elt)->deleteLater();
+            dynamic_cast<QObject*>(elt.plugin)->deleteLater();
         }
     }
 }

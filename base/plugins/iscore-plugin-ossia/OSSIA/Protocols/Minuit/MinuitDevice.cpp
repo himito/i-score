@@ -20,7 +20,7 @@ MinuitDevice::MinuitDevice(const Device::DeviceSettings &settings):
 
 bool MinuitDevice::reconnect()
 {
-    OSSIADevice::disconnect();
+    disconnect();
 
     try {
         auto stgs = settings().deviceSpecificSettings.value<MinuitSpecificSettings>();
@@ -30,6 +30,7 @@ bool MinuitDevice::reconnect()
                                stgs.outputPort);
 
         m_dev = OSSIA::Device::create(ossia_settings, settings().name.toStdString());
+        setLogging_impl(isLogging());
     }
     catch(std::exception& e)
     {

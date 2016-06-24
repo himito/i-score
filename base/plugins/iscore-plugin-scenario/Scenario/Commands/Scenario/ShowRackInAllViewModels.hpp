@@ -1,14 +1,14 @@
 #pragma once
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 #include <QMap>
 
 #include <iscore/tools/ModelPath.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
 
-class DataStreamInput;
-class DataStreamOutput;
+struct DataStreamInput;
+struct DataStreamOutput;
 
 namespace Scenario
 {
@@ -19,13 +19,13 @@ class ConstraintViewModel;
 namespace Command
 {
 
-class ShowRackInAllViewModels final : public iscore::SerializableCommand
+class ISCORE_PLUGIN_SCENARIO_EXPORT ShowRackInAllViewModels final : public iscore::SerializableCommand
 {
         ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), ShowRackInAllViewModels, "Show a rack everywhere")
     public:
         ShowRackInAllViewModels(
                 Path<ConstraintModel>&& constraint_path,
-                const Id<RackModel>& rackId);
+                Id<RackModel> rackId);
 
         void undo() const override;
         void redo() const override;

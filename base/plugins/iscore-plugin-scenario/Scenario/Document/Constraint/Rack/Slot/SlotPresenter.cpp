@@ -8,7 +8,7 @@
 #include <Scenario/Document/Constraint/Rack/RackView.hpp>
 #include <Scenario/Document/Constraint/Rack/Slot/SlotModel.hpp>
 #include <Scenario/Document/Constraint/Rack/Slot/SlotView.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include <iscore/widgets/GraphicsItem.hpp>
 #include <QMenu>
@@ -22,7 +22,7 @@
 #include <Process/ProcessContext.hpp>
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/tools/NamedObject.hpp>
 #include <iscore/tools/NotifyingMap.hpp>

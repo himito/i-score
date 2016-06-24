@@ -1,35 +1,21 @@
 #pragma once
-#include <iscore/plugins/settingsdelegate/SettingsDelegateModelInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegateModel.hpp>
+#include <QItemSelectionModel>
+#include <PluginSettings/PluginItemModel.hpp>
 
-class QStandardItem;
-class QStandardItemModel;
-
-namespace iscore
-{
-}
+class QAbstractItemModel;
 
 namespace PluginSettings
 {
 class BlacklistCommand;
 
-class PluginSettingsModel : public iscore::SettingsDelegateModelInterface
+class PluginSettingsModel : public iscore::SettingsDelegateModel
 {
-        Q_OBJECT
     public:
-        PluginSettingsModel();
-        QStandardItemModel* model()
-        {
-            return m_plugins;
-        }
+        PluginSettingsModel(QSettings& set, const iscore::ApplicationContext& ctx);
 
-        void setFirstTimeSettings() override;
-
-    signals:
-        void blacklistCommand(BlacklistCommand*);
-    public slots:
-        void on_itemChanged(QStandardItem*);
-
-    private:
-        QStandardItemModel* m_plugins {};
+        LocalPluginItemModel localPlugins;
+        RemotePluginItemModel remotePlugins;
+        QItemSelectionModel remoteSelection;
 };
 }

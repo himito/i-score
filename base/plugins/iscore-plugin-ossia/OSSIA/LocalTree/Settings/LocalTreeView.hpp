@@ -1,5 +1,5 @@
 #pragma once
-#include <iscore/plugins/settingsdelegate/SettingsDelegateViewInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegateView.hpp>
 
 class QCheckBox;
 namespace Ossia
@@ -10,7 +10,7 @@ namespace Settings
 {
 
 class View :
-        public iscore::SettingsDelegateViewInterface
+        public iscore::SettingsDelegateView
 {
         Q_OBJECT
     public:

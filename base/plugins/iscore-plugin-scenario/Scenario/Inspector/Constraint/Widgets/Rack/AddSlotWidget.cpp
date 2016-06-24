@@ -13,14 +13,13 @@ namespace Scenario
 AddSlotWidget::AddSlotWidget(RackInspectorSection* parent) :
     QWidget {parent}
 {
-    QHBoxLayout* layout = new iscore::MarginLess<QHBoxLayout>(this);
+    auto layout = new iscore::MarginLess<QHBoxLayout>(this);
 
     // Button
-    QToolButton* addButton = new QToolButton;
+    auto addButton = new QToolButton;
     addButton->setText("+");
     addButton->setObjectName("addAutom");
-    QIcon addIcon;
-    makeIcons(&addIcon, QString(":/icons/condition_add_on.png"), QString(":/icons/condition_add_off.png"));
+    auto addIcon = makeIcons(":/icons/condition_add_on.png", ":/icons/condition_add_off.png");
     addButton->setIcon(addIcon);
 
     // Text

@@ -1,22 +1,26 @@
 #pragma once
 #include <iscore/application/ApplicationComponents.hpp>
-#include <iscore/application/ApplicationContext.hpp>
+#include <iscore/application/GUIApplicationContext.hpp>
+#include <iscore/actions/Action.hpp>
+
 #include <core/presenter/DocumentManager.hpp>
-#include <core/presenter/MenubarManager.hpp>
+
 #include <iscore/tools/NamedObject.hpp>
 #include <iscore/widgets/OrderedToolbar.hpp>
 #include <vector>
-
+#include <QMenuBar>
 #include <iscore_lib_base_export.h>
 class QObject;
 
 
 namespace iscore
 {
-    class View;
-    class Settings;
 
-    /**
+class CoreApplicationPlugin;
+class View;
+class Settings;
+
+/**
      * @brief The Presenter class
      *
      * Certainly needs refactoring.
@@ -25,51 +29,55 @@ namespace iscore
      * It is also able to instantiate a Command from serialized Undo/Redo data.
      * (this should go in the DocumentPresenter maybe ?)
      */
-    class ISCORE_LIB_BASE_EXPORT Presenter final : public NamedObject
-    {
-            Q_OBJECT
-        public:
-            Presenter(
-                    const iscore::ApplicationSettings& app,
-                    const iscore::Settings& set,
-                    iscore::View* view,
-                    QObject* parent);
+class ISCORE_LIB_BASE_EXPORT Presenter final : public NamedObject
+{
+        Q_OBJECT
+        friend class iscore::CoreApplicationPlugin;
+    public:
+        Presenter(
+                const iscore::ApplicationSettings& app,
+                const iscore::Settings& set,
+                iscore::View* view,
+                QObject* parent);
 
-            // Exit i-score
-            bool exit();
+        // Exit i-score
+        bool exit();
 
-            // Toolbars
-            std::vector<OrderedToolbar>& toolbars()
-            { return m_toolbars; }
+        View* view() const;
+
+        auto& menuManager() { return m_menus; }
+        auto& toolbarManager() { return m_toolbars; }
+        auto& actionManager() { return m_actions; }
+
+        // Called after all the classes
+        // have been loaded from plug-ins.
+        void setupGUI();
 
 
-            View* view() const;
+        auto& documentManager()
+        { return m_docManager; }
+        const ApplicationComponents& applicationComponents()
+        { return m_components_readonly; }
+        const GUIApplicationContext& applicationContext()
+        { return m_context; }
 
-            auto& menuBar()
-            { return m_menubar; }
+        auto& components()
+        { return m_components; }
+    private:
+        void setupMenus();
+        View* m_view {};
+        const Settings& m_settings;
 
-            auto& documentManager()
-            { return m_docManager; }
-            const ApplicationComponents& applicationComponents()
-            { return m_components_readonly; }
-            const ApplicationContext& applicationContext()
-            { return m_context; }
+        DocumentManager m_docManager;
+        ApplicationComponentsData m_components;
+        ApplicationComponents m_components_readonly;
 
-            auto& components()
-            { return m_components; }
-        private:
-            void setupMenus();
-            View* m_view {};
-            const Settings& m_settings;
+        QMenuBar* m_menubar{};
+        GUIApplicationContext m_context;
 
-            DocumentManager m_docManager;
-            ApplicationComponentsData m_components;
-            ApplicationComponents m_components_readonly;
+        MenuManager m_menus;
+        ToolbarManager m_toolbars;
+        ActionManager m_actions;
 
-            MenubarManager m_menubar;
-            ApplicationContext m_context;
-
-            std::vector<OrderedToolbar> m_toolbars;
-
-    };
+};
 }

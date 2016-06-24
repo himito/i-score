@@ -5,28 +5,34 @@ namespace iscore
 {
 class ApplicationComponents;
 struct ApplicationSettings;
-class SettingsDelegateModelInterface;
+class SettingsDelegateModel;
 class DocumentManager;
-class MenubarManager;
+class MenuManager;
+class ToolbarManager;
+class ActionManager;
 
-struct ApplicationContext
+struct ISCORE_LIB_BASE_EXPORT ApplicationContext
 {
         explicit ApplicationContext(
                 const iscore::ApplicationSettings&,
                 const ApplicationComponents&,
                 DocumentManager&,
-                iscore::MenubarManager&,
-                const std::vector<iscore::SettingsDelegateModelInterface*>&);
+                iscore::MenuManager&,
+                iscore::ToolbarManager&,
+                iscore::ActionManager&,
+                const std::vector<std::unique_ptr<iscore::SettingsDelegateModel>>&);
         ApplicationContext(const ApplicationContext&) = delete;
         ApplicationContext(ApplicationContext&&) = delete;
         ApplicationContext& operator=(const ApplicationContext&) = delete;
+
+        virtual ~ApplicationContext();
 
         template<typename T>
         T& settings() const
         {
             for(auto& elt : this->m_settings)
             {
-                if(auto c = dynamic_cast<T*>(elt))
+                if(auto c = dynamic_cast<T*>(elt.get()))
                 {
                     return *c;
                 }
@@ -39,10 +45,13 @@ struct ApplicationContext
         const iscore::ApplicationSettings& applicationSettings;
         const iscore::ApplicationComponents& components;
         DocumentManager& documents;
-        iscore::MenubarManager& menuBar;
+
+        MenuManager& menus;
+        ToolbarManager& toolbars;
+        ActionManager& actions;
 
     private:
-        const std::vector<iscore::SettingsDelegateModelInterface*>& m_settings;
+        const std::vector<std::unique_ptr<iscore::SettingsDelegateModel>>& m_settings;
 };
 
 // By default this is defined in iscore::Application

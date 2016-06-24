@@ -2,7 +2,7 @@
 #include <Scenario/Process/Temporal/TemporalScenarioPresenter.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioView.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QApplication>
 #include <QRect>
 #include <algorithm>
@@ -39,7 +39,7 @@ ToolPalette::ToolPalette(
 {
 }
 
-const Scenario::EditionSettings&ToolPalette::editionSettings() const
+Scenario::EditionSettings& ToolPalette::editionSettings() const
 {
     return m_presenter.editionSettings();
 }
@@ -93,18 +93,24 @@ void ToolPalette::on_moved(QPointF point)
 void ToolPalette::on_released(QPointF point)
 {
     scenePoint = point;
+    auto& es = m_presenter.editionSettings();
     auto scenarioPoint = ScenePointToScenarioPoint(m_presenter.m_view->mapFromScene(point));
-    switch(editionSettings().tool())
+    switch(es.tool())
     {
         case Scenario::Tool::Create:
             m_createTool.on_released(point, scenarioPoint);
+            es.setTool(Scenario::Tool::Select);
             break;
         case Scenario::Tool::Playing:
+            m_selectTool.on_released(point, scenarioPoint);
+            es.setTool(Scenario::Tool::Select);
+            break;
         case Scenario::Tool::Select:
             m_selectTool.on_released(point, scenarioPoint);
             break;
         case Scenario::Tool::MoveSlot:
             m_moveSlotTool.on_released();
+            es.setTool(Scenario::Tool::Select);
             break;
         default:
             break;
@@ -117,6 +123,7 @@ void ToolPalette::on_cancel()
     m_createTool.on_cancel();
     m_selectTool.on_cancel();
     m_moveSlotTool.on_cancel();
+    m_presenter.editionSettings().setTool(Scenario::Tool::Select);
 }
 
 void ToolPalette::activate(Tool t)

@@ -1,5 +1,5 @@
 #include <Inspector/InspectorWidgetList.hpp>
-#include <Inspector/Separator.hpp>
+#include <iscore/widgets/Separator.hpp>
 #include <Process/Process.hpp>
 #include <Scenario/Application/ScenarioApplicationPlugin.hpp>
 #include <Scenario/Commands/Constraint/SetLooping.hpp>
@@ -10,7 +10,7 @@
 #include <Scenario/Inspector/MetadataWidget.hpp>
 #include <Scenario/Inspector/SelectionButton.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/document/DocumentInterface.hpp>
 #include <QBoxLayout>
 #include <QCheckBox>
@@ -84,32 +84,70 @@ ConstraintInspectorWidget::ConstraintInspectorWidget(
 
     addHeader(m_metadata);
 
-    auto speedWidg = new QWidget{this};
-    auto speedLay = new iscore::MarginLess<QVBoxLayout>{speedWidg};
+    {
+        auto speedWidg = new QWidget{this};
+        auto lay = new iscore::MarginLess<QVBoxLayout>{speedWidg};
 
-    QSlider* speedSlider = new QSlider{Qt::Horizontal};
-    speedSlider->setTickInterval(100);
-    speedSlider->setMinimum(-100);
-    speedSlider->setMaximum(500);
-    speedSlider->setValue(m_model.duration.executionSpeed() * 100);
-    auto speedLab = new QLabel{"Speed x" + QString::number(double(speedSlider->value())/100.0)};
+        // Label
+        auto speedLab = new QLabel{"Speed x" + QString::number(m_model.duration.executionSpeed())};
+        lay->addWidget(speedLab);
 
-    speedLay->addWidget(speedLab);
-    speedLay->addWidget(speedSlider);
+        auto speedLay = new iscore::MarginLess<QGridLayout>;
+        lay->addLayout(speedLay);
+        speedLay->setHorizontalSpacing(0);
+        speedLay->setVerticalSpacing(0);
 
-    connect(speedSlider, &QSlider::valueChanged,
-            this, [=] (int val) {
-        // TODO command
-        ((ConstraintModel&)(m_model)).duration.setExecutionSpeed(double(val) / 100.0);
-        speedLab->setText("Speed x" + QString::number(double(val)/100.0));
-    });
+        auto setSpeedFun = [=] (int val) {
+            auto& dur = ((ConstraintModel&)(m_model)).duration;
+            auto s = double(val) / 100.0;
+            if(dur.executionSpeed() != s)
+            {
+                dur.setExecutionSpeed(s);
+            }
+        };
+        // Buttons
+        int btn_col = 0;
+        for(int factor : { 0, 50, 100, 200, 500})
+        {
+            auto pb = new QPushButton{"x " + QString::number(factor / 100.0), speedWidg};
+            pb->setMinimumWidth(35);
+            pb->setMaximumWidth(35);
+            pb->setContentsMargins(0, 0, 0, 0);
+            pb->setStyleSheet(" QPushButton { margin: 0px; padding: 0px; }");
 
-    m_properties.push_back(speedWidg);
+            connect(pb, &QPushButton::clicked, this, [=] { setSpeedFun(factor); });
+            speedLay->addWidget(pb, 1, btn_col++, 1, 1);
+        }
+
+        // Slider
+        auto speedSlider = new QSlider{Qt::Horizontal};
+        speedSlider->setTickInterval(100);
+        speedSlider->setMinimum(-100);
+        speedSlider->setMaximum(500);
+        speedSlider->setValue(m_model.duration.executionSpeed() * 100.);
+        con(m_model.duration, &ConstraintDurations::executionSpeedChanged,
+            this, [=] (double s) {
+            double r = s * 100;
+            speedLab->setText("Speed x" + QString::number(s));
+            if(r != speedSlider->value())
+                speedSlider->setValue(r);
+        });
+
+        speedLay->addWidget(speedSlider, 1, btn_col, 1, 1);
+
+        for(int i = 0; i < 5; i ++)
+            speedLay->setColumnStretch(i, 0);
+        speedLay->setColumnStretch(5, 10);
+        connect(speedSlider, &QSlider::valueChanged,
+                this, setSpeedFun);
+
+        m_properties.push_back(speedWidg);
+    }
 
     m_delegate->addWidgets_pre(m_properties, this);
 
     ////// BODY
-    QPushButton* setAsDisplayedConstraint = new QPushButton {tr("Full view"), this};
+    auto setAsDisplayedConstraint = new QPushButton {tr("Full view"), this};
     connect(setAsDisplayedConstraint, &QPushButton::clicked,
             this, [this] {
         auto& base = get<ScenarioDocumentModel> (*documentFromObject(m_model));
@@ -117,12 +155,39 @@ ConstraintInspectorWidget::ConstraintInspectorWidget(
         base.setDisplayedConstraint(model());
     });
 
-    m_properties.push_back(setAsDisplayedConstraint);
-
-    // Events
-    if(auto scenario = qobject_cast<Scenario::ScenarioModel*>(m_model.parent()))
+    // Transport
     {
-        m_properties.push_back(makeStatesWidget(scenario));
+        auto transportWid = new QWidget{this};
+        auto transportLay = new iscore::MarginLess<QHBoxLayout>{transportWid};
+
+        auto scenar = dynamic_cast<Scenario::ScenarioInterface*>(m_model.parent());
+        ISCORE_ASSERT(scenar);
+        transportLay->addStretch(1);
+
+        if(auto sst = m_model.startState())
+        {
+            auto btn = SelectionButton::make(
+                        tr("Start State"),
+                        &scenar->state(sst),
+                        selectionDispatcher(),
+                        this);
+            transportLay->addWidget(btn);
+        }
+
+        transportLay->addWidget(setAsDisplayedConstraint);
+
+        if(auto est = m_model.endState())
+        {
+            auto btn = SelectionButton::make(
+                        tr("End State"),
+                        &scenar->state(est),
+                        selectionDispatcher(),
+                        this);
+            transportLay->addWidget(btn);
+        }
+        transportLay->addStretch(1);
+
+        m_properties.push_back(transportWid);
     }
 
     // Separator
@@ -130,8 +195,10 @@ ConstraintInspectorWidget::ConstraintInspectorWidget(
 
     // Durations
     auto& ctrl = ctx.app.components.applicationPlugin<ScenarioApplicationPlugin>();
-    m_durationSection = new DurationSectionWidget {ctrl.editionSettings(), *m_delegate, this};
+    m_durationSection = new DurationWidget {ctrl.editionSettings(), *m_delegate, this};
     m_properties.push_back(m_durationSection);
+
+    /*
     auto loop = new QCheckBox{tr("Loop content"), this};
     loop->setChecked(m_model.looping());
     connect(loop, &QCheckBox::clicked,
@@ -140,7 +207,7 @@ ConstraintInspectorWidget::ConstraintInspectorWidget(
         commandDispatcher()->submitCommand(cmd);
     });
     m_properties.push_back(loop);
-
+    */
     // Separator
     m_properties.push_back(new Inspector::HSeparator {this});
 
@@ -189,14 +256,11 @@ ConstraintInspectorWidget::ConstraintInspectorWidget(
     updateAreaLayout(m_properties);
 }
 
-ConstraintInspectorWidget::~ConstraintInspectorWidget()
-{
+ConstraintInspectorWidget::~ConstraintInspectorWidget() = default;
 
-}
-
-const ConstraintModel& ConstraintInspectorWidget::model() const
+ConstraintModel& ConstraintInspectorWidget::model() const
 {
-    return m_model;
+    return const_cast<ConstraintModel&>(m_model);
 }
 
 QString ConstraintInspectorWidget::tabName()
@@ -211,36 +275,6 @@ void ConstraintInspectorWidget::updateDisplayedValues()
     m_viewTabPage->updateDisplayedValues();
 
     m_delegate->updateElements();
-}
-
-QWidget* ConstraintInspectorWidget::makeStatesWidget(Scenario::ScenarioModel* scenar)
-{
-    QWidget* eventWid = new QWidget{this};
-    auto eventLay = new iscore::MarginLess<QHBoxLayout>{eventWid};
-
-    eventLay->addStretch(1);
-    if(auto sst = m_model.startState())
-    {
-        auto btn = SelectionButton::make(
-                       tr("Start State"),
-                       &scenar->state(sst),
-                       selectionDispatcher(),
-                       this);
-        eventLay->addWidget(btn);
-    }
-
-    if(auto est = m_model.endState())
-    {
-        auto btn = SelectionButton::make(
-                    tr("End State"),
-                       &scenar->state(est),
-                       selectionDispatcher(),
-                       this);
-        eventLay->addWidget(btn);
-    }
-    eventLay->addStretch(1);
-
-    return eventWid;
 }
 
 void ConstraintInspectorWidget::on_processCreated(

@@ -10,7 +10,6 @@
 class QObject;
 namespace iscore {
 class Document;
-class MenubarManager;
 struct OrderedToolbar;
 }  // namespace iscore
 
@@ -22,21 +21,20 @@ namespace iscore
  * Base class for the "fake" undo plugin,
  * which provides a undo panel.
  */
-class ISCORE_LIB_BASE_EXPORT UndoApplicationPlugin final : public iscore::GUIApplicationContextPlugin
+class ISCORE_LIB_BASE_EXPORT UndoApplicationPlugin final :
+        public iscore::GUIApplicationContextPlugin
 {
     public:
-        UndoApplicationPlugin(const iscore::ApplicationContext& app, QObject* parent);
+        UndoApplicationPlugin(const iscore::GUIApplicationContext& app);
         ~UndoApplicationPlugin();
 
-        void populateMenus(MenubarManager*) override;
-        std::vector<OrderedToolbar> makeToolbars() override;
-
-    private slots:
+    private:
         void on_documentChanged(
                 iscore::Document* olddoc,
                 iscore::Document* newdoc) override;
 
-    private:
+        GUIElements makeGUIElements() override;
+
         // Connections to keep for the running document.
         QList<QMetaObject::Connection> m_connections;
 

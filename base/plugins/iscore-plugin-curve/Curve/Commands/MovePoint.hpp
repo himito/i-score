@@ -1,14 +1,14 @@
 #pragma once
 #include <Curve/Commands/CurveCommandFactory.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 #include <iscore/tools/ModelPath.hpp>
 
 #include <Curve/Palette/CurvePoint.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
 #include <iscore_plugin_curve_export.h>
-class DataStreamInput;
-class DataStreamOutput;
+struct DataStreamInput;
+struct DataStreamOutput;
 
 namespace Curve
 {

@@ -6,34 +6,31 @@
 #include "Record/RecordManager.hpp"
 #include "Record/RecordMessagesManager.hpp"
 
+class OSSIAApplicationPlugin;
 class QAction;
 namespace Scenario {
 class ScenarioModel;
 struct Point;
 }  // namespace Scenario
-namespace iscore {
-
-class MenubarManager;
-struct OrderedToolbar;
-}  // namespace iscore
-
 class IScoreCohesionApplicationPlugin final :
         public QObject,
         public iscore::GUIApplicationContextPlugin
 {
     public:
-        IScoreCohesionApplicationPlugin(const iscore::ApplicationContext& app);
-        void populateMenus(iscore::MenubarManager*) override;
-        std::vector<iscore::OrderedToolbar> makeToolbars() override;
+        IScoreCohesionApplicationPlugin(
+                const iscore::GUIApplicationContext& app);
 
-        void record(Scenario::ScenarioModel&, Scenario::Point pt);
-        void recordMessages(Scenario::ScenarioModel&, Scenario::Point pt);
+        GUIElements makeGUIElements() override;
+
+        void record(const Scenario::ScenarioModel&, Scenario::Point pt);
+        void recordMessages(const Scenario::ScenarioModel&, Scenario::Point pt);
         void stopRecord();
 
     private:
         QAction* m_snapshot{};
         QAction* m_curves{};
 
+        OSSIAApplicationPlugin* m_ossiaplug{};
         QAction* m_stopAction{};
 
         std::unique_ptr<Recording::RecordManager> m_recManager;

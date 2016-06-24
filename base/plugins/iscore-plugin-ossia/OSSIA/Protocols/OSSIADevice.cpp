@@ -9,7 +9,9 @@
 #include <Device/Protocol/DeviceSettings.hpp>
 #include "Network/Address.h"
 #include "Network/Device.h"
+#include "Network/Protocol.h"
 #include "OSSIADevice.hpp"
+#include "Network/NetworkLogger.h"
 #include <State/Message.hpp>
 #include <State/Value.hpp>
 #include <OSSIA/OSSIA2iscore.hpp>
@@ -87,6 +89,7 @@ void OSSIADevice::disconnect()
 
     m_callbacks.clear();
     m_dev.reset();
+    setLogging_impl(false);
 }
 
 void OSSIADevice::addAddress(const Device::FullAddressSettings &settings)
@@ -154,6 +157,30 @@ void OSSIADevice::removeListening_impl(
     }
 }
 
+void OSSIADevice::setLogging_impl(bool b) const
+{
+    if(!m_dev)
+        return;
+
+    if(b)
+    {
+        auto l = std::make_shared<OSSIA::NetworkLogger>();
+        l->setInboundLogCallback([=] (std::string s) {
+            emit logInbound(QString::fromStdString(s));
+        });
+        l->setOutboundLogCallback([=] (std::string s) {
+            emit logOutbound(QString::fromStdString(s));
+        });
+        m_dev->getProtocol()->setLogger(std::move(l));
+        qDebug() << "logging enabled";
+    }
+    else
+    {
+        m_dev->getProtocol()->setLogger({});
+        qDebug() << "logging disnabled";
+    }
+}
+
 void OSSIADevice::removeNode(const State::Address& address)
 {
     using namespace OSSIA;
@@ -213,7 +240,7 @@ Device::Node OSSIADevice::refresh()
     return device_node;
 }
 
-boost::optional<State::Value> OSSIADevice::refresh(const State::Address& address)
+optional<State::Value> OSSIADevice::refresh(const State::Address& address)
 {
     if(!connected())
         return {};
@@ -274,10 +301,17 @@ void OSSIADevice::setListening(
         }
     }
 
+    ISCORE_ASSERT(bool(ossia_addr));
+
     // If we want to enable listening
     // and the address wasn't already listening
     if(b)
     {
+        ossia_addr->pullValue();
+        std::unique_ptr<OSSIA::Value> v;
+        v.reset(ossia_addr->cloneValue());
+        emit valueUpdated(addr, Ossia::convert::ToValue(v.get()));
+
         if(cb_it == m_callbacks.end())
         {
             m_callbacks.insert(
@@ -342,18 +376,29 @@ void OSSIADevice::sendMessage(const State::Message& mess)
 
     auto addr = node->getAddress();
     if(addr)
-        addr->pushValue(iscore::convert::toOSSIAValue(mess.value));
+    {
+        auto val = iscore::convert::toOSSIAValue(mess.value);
+        addr->pushValue(val.get());
+    }
 }
 
+bool OSSIADevice::isLogging() const
+{
+    return m_logging;
+}
 
-bool OSSIADevice::check(const QString &str)
+void OSSIADevice::setLogging(bool b)
 {
     if(!connected())
-        return false;
+        return;
 
-    ISCORE_TODO;
-    return false;
+    if(b == m_logging)
+        return;
+
+    m_logging = b;
+    setLogging_impl(m_logging);
 }
+
 
 OSSIA::Device& OSSIADevice::impl() const
 {

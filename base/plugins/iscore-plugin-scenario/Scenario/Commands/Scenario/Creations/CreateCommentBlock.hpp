@@ -2,7 +2,7 @@
 
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 
 #include <iscore/tools/ModelPath.hpp>
@@ -21,8 +21,8 @@ class CreateCommentBlock final : public iscore::SerializableCommand
         ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), CreateCommentBlock, "Create a comment block")
         public:
             CreateCommentBlock(
-                const Path<ScenarioModel>& scenarioPath,
-                const TimeValue& date,
+                Path<ScenarioModel>&& scenarioPath,
+                TimeValue date,
                 double yPosition);
 
         void undo() const override;

@@ -1,13 +1,13 @@
 #pragma once
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 #include <iscore/tools/ModelPath.hpp>
 
 #include <iscore/tools/SettableIdentifier.hpp>
 
-class DataStreamInput;
-class DataStreamOutput;
+struct DataStreamInput;
+struct DataStreamOutput;
 
 namespace Scenario
 {
@@ -23,12 +23,12 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT CreateState final : public iscore::Serializa
 
         CreateState(
             const Scenario::ScenarioModel& scenario,
-            const Id<EventModel>& event,
+            Id<EventModel> event,
             double stateY);
 
         CreateState(
                 const Path<Scenario::ScenarioModel> &scenarioPath,
-                const Id<EventModel>& event,
+                Id<EventModel> event,
                 double stateY);
 
         const Path<Scenario::ScenarioModel>& scenarioPath() const

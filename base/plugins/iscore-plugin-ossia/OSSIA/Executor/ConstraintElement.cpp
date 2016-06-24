@@ -65,7 +65,6 @@ ConstraintElement::ConstraintElement(
         on_processAdded(process);
     }
 
-    m_state_on_play = OSSIA::State::create();
 }
 
 std::shared_ptr<OSSIA::TimeConstraint> ConstraintElement::OSSIAConstraint() const
@@ -86,9 +85,10 @@ void ConstraintElement::play(TimeValue t)
     auto start_state = m_ossia_constraint->getStartEvent()->getState();
     auto offset_state = m_ossia_constraint->offset(m_offset);
 
-    flattenAndFilter(start_state);
-    flattenAndFilter(offset_state);
-    m_state_on_play->launch();
+    auto accumulator = OSSIA::State::create();
+    flattenAndFilter(start_state, accumulator);
+    flattenAndFilter(offset_state, accumulator);
+    accumulator->launch();
 
     try {
         m_ossia_constraint->start();
@@ -100,7 +100,20 @@ void ConstraintElement::play(TimeValue t)
 
 }
 
-void ConstraintElement::flattenAndFilter(const std::shared_ptr<OSSIA::StateElement>& element)
+void ConstraintElement::pause()
+{
+    m_ossia_constraint->pause();
+}
+
+void ConstraintElement::resume()
+{
+    m_ossia_constraint->resume();
+}
+
+void flattenAndFilter(
+        const std::shared_ptr<OSSIA::StateElement>& element,
+        std::shared_ptr<OSSIA::State> accumulator
+        )
 {
     if (!element)
         return;
@@ -113,8 +126,8 @@ void ConstraintElement::flattenAndFilter(const std::shared_ptr<OSSIA::StateEleme
 
             // find message with the same address to replace it
             bool found = false;
-            for (auto it = m_state_on_play->stateElements().begin();
-                 it != m_state_on_play->stateElements().end();
+            for (auto it = accumulator->stateElements().begin();
+                 it != accumulator->stateElements().end();
                  it++)
             {
                 std::shared_ptr<OSSIA::Message> messageToCheck = std::dynamic_pointer_cast<OSSIA::Message>(*it);
@@ -130,7 +143,7 @@ void ConstraintElement::flattenAndFilter(const std::shared_ptr<OSSIA::StateEleme
 
             // if not found append it
             if (!found)
-                m_state_on_play->stateElements().push_back(element);
+                accumulator->stateElements().push_back(element);
 
             break;
         }
@@ -140,14 +153,14 @@ void ConstraintElement::flattenAndFilter(const std::shared_ptr<OSSIA::StateEleme
 
             for (const auto& e : stateToFlatAndFilter->stateElements())
             {
-                flattenAndFilter(e);
+                flattenAndFilter(e, accumulator);
             }
             break;
         }
 
         default:
         {
-            m_state_on_play->stateElements().push_back(element);
+            accumulator->stateElements().push_back(element);
             break;
         }
     }
@@ -156,7 +169,15 @@ void ConstraintElement::flattenAndFilter(const std::shared_ptr<OSSIA::StateEleme
 void ConstraintElement::stop()
 {
     m_ossia_constraint->stop();
-    m_ossia_constraint->getEndEvent()->getState()->launch();
+    auto st = m_ossia_constraint->getEndEvent()->getState();
+    if(st)
+    {
+        st->launch();
+    }
+    else
+    {
+        qDebug() << "Error : state missing";
+    }
 
     for(auto& process : m_processes)
     {

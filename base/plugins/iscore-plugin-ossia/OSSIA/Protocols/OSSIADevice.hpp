@@ -1,7 +1,7 @@
 #pragma once
 #include <Device/Protocol/DeviceInterface.hpp>
 #include <Network/Address.h>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QString>
 #include <memory>
 #include <unordered_map>
@@ -49,7 +49,7 @@ class ISCORE_PLUGIN_OSSIA_EXPORT OSSIADevice :
         Device::Node refresh() override;
 
         // throws std::runtime_error
-        boost::optional<State::Value> refresh(const State::Address&) final override;
+        optional<State::Value> refresh(const State::Address&) final override;
 
         Device::Node getNode(const State::Address&) final override;
 
@@ -59,7 +59,9 @@ class ISCORE_PLUGIN_OSSIA_EXPORT OSSIADevice :
         void addToListening(const std::vector<State::Address>&) final override;
 
         void sendMessage(const State::Message& mess) final override;
-        bool check(const QString& str) final override;
+
+        bool isLogging() const final override;
+        void setLogging(bool) final override;
 
         OSSIA::Device& impl() const;
         std::shared_ptr<OSSIA::Device> impl_ptr() const
@@ -78,7 +80,9 @@ class ISCORE_PLUGIN_OSSIA_EXPORT OSSIADevice :
             >
         > m_callbacks;
 
-    private:
         void removeListening_impl(OSSIA::Node &node, State::Address addr);
+        void setLogging_impl(bool) const;
+    private:
+        bool m_logging = false;
 };
 }

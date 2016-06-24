@@ -2,7 +2,7 @@
 #include <Device/Node/DeviceNode.hpp>
 #include <Device/Protocol/DeviceSettings.hpp>
 #include <State/Address.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QObject>
 #include <QString>
 #include <vector>
@@ -36,14 +36,14 @@ class ISCORE_LIB_DEVICE_EXPORT DeviceInterface : public QObject
         Q_OBJECT
 
     public:
-        explicit DeviceInterface(const Device::DeviceSettings& s);
+        explicit DeviceInterface(Device::DeviceSettings s);
         virtual ~DeviceInterface();
 
         const Device::DeviceSettings& settings() const;
 
         virtual void addNode(const Device::Node& n);
 
-        auto capabilities() const { return m_capas; }
+        DeviceCapas capabilities() const { return m_capas; }
 
         virtual void disconnect() = 0;
         virtual bool reconnect() = 0;
@@ -54,7 +54,7 @@ class ISCORE_LIB_DEVICE_EXPORT DeviceInterface : public QObject
         // Asks, and returns all the new addresses if the device can refresh itself Minuit-like.
         // The addresses are not applied to the device, they have to be via a command!
         virtual Device::Node refresh() { return {}; }
-        virtual boost::optional<State::Value> refresh(const State::Address&) { return {}; }
+        virtual optional<State::Value> refresh(const State::Address&) { return {}; }
         virtual void setListening(const State::Address&, bool) { }
         virtual void addToListening(const std::vector<State::Address>&) { }
         virtual std::vector<State::Address> listening() const { return {}; }
@@ -67,10 +67,12 @@ class ISCORE_LIB_DEVICE_EXPORT DeviceInterface : public QObject
 
         // Execution API... Maybe we don't need it here.
         virtual void sendMessage(const State::Message& mess) = 0;
-        virtual bool check(const QString& str) = 0;
 
         // Make a node from an inside path, if it has been added for instance.
         virtual Device::Node getNode(const State::Address&) = 0;
+
+        virtual bool isLogging() const = 0;
+        virtual void setLogging(bool) = 0;
 
     signals:
         // These signals are emitted if a device changes from the inside
@@ -84,6 +86,11 @@ class ISCORE_LIB_DEVICE_EXPORT DeviceInterface : public QObject
 
         // In case the whole namespace changed?
         void namespaceUpdated();
+
+        /* If logging is enabled, these two signals may be sent
+         * when something happens */
+        void logInbound(const QString&) const;
+        void logOutbound(const QString&) const;
 
     protected:
         Device::DeviceSettings m_settings;

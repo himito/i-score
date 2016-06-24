@@ -8,7 +8,7 @@
 #include <boost/mpl/at.hpp>
 #include <boost/mpl/map.hpp>
 #include <boost/mpl/pair.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <boost/range/algorithm/find_if.hpp>
 #include <eggs/variant/variant.hpp>
 #include <QByteArray>
@@ -170,8 +170,7 @@ OSSIA::Node* getNodeFromPath(
     {
         const auto& children = node->children();
 
-        auto it = boost::range::find_if(children,
-                                        [&] (const auto& ossia_node)
+        auto it = find_if(children, [&] (const auto& ossia_node)
         {
             return ossia_node->getName() == path[i].toStdString();
         });
@@ -226,7 +225,15 @@ void updateOSSIAAddress(
     addr->setRepetitionFilter(settings.repetitionFilter);
     addr->setBoundingMode(toBoundingMode(settings.clipMode));
 
-    addr->setValue(iscore::convert::toOSSIAValue(settings.value));
+    auto val = iscore::convert::toOSSIAValue(settings.value);
+    addr->setValue(val.get());
+
+    auto min = toOSSIAValue(settings.domain.min).release();
+    auto max = toOSSIAValue(settings.domain.max).release();
+    if(min && max)
+    {
+        addr->setDomain(OSSIA::Domain::create(min, max));
+    }
 }
 
 void createOSSIAAddress(
@@ -297,7 +304,7 @@ void updateOSSIAValue(const State::ValueImpl& data, OSSIA::Value& val)
             delete generic.start;
             generic.start = new char[generic.size];
 
-            boost::range::copy(array, generic.start);
+            copy(array, generic.start);
             break;
             */
         }
@@ -324,12 +331,12 @@ OSSIA::Value* createOSSIAValue(const T& val)
     return new typename boost::mpl::at<OSSIATypeMap, T>::type(val);
 }
 
-static OSSIA::Value* toOSSIAValue(const State::ValueImpl& val)
+static std::unique_ptr<OSSIA::Value> toOSSIAValue(const State::ValueImpl& val)
 {
     struct {
         public:
             using return_type = OSSIA::Value*;
-            return_type operator()(const State::no_value_t&) const { ISCORE_ABORT; return nullptr; }
+            return_type operator()(const State::no_value_t&) const { return nullptr; }
             return_type operator()(const State::impulse_t&) const { return new OSSIA::Impulse; }
             return_type operator()(int v) const { return new OSSIA::Int{v}; }
             return_type operator()(float v) const { return new OSSIA::Float{v}; }
@@ -347,10 +354,10 @@ static OSSIA::Value* toOSSIAValue(const State::ValueImpl& val)
             }
     } visitor{};
 
-    return eggs::variants::apply(visitor, val.impl());
+    return std::unique_ptr<OSSIA::Value>{eggs::variants::apply(visitor, val.impl())};
 }
 
-OSSIA::Value* toOSSIAValue(
+std::unique_ptr<OSSIA::Value> toOSSIAValue(
         const State::Value& value)
 {
     return toOSSIAValue(value.val);
@@ -379,9 +386,10 @@ std::shared_ptr<OSSIA::Message> message(
         if(!ossia_node)
             return {};
 
+        auto val = iscore::convert::toOSSIAValue(mess.value);
         return OSSIA::Message::create(
                     ossia_node->getAddress(),
-                    iscore::convert::toOSSIAValue(mess.value));
+                    val.get());
     }
 
     return {};
@@ -416,17 +424,13 @@ std::shared_ptr<OSSIA::State> state(
             const auto& val = n.value();
             if(val)
             {
-                elts.push_back(
-                            message(
-                                State::Message{
-                                    address(n),
-                                    *val},
-                                    dl
-                                )
-                            );
+                auto mess = message(State::Message{address(n), *val}, dl);
+                if(mess)
+                    elts.push_back(std::move(mess));
+                else
+                    qDebug( ) << State::Message{address(n), *val} << " message creation failed";
             }
     });
-
 
     for(auto& proc : iscore_state.stateProcesses)
     {
@@ -500,7 +504,7 @@ static OSSIA::Value* expressionOperand(
             }
 
             return_type operator()(const State::Value& val) const {
-                return toOSSIAValue(val);
+                return toOSSIAValue(val).release();
             }
 
             return_type operator()(const State::AddressAccessor& acc) const {

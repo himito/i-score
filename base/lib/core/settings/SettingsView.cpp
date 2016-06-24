@@ -1,6 +1,6 @@
 #include <core/settings/SettingsView.hpp>
-#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenterInterface.hpp>
-#include <iscore/plugins/settingsdelegate/SettingsDelegateViewInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenter.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegateView.hpp>
 #include <QSize>
 #include <QWidget>
 
@@ -31,7 +31,7 @@ SettingsView::SettingsView(QWidget* parent) :
     this,	   &SettingsView::reject);
 }
 
-void SettingsView::addSettingsView(SettingsDelegateViewInterface* view)
+void SettingsView::addSettingsView(SettingsDelegateView* view)
 {
     view->setParent(this);
     QListWidgetItem* it = new QListWidgetItem {view->getPresenter()->settingsIcon(),

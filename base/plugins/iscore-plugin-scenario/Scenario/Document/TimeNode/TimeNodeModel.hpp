@@ -3,7 +3,7 @@
 #include <Process/ModelMetadata.hpp>
 #include <Process/TimeValue.hpp>
 #include <Scenario/Document/VerticalExtent.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
 #include <iscore/selection/Selectable.hpp>
 #include <iscore/tools/IdentifiedObject.hpp>
@@ -69,7 +69,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TimeNodeModel final : public IdentifiedObjec
         const QVector<Id<EventModel>>& events() const;
         void setEvents(const QVector<Id<EventModel>>& events);
 
-        TriggerModel* trigger() const;
+        Scenario::TriggerModel* trigger() const;
         QString expression() const;
 
         bool hasTrigger() const;
@@ -79,7 +79,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TimeNodeModel final : public IdentifiedObjec
         void dateChanged(const TimeValue&);
 
         void newEvent(const Id<EventModel>& eventId);
-        // TODO no eventRemoved ? eventsChanged ?
+        void eventRemoved(const Id<EventModel>& eventId);
 
     private:
         VerticalExtent m_extent;

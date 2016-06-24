@@ -27,14 +27,14 @@ const PanelStatus &UndoPanelDelegate::defaultPanelStatus() const
         Qt::LeftDockWidgetArea,
                 1,
                 QObject::tr("History"),
-                QKeySequence::fromString("Ctrl+H")};
+                QKeySequence::fromString("Ctrl+Shift+H")};
 
     return status;
 }
 
 void UndoPanelDelegate::on_modelChanged(
-        PanelDelegate::maybe_document_t oldm,
-        PanelDelegate::maybe_document_t newm)
+        MaybeDocument oldm,
+        MaybeDocument newm)
 {
     delete m_list;
     m_list = nullptr;

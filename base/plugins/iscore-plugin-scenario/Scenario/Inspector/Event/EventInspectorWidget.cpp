@@ -1,4 +1,5 @@
-#include <Inspector/Separator.hpp>
+
+#include <iscore/widgets/Separator.hpp>
 #include <Scenario/Commands/Event/SetCondition.hpp>
 #include <Scenario/Commands/Event/SplitEvent.hpp>
 #include <Scenario/Commands/TimeNode/TriggerCommandFactory/TriggerCommandFactoryList.hpp>
@@ -63,8 +64,9 @@ EventInspectorWidget::EventInspectorWidget(
     auto scenar = dynamic_cast<ScenarioInterface*>(m_model.parent());
     ISCORE_ASSERT(scenar);
 
-    con(m_model,  &EventModel::statesChanged,
-            this, &EventInspectorWidget::updateDisplayedValues);
+    con(m_model, &EventModel::statesChanged,
+        this, &EventInspectorWidget::updateDisplayedValues,
+        Qt::QueuedConnection);
 
     ////// HEADER
     // metadata
@@ -86,12 +88,14 @@ EventInspectorWidget::EventInspectorWidget(
                     tr("Parent TimeNode"),
                     &scenar->timeNode(timeNode),
                     selectionDispatcher(),
-                    this);
+                    infoWidg);
 
         infoLay->addWidget(tnBtn);
     }
+    m_properties.push_back(infoWidg);
 
     // Condition
+
     m_exprEditor = new ExpressionEditorWidget{m_context, this};
     connect(m_exprEditor, &ExpressionEditorWidget::editingFinished,
             this, &EventInspectorWidget::on_conditionChanged);
@@ -136,6 +140,7 @@ EventInspectorWidget::EventInspectorWidget(
     auto lay = new iscore::MarginLess<QVBoxLayout>{this};
     for(auto w : m_properties)
         lay->addWidget(w);
+    this->setLayout(lay);
 }
 
 void EventInspectorWidget::addState(const StateModel& state)
@@ -166,12 +171,13 @@ void EventInspectorWidget::addState(const StateModel& state)
             }
     });
 }
-
-void EventInspectorWidget::removeState(const StateModel& state)
+/*
+void EventInspectorWidget::removeState(const Id<StateModel>& state)
 {
-    // this is not connected
-    ISCORE_TODO;
+    // OPTIMIZEME
+    updateDisplayedValues();
 }
+*/
 
 void EventInspectorWidget::focusState(const StateModel* state)
 {
@@ -189,11 +195,16 @@ void EventInspectorWidget::updateDisplayedValues()
     m_statesSections.clear();
     m_states.clear();
 
+    if(!m_model.parent())
+        return;
+
     auto scenar = dynamic_cast<ScenarioInterface*>(m_model.parent());
     ISCORE_ASSERT(scenar);
     for(const auto& state : m_model.states())
     {
-        addState(scenar->state(state));
+        auto st = scenar->findState(state);
+        if(st)
+            addState(*st);
     }
 
     m_exprEditor->setExpression(m_model.condition());

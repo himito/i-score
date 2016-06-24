@@ -12,23 +12,23 @@
 #include <iscore/tools/std/StdlibWrapper.hpp>
 #include <iscore/tools/std/Algorithms.hpp>
 
+template class IdentifiedObject<Process::ProcessModel>;
+template class iscore::SerializableInterface<Process::ProcessFactory>;
 namespace Process
 {
 ProcessModel::ProcessModel(
-        const TimeValue& duration,
+        TimeValue duration,
         const Id<ProcessModel>& id,
         const QString& name,
         QObject* parent):
     IdentifiedObject<ProcessModel>{id, name, parent},
-    m_duration{duration}
+    m_duration{std::move(duration)}
 {
     metadata.setName(QString("Process.%1").arg(*this->id().val()));
 }
 
-ProcessModel::~ProcessModel()
-{
+ProcessModel::~ProcessModel() = default;
 
-}
 
 ProcessModel::ProcessModel(
         const ProcessModel& source,
@@ -97,9 +97,6 @@ std::vector<LayerModel*> ProcessModel::layers() const
 
 void ProcessModel::setParentDuration(ExpandMode mode, const TimeValue& t)
 {
-    if(m_useParentDuration && mode == ExpandMode::Fixed)
-        mode = ExpandMode::Scale;
-
     switch(mode)
     {
         case ExpandMode::Scale:

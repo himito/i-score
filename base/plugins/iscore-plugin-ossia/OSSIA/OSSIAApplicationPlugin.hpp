@@ -5,21 +5,25 @@
 #include <QString>
 #include <memory>
 
+#include <OSSIA/Executor/ContextMenu/PlayContextMenu.hpp>
 #include <iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.hpp>
 #include <iscore_plugin_ossia_export.h>
 namespace iscore {
 
 class Document;
-class MenubarManager;
 }  // namespace iscore
 struct VisitorVariant;
 
+namespace Scenario
+{ class ConstraintModel; }
 namespace OSSIA
 {
     class Device;
 }
 namespace RecreateOnPlay
 {
+class ClockManager;
+class Context;
 class ConstraintElement;
 }
 // TODO this should have "OSSIA Policies" : one would be the
@@ -31,13 +35,10 @@ class ISCORE_PLUGIN_OSSIA_EXPORT OSSIAApplicationPlugin final :
         public QObject,
         public iscore::GUIApplicationContextPlugin
 {
-        Q_OBJECT
-
     public:
-        OSSIAApplicationPlugin(const iscore::ApplicationContext& app);
+        OSSIAApplicationPlugin(
+                const iscore::GUIApplicationContext& app);
         ~OSSIAApplicationPlugin();
-
-        void populateMenus(iscore::MenubarManager*) override;
 
         bool handleStartup() override;
 
@@ -48,24 +49,26 @@ class ISCORE_PLUGIN_OSSIA_EXPORT OSSIAApplicationPlugin final :
                 iscore::Document* olddoc,
                 iscore::Document* newdoc) override;
 
-        RecreateOnPlay::ConstraintElement& baseConstraint() const;
         const std::shared_ptr<OSSIA::Device>& localDevice() const
         { return m_localDevice; }
 
-    signals:
-        void requestPlay();
-        void requestPause();
-        void requestResume();
-        void requestStop();
+        void on_play(bool, ::TimeValue t = ::TimeValue::zero() );
+        void on_play(Scenario::ConstraintModel&, bool, ::TimeValue t = ::TimeValue::zero() );
+        void on_record(::TimeValue t);
 
     private:
-        void on_play(bool, ::TimeValue t = ::TimeValue::zero() );
         void on_stop();
         void on_init();
 
         void setupOSSIACallbacks();
+
+        std::unique_ptr<RecreateOnPlay::ClockManager> makeClock(const RecreateOnPlay::Context&);
+
         std::shared_ptr<OSSIA::Device> m_localDevice;
         std::shared_ptr<OSSIA::Device> m_remoteDevice;
 
+        RecreateOnPlay::PlayContextMenu m_playActions;
+
+        std::unique_ptr<RecreateOnPlay::ClockManager> m_clock;
         bool m_playing{false};
 };

@@ -20,16 +20,41 @@
 #include <algorithm>
 #include <iterator>
 #include <set>
+#include <iscore/tools/std/Algorithms.hpp>
+#include <iscore/widgets/QmlContainerPanel.hpp>
+#include <iscore_git_info.hpp>
 
 class QObject;
 
+
 namespace iscore
 {
+struct PanelComparator
+{
+        bool operator()(
+                const QPair<iscore::PanelDelegate*, QDockWidget*>& lhs,
+                const QPair<iscore::PanelDelegate*, QDockWidget*>& rhs) const
+        {
+            return lhs.first->defaultPanelStatus().priority < rhs.first->defaultPanelStatus().priority;
+        }
+};
+
 View::View(QObject* parent) :
     QMainWindow {},
     m_tabWidget{new QTabWidget}
 {
     setObjectName("View");
+    this->setWindowIcon(QIcon("://i-score.png"));
+
+    QString version = QString{"%1.%2.%3-%4"}
+            .arg(ISCORE_VERSION_MAJOR)
+            .arg(ISCORE_VERSION_MINOR)
+            .arg(ISCORE_VERSION_PATCH)
+            .arg(ISCORE_VERSION_EXTRA);
+    auto title = tr("i-score - %1").arg(version);
+    this->setWindowIconText(title);
+    this->setWindowTitle(title);
+    m_tabWidget->setObjectName("Documents");
     //setUnifiedTitleAndToolBarOnMac(true);
 
     setDockOptions(QMainWindow::ForceTabbedDocks | QMainWindow::VerticalTabs);
@@ -44,14 +69,15 @@ View::View(QObject* parent) :
     setCentralWidget(m_tabWidget);
     m_tabWidget->tabBar()->setDocumentMode(true);
     connect(m_tabWidget, &QTabWidget::currentChanged,
-            [&] (int index) {
+            this, [&] (int index) {
            auto view = dynamic_cast<DocumentView*>(m_tabWidget->widget(index));
            if(!view)
                return;
            emit activeDocumentChanged(view->document().model().id());
-    });
+    }, Qt::QueuedConnection);
 
-    connect(m_tabWidget, &QTabWidget::tabCloseRequested, [&] (int index)
+    connect(m_tabWidget, &QTabWidget::tabCloseRequested,
+            this, [&] (int index)
     {
         emit closeRequested(safe_cast<DocumentView*>(m_tabWidget->widget(index))->document().model().id());
     });
@@ -74,12 +100,12 @@ void View::addDocumentView(DocumentView* doc)
 void View::setupPanel(PanelDelegate* v)
 {
     using namespace std;
-    QDockWidget* dial = new QDockWidget {v->defaultPanelStatus().prettyName, this};
+    auto dial = new QDockWidget {v->defaultPanelStatus().prettyName, this};
     dial->setWidget(v->widget());
     dial->toggleViewAction()->setShortcut(v->defaultPanelStatus().shortcut);
-    emit insertActionIntoMenubar({MenuInterface::name(ToplevelMenuElement::ViewMenu) + "/" +
-                                  MenuInterface::name(ViewMenuElement::Windows),
-                                  dial->toggleViewAction()});
+
+    auto& mw = v->context().menus.get().at(iscore::Menus::Windows());
+    mw.menu()->addAction(dial->toggleViewAction());
 
     // Note : this only has meaning at initialisation time.
     auto dock = v->defaultPanelStatus().dock;
@@ -91,10 +117,7 @@ void View::setupPanel(PanelDelegate* v)
         if(m_leftPanels.size() > 1)
         {
             // Find the one with the biggest priority
-            auto it = max_element(begin(m_leftPanels),
-                                  end(m_leftPanels),
-                                  [] (const auto& lhs, const auto& rhs)
-            { return lhs.first->defaultPanelStatus().priority < rhs.first->defaultPanelStatus().priority; });
+            auto it = max_element(m_leftPanels, PanelComparator{});
 
             it->second->raise();
             if(dial != it->second)
@@ -120,10 +143,7 @@ void View::setupPanel(PanelDelegate* v)
         if(m_rightPanels.size() > 1)
         {
             // Find the one with the biggest priority
-            auto it = max_element(begin(m_rightPanels),
-                                  end(m_rightPanels),
-                                  [] (const auto& lhs, const auto& rhs)
-            { return lhs.first->defaultPanelStatus().priority < rhs.first->defaultPanelStatus().priority; });
+            auto it = max_element(m_rightPanels, PanelComparator{});
 
             it->second->raise();
             if(dial != it->second)
@@ -157,7 +177,24 @@ void View::closeDocument(DocumentView *doc)
     }
 }
 
-void iscore::View::closeEvent(QCloseEvent* ev)
+void View::restoreLayout()
+{
+    for(auto panels : {m_leftPanels, m_rightPanels})
+    {
+        sort(panels, PanelComparator{});
+
+        for(auto& panel : panels)
+        {
+            auto dock = panel.second;
+            if(dock->isFloating())
+            {
+                dock->setFloating(false);
+            }
+        }
+    }
+}
+
+void View::closeEvent(QCloseEvent* ev)
 {
     if(m_presenter->exit())
     {

@@ -1,22 +1,24 @@
 #include <OSSIA/Protocols/Minuit/MinuitProtocolFactory.hpp>
 #include <OSSIA/Protocols/OSC/OSCProtocolFactory.hpp>
+#include <OSSIA/Protocols/MIDI/MIDIProtocolFactory.hpp>
 #include <OSSIA/Protocols/Local/LocalProtocolFactory.hpp>
+#include <OSSIA/Protocols/Panel/MessagesPanel.hpp>
 #include <QString>
 
 #include <Device/Protocol/ProtocolFactoryInterface.hpp>
-#include <OSSIA/Executor/ContextMenu/PlayContextMenuFactory.hpp>
 #include <OSSIA/OSSIAApplicationPlugin.hpp>
 
 #include <OSSIA/LocalTree/Scenario/ScenarioComponentFactory.hpp>
 #include <OSSIA/Executor/ProcessElement.hpp>
 #include <OSSIA/Executor/ScenarioElement.hpp>
-#include <Scenario/Application/Menus/Plugin/ScenarioActionsFactory.hpp>
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include "iscore_plugin_ossia.hpp"
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
 
 #include <OSSIA/Executor/DocumentPlugin.hpp>
 #include <OSSIA/Executor/Settings/ExecutorFactory.hpp>
+#include <OSSIA/Executor/ClockManager/ClockManagerFactory.hpp>
+#include <OSSIA/Executor/ClockManager/DefaultClockManager.hpp>
 #include <OSSIA/LocalTree/Settings/LocalTreeFactory.hpp>
 #include <OSSIA/Listening/PlayListeningHandlerFactory.hpp>
 #include <iscore/plugins/customfactory/FactorySetup.hpp>
@@ -27,6 +29,8 @@ namespace iscore {
 iscore_plugin_ossia::iscore_plugin_ossia() :
     QObject {}
 {
+    qRegisterMetaType<RecreateOnPlay::ClockManagerFactory::ConcreteFactoryKey>("ClockManagerKey");
+    qRegisterMetaTypeStreamOperators<RecreateOnPlay::ClockManagerFactory::ConcreteFactoryKey>("ClockManagerKey");
 }
 
 iscore_plugin_ossia::~iscore_plugin_ossia()
@@ -35,7 +39,7 @@ iscore_plugin_ossia::~iscore_plugin_ossia()
 }
 
 iscore::GUIApplicationContextPlugin* iscore_plugin_ossia::make_applicationPlugin(
-        const iscore::ApplicationContext& app)
+        const iscore::GUIApplicationContext& app)
 {
     return new OSSIAApplicationPlugin{app};
 }
@@ -45,7 +49,8 @@ std::vector<std::unique_ptr<iscore::FactoryListInterface>> iscore_plugin_ossia::
     return make_ptr_vector<iscore::FactoryListInterface,
             Ossia::LocalTree::ProcessComponentFactoryList,
             RecreateOnPlay::ProcessComponentFactoryList,
-            RecreateOnPlay::StateProcessComponentFactoryList
+            RecreateOnPlay::StateProcessComponentFactoryList,
+            RecreateOnPlay::ClockManagerFactoryList
             >();
 }
 
@@ -65,19 +70,21 @@ std::vector<std::unique_ptr<iscore::FactoryInterfaceBase>> iscore_plugin_ossia::
             FW<Device::ProtocolFactory,
                  LocalProtocolFactory,
                  OSCProtocolFactory,
-                 MinuitProtocolFactory>,
-            FW<ScenarioActionsFactory,
-                 PlayContextMenuFactory>,
+                 MinuitProtocolFactory,
+                 MIDIProtocolFactory>,
             FW<RecreateOnPlay::ProcessComponentFactory,
                  RecreateOnPlay::ScenarioComponentFactory>,
             FW<Explorer::ListeningHandlerFactory,
-                Ossia::PlayListeningHandlerFactory>,
+                 Ossia::PlayListeningHandlerFactory>,
             FW<iscore::SettingsDelegateFactory,
-                RecreateOnPlay::Settings::Factory,
-                LocalTree::Settings::Factory
-            >,
+                 RecreateOnPlay::Settings::Factory,
+                 LocalTree::Settings::Factory>,
             FW<Ossia::LocalTree::ProcessComponentFactory,
-                 Ossia::LocalTree::ScenarioComponentFactory>
+                 Ossia::LocalTree::ScenarioComponentFactory>,
+            FW<iscore::PanelDelegateFactory,
+                 Ossia::PanelDelegateFactory>,
+            FW<RecreateOnPlay::ClockManagerFactory,
+                 RecreateOnPlay::DefaultClockManagerFactory>
             >
             >(ctx, key);
 }
@@ -85,7 +92,12 @@ std::vector<std::unique_ptr<iscore::FactoryInterfaceBase>> iscore_plugin_ossia::
 
 QStringList iscore_plugin_ossia::required() const
 {
-    return {"Scenario"};
+    return {"Scenario", "DeviceExplorer"};
+}
+
+QStringList iscore_plugin_ossia::offered() const
+{
+    return {"OSSIA"};
 }
 
 iscore::Version iscore_plugin_ossia::version() const

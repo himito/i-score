@@ -20,7 +20,7 @@
 #include <QFile>
 #include <QStyleFactory>
 #include <Process/Style/Skin.hpp>
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 #include <Process/Tools/ProcessGraphicsView.hpp>
 #include "ScenarioDocumentView.hpp"
 #include <Scenario/Document/ScenarioDocument/ScenarioScene.hpp>
@@ -35,6 +35,7 @@
 #include <Scenario/Document/TimeRuler/TimeRulerGraphicsView.hpp>
 #include <Scenario/Settings/Model.hpp>
 class QObject;
+
 #if defined(ISCORE_OPENGL)
 #include <QOpenGLWidget>
 #endif
@@ -70,33 +71,14 @@ ScenarioDocumentView::ScenarioDocumentView(
     m_timeRulersView->setViewport(vp2);
 #endif
 
+    m_view->setAttribute(Qt::WA_PaintOnScreen, true);
+    m_timeRulersView->setAttribute(Qt::WA_PaintOnScreen, true);
     m_widget->addAction(new SnapshotAction{*m_scene, m_widget});
 
     // Transport
     auto transportWidget = new QWidget{m_widget};
     transportWidget->setObjectName("ScenarioTransportWidget");
     auto transportLayout = new iscore::MarginLess<QGridLayout>{transportWidget};
-
-    QToolBar* transportButtons = new QToolBar;
-    // See : http://stackoverflow.com/questions/21363350/remove-gradient-from-qtoolbar-in-os-x
-    transportButtons->setStyle(QStyleFactory::create("windows"));
-    transportButtons->setObjectName("ScenarioTransportToolbar");
-
-    auto& appPlug = ctx.components.applicationPlugin<ScenarioApplicationPlugin>();
-    for(const auto& action : appPlug.pluginActions())
-    {
-        if(auto trsprt = dynamic_cast<TransportActions*>(action))
-        {
-            trsprt->populateToolBar(transportButtons);
-            for(auto act : trsprt->actions())
-            {
-                m_view->addAction(act);
-            }
-            break;
-        }
-    }
-
-    transportLayout->addWidget(transportButtons, 0, 0);
 
     /// Zoom
     m_zoomSlider = new DoubleSlider{transportWidget};
@@ -166,6 +148,29 @@ ScenarioDocumentView::ScenarioDocumentView(
     });
 
     m_widget->setObjectName("ScenarioViewer");
+
+    // Cursors
+    auto& es = ctx.components.applicationPlugin<ScenarioApplicationPlugin>().editionSettings();
+    con(es, &EditionSettings::toolChanged,
+            this, [=] (Scenario::Tool t)
+    {
+       switch(t)
+       {
+           case Scenario::Tool::Select:
+               m_view->setCursor(QCursor(Qt::ArrowCursor));
+               break;
+           case Scenario::Tool::Create:
+               m_view->setCursor(QCursor(Qt::PointingHandCursor));
+               break;
+           case Scenario::Tool::Play:
+               m_view->setCursor(QCursor(Qt::CrossCursor));
+               break;
+           default:
+               m_view->setCursor(QCursor(Qt::ArrowCursor));
+               break;
+       }
+    });
+
 }
 
 QWidget* ScenarioDocumentView::getWidget()

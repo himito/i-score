@@ -6,7 +6,7 @@
 #include <Scenario/Process/Algorithms/VerticalMovePolicy.hpp>
 #include <Scenario/Process/ScenarioInterface.hpp>
 
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include "BaseScenarioContainer.hpp"
 #include <Process/TimeValue.hpp>
@@ -16,10 +16,7 @@ namespace Scenario
 {
 class ConstraintViewModel;
 
-BaseScenarioContainer::~BaseScenarioContainer()
-{
-
-}
+BaseScenarioContainer::~BaseScenarioContainer() = default;
 
 void BaseScenarioContainer::init()
 {

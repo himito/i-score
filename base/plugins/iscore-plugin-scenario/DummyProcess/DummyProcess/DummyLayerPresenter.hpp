@@ -38,11 +38,6 @@ class ISCORE_LIB_DUMMYPROCESS_EXPORT DummyLayerPresenter final :
         const Process::LayerModel& layerModel() const override;
         const Id<Process::ProcessModel>& modelId() const override;
 
-        void fillContextMenu(
-                QMenu*,
-                const QPoint& pos,
-                const QPointF& scenepos) const override;
-
     private:
         const Process::LayerModel& m_layer;
         DummyLayerView* m_view{};

@@ -7,7 +7,7 @@
 #include <Scenario/Document/ScenarioDocument/ScenarioDocumentView.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioPresenter.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
 #include <iscore/plugins/documentdelegate/DocumentDelegateViewInterface.hpp>
 // This part is somewhat similar to what moc does
@@ -32,7 +32,7 @@
 #include <Process/LayerModel.hpp>
 #include <Process/LayerPresenter.hpp>
 #include <Process/Process.hpp>
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 #include <Scenario/Application/Menus/ScenarioContextMenuManager.hpp>
 #include <Scenario/Application/ScenarioEditionSettings.hpp>
 #include <Scenario/Application/Menus/ObjectMenuActions.hpp>
@@ -49,7 +49,7 @@
 #include <Scenario/Palette/Tool.hpp>
 #include "ScenarioApplicationPlugin.hpp"
 #include <core/document/Document.hpp>
-#include <core/presenter/MenubarManager.hpp>
+
 #include <core/document/DocumentModel.hpp>
 #include <core/document/DocumentView.hpp>
 #include <iscore/document/DocumentInterface.hpp>
@@ -58,129 +58,114 @@
 #include <iscore/plugins/documentdelegate/DocumentDelegateModelInterface.hpp>
 #include <iscore/tools/IdentifiedObjectMap.hpp>
 #include <iscore/tools/NotifyingMap.hpp>
+#include <Scenario/Process/Temporal/TemporalScenarioLayerModel.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
 #include <iscore/widgets/OrderedToolbar.hpp>
-#include <Scenario/Application/Menus/ScenarioCommonContextMenuFactory.hpp>
 #include <algorithm>
 #include <core/presenter/Presenter.hpp>
+#include <iscore/document/DocumentInterface.hpp>
 #include <core/view/View.hpp>
+#include <Scenario/Application/ScenarioActions.hpp>
+
 namespace Scenario
 {
 void test_parse_expr_full();
-ScenarioApplicationPlugin::ScenarioApplicationPlugin(const iscore::ApplicationContext& ctx) :
-    GUIApplicationContextPlugin{ctx, "ScenarioApplicationPlugin", nullptr}
+
+ScenarioApplicationPlugin::ScenarioApplicationPlugin(
+        const iscore::GUIApplicationContext& ctx) :
+    GUIApplicationContextPlugin{ctx}
 {
     connect(qApp, &QApplication::applicationStateChanged,
             this, [&] (Qt::ApplicationState st) {
         editionSettings().setDefault();
     });
 
-    // Note : they are constructed here, because
-    // they need to be available quickly for other plug-ins,
-    // not after factory loading.
-    auto fact  = new ScenarioCommonActionsFactory;
-    for(const auto& act : fact->make(this))
-    {
-        m_pluginActions.push_back(act);
-    }
-    delete fact;
+    // Register conditions for the actions enablement
+    using namespace iscore;
+    using namespace Process;
+    ctx.actions.onFocusChange(std::make_shared<EnableWhenFocusedObjectIs<TemporalScenarioLayerModel>>());
+    ctx.actions.onFocusChange(std::make_shared<EnableWhenFocusedProcessIs<ScenarioModel>>());
+    ctx.actions.onFocusChange(std::make_shared<EnableWhenFocusedProcessIs<ScenarioInterface>>());
+    ctx.actions.onDocumentChange(std::make_shared<EnableWhenDocumentIs<ScenarioDocumentModel>>());
+
+    ctx.actions.onSelectionChange(std::make_shared<EnableWhenSelectionContains<ConstraintModel>>());
+    ctx.actions.onSelectionChange(std::make_shared<EnableWhenSelectionContains<EventModel>>());
+    ctx.actions.onSelectionChange(std::make_shared<EnableWhenSelectionContains<StateModel>>());
+
+    auto on_sm = std::make_shared<EnableWhenScenarioModelObject>();
+    ctx.actions.onSelectionChange(on_sm);
+    ctx.actions.onFocusChange(on_sm);
+    auto on_si = std::make_shared<EnableWhenScenarioInterfaceObject>();
+    ctx.actions.onSelectionChange(on_si);
+    ctx.actions.onFocusChange(on_si);
+
+    m_objectActions.setupContextMenu(m_layerCtxMenuManager);
 }
 
-ScenarioApplicationPlugin::~ScenarioApplicationPlugin()
-{
-}
-
-void ScenarioApplicationPlugin::populateMenus(iscore::MenubarManager *menu)
+auto ScenarioApplicationPlugin::makeGUIElements() -> GUIElements
 {
     using namespace iscore;
-    ///// Edit /////
+    GUIElements e;
 
-    ///// View /////
-    // TODO create ViewMenuActions
-    m_selectAll = new QAction{tr("Select all"), this};
-    m_selectAll->setShortcut(QKeySequence::SelectAll);
-    m_selectAll->setToolTip("Ctrl+a");
-    connect(m_selectAll, &QAction::triggered,
-            [this]()
     {
-        auto &pres = IDocument::presenterDelegate<ScenarioDocumentPresenter>(*currentDocument());
-        pres.selectAll();
-    });
-
-    menu->insertActionIntoToplevelMenu(ToplevelMenuElement::ViewMenu,
-                                       ViewMenuElement::Windows,
-                                       m_selectAll);
-
-
-    m_deselectAll = new QAction{tr("Deselect all"), this};
-    m_deselectAll->setShortcut(QKeySequence::Deselect);
-    m_deselectAll->setToolTip("Ctrl+Shift+a");
-    connect(m_deselectAll, &QAction::triggered,
-            [this]()
-    {
-        auto &pres = IDocument::presenterDelegate<ScenarioDocumentPresenter>(*currentDocument());
-        pres.deselectAll();
-    });
-
-    menu->insertActionIntoToplevelMenu(ToplevelMenuElement::ViewMenu,
-                                       ViewMenuElement::Windows,
-                                       m_deselectAll);
-
-
-    for(ScenarioActions*& elt : m_pluginActions)
-    {
-        elt->fillMenuBar(menu);
-    }
-}
-
-std::vector<iscore::OrderedToolbar> ScenarioApplicationPlugin::makeToolbars()
-{
-    QToolBar *bar = new QToolBar;
-
-    int i = 0;
-    for(const auto& act : m_pluginActions)
-    {
-        if(dynamic_cast<TransportActions*>(act))
-            continue;
-
-        if(act->populateToolBar(bar))
+        m_selectAll = new QAction{tr("Select all"), this};
+        m_selectAll->setToolTip("Ctrl+a");
+        connect(m_selectAll, &QAction::triggered,
+                [this]()
         {
-            if(i < m_pluginActions.size() - 1)
-                bar->addSeparator();
-        }
+            auto doc = currentDocument();
+            if(!doc)
+                return;
 
-        i++;
+            auto pres = IDocument::try_get<ScenarioDocumentPresenter>(*doc);
+            if(pres)
+                pres->selectAll();
+        });
+
+        m_deselectAll = new QAction{tr("Deselect all"), this};
+        m_deselectAll->setToolTip("Ctrl+Shift+a");
+        connect(m_deselectAll, &QAction::triggered,
+                [this]()
+        {
+            auto doc = currentDocument();
+            if(!doc)
+                return;
+
+            auto pres = IDocument::try_get<ScenarioDocumentPresenter>(*doc);
+            if(pres)
+                pres->deselectAll();
+        });
+
+
+        Menu& menu = context.menus.get().at(Menus::View());
+        menu.menu()->addAction(m_selectAll);
+        menu.menu()->addAction(m_deselectAll);
+
+        e.actions.add<Actions::SelectAll>(m_selectAll);
+        e.actions.add<Actions::DeselectAll>(m_deselectAll);
+
+        auto& cond = context.actions.condition<iscore::EnableWhenDocumentIs<Scenario::ScenarioDocumentModel>>();
+        cond.add<Actions::SelectAll>();
+        cond.add<Actions::DeselectAll>();
     }
 
-    return std::vector<iscore::OrderedToolbar>{iscore::OrderedToolbar(1, bar)};
+    m_objectActions.makeGUIElements(e);
+    m_toolActions.makeGUIElements(e);
+    m_transportActions.makeGUIElements(e);
+
+    return e;
 }
 
-std::vector<QAction*> ScenarioApplicationPlugin::actions()
-{
-    // TODO add the others
-    std::vector<QAction*> act;
-    for(const auto& elt : m_pluginActions)
-    {
-        auto actions = elt->actions();
-        act.insert(act.end(), actions.begin(), actions.end());
-    }
-    return act;
-}
+ScenarioApplicationPlugin::~ScenarioApplicationPlugin() = default;
 
 void ScenarioApplicationPlugin::on_presenterDefocused(Process::LayerPresenter* pres)
 {
     // We set the currently focused view model to a "select" state
     // to prevent problems.
-    editionSettings().setDefault(); // NOTE maybe useless now ?
-
-    for(ScenarioActions*& elt : m_pluginActions)
-    {
-        elt->setEnabled(false);
-    }
+    editionSettings().setDefault();
 
     disconnect(m_contextMenuConnection);
 }
-
 
 void ScenarioApplicationPlugin::on_presenterFocused(Process::LayerPresenter* pres)
 {
@@ -191,28 +176,22 @@ void ScenarioApplicationPlugin::on_presenterFocused(Process::LayerPresenter* pre
     }
     if(pres)
     {
-        m_contextMenuConnection = connect(pres, &Process::LayerPresenter::contextMenuRequested,
-                this, [=] (const QPoint& pos, const QPointF& pt2) {
+        // If a layer is right-clicked,
+        // this is called and will create a context menu with slot & process information.
+        m_contextMenuConnection = QObject::connect(pres, &Process::LayerPresenter::contextMenuRequested,
+                                                   this, [=] (const QPoint& pos, const QPointF& pt2) {
             QMenu menu(qApp->activeWindow());
-            ScenarioContextMenuManager::createLayerContextMenu(menu, pos, pt2, *pres);
+            ScenarioContextMenuManager::createLayerContextMenu(menu, pos, pt2, m_layerCtxMenuManager, *pres);
             menu.exec(pos);
             menu.close();
         } );
     }
-
-
-    // Case specific to the scenario process.
-    // First get the scenario presenter
-    auto s_pres = dynamic_cast<TemporalScenarioPresenter*>(pres);
-
-    for(ScenarioActions* elt : m_pluginActions)
+    else
     {
-        if(dynamic_cast<ObjectMenuActions*>(elt))
-            elt->setEnabled(false);
-        else
-            elt->setEnabled(bool(s_pres));
+        return;
     }
 
+    auto s_pres = dynamic_cast<TemporalScenarioPresenter*>(pres);
     if (s_pres)
     {
         connect(s_pres, &TemporalScenarioPresenter::keyPressed,
@@ -221,17 +200,8 @@ void ScenarioApplicationPlugin::on_presenterFocused(Process::LayerPresenter* pre
         connect(s_pres, &TemporalScenarioPresenter::keyReleased,
                 this,  &ScenarioApplicationPlugin::keyReleased);
 
-
-        for(ScenarioActions* elt : m_pluginActions)
-        {
-            const auto& acts = elt->actions();
-            auto it = std::find_if(acts.begin(), acts.end(), [] (const auto& act) { return act->objectName() == "Select"; });
-            if(it != acts.end())
-            {
-                (*it)->trigger();
-                break;
-            }
-        }
+        auto& select_act = context.actions.action<Actions::SelectTool>();
+        select_act.action()->trigger();
     }
 }
 
@@ -318,24 +288,6 @@ void ScenarioApplicationPlugin::on_activeWindowChanged()
     editionSettings().setDefault(); // NOTE maybe useless now ?
 }
 
-const Scenario::ScenarioModel* ScenarioApplicationPlugin::focusedScenarioModel() const
-{
-    if(auto focusManager = processFocusManager())
-    {
-        return dynamic_cast<const Scenario::ScenarioModel*>(focusManager->focusedModel());
-    }
-    return nullptr;
-}
-
-const Scenario::ScenarioInterface* ScenarioApplicationPlugin::focusedScenarioInterface() const
-{
-    if(auto focusManager = processFocusManager())
-    {
-        return dynamic_cast<const Scenario::ScenarioInterface*>(focusManager->focusedModel());
-    }
-    return nullptr;
-}
-
 TemporalScenarioPresenter* ScenarioApplicationPlugin::focusedPresenter() const
 {
     if(auto focusManager = processFocusManager())
@@ -347,14 +299,8 @@ TemporalScenarioPresenter* ScenarioApplicationPlugin::focusedPresenter() const
 
 void ScenarioApplicationPlugin::prepareNewDocument()
 {
-    for(const auto& action : pluginActions())
-    {
-        if(auto trsprt = dynamic_cast<TransportActions*>(action))
-        {
-            trsprt->stop();
-            return;
-        }
-    }
+    auto& stop_action = context.actions.action<Actions::Stop>();
+    stop_action.action()->trigger();
 }
 
 Process::ProcessFocusManager* ScenarioApplicationPlugin::processFocusManager() const

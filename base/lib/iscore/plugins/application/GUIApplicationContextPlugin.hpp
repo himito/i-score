@@ -4,8 +4,8 @@
 #include <QString>
 #include <vector>
 
-#include <iscore/application/ApplicationContext.hpp>
-
+#include <iscore/application/GUIApplicationContext.hpp>
+#include <iscore/actions/Action.hpp>
 class QAction;
 class QObject;
 namespace iscore {
@@ -17,7 +17,6 @@ struct VisitorVariant;
 namespace iscore
 {
     class DocumentPlugin;
-    class MenubarManager;
 
     /**
      * @brief The GUIApplicationContextPlugin class
@@ -37,9 +36,8 @@ namespace iscore
             // Fournir menus de base : Fichier Edition Affichage Objet Arrangement Devices Fenêtre Paramètres Aide
 
         public:
-            GUIApplicationContextPlugin(const iscore::ApplicationContext& presenter,
-                                   const QString& name,
-                                   QObject* parent);
+            using GUIElements = iscore::GUIElements;
+            GUIApplicationContextPlugin(const iscore::GUIApplicationContext& presenter);
 
             /**
              * @brief initialize
@@ -51,11 +49,9 @@ namespace iscore
 
             virtual ~GUIApplicationContextPlugin();
 
-            virtual void populateMenus(iscore::MenubarManager*);
-            virtual std::vector<iscore::OrderedToolbar> makeToolbars();
-            virtual std::vector<QAction*> actions();
+            virtual GUIElements makeGUIElements();
 
-            const ApplicationContext& context;
+            const GUIApplicationContext& context;
             Document* currentDocument() const;
 
             // Returns true if the start-up was handled by this plug-in.

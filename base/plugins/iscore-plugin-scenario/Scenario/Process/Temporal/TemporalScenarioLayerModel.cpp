@@ -1,7 +1,7 @@
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <Scenario/Document/Constraint/ViewModels/Temporal/TemporalConstraintViewModel.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QVector>
 
 #include <Process/LayerModel.hpp>
@@ -52,7 +52,7 @@ TemporalScenarioLayerModel::TemporalScenarioLayerModel(
         addConstraintViewModel(
                     src_constraint->clone(
                         src_constraint->id(),
-                        newScenario.constraints.at(src_constraint->model().id()),
+                        newScenario.constraints.at(Id<ConstraintModel>{src_constraint->model().id()}),
                         this));
     }
 }

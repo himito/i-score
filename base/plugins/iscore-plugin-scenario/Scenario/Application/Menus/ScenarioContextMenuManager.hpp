@@ -1,7 +1,12 @@
 #pragma once
 #include <QObject>
 
-namespace Process { class LayerPresenter; }
+#include <Process/Layer/LayerContextMenu.hpp>
+namespace Process
+{
+class LayerContextMenu;
+class LayerPresenter;
+}
 class QMenu;
 class QPoint;
 class QPointF;
@@ -24,17 +29,11 @@ class ScenarioContextMenuManager final : public QObject
                 QMenu& menu,
                 const SlotPresenter& slotp);
 
-        static void createScenarioContextMenu(
-                const iscore::DocumentContext& ctx,
-                QMenu& menu,
-                const QPoint& pos,
-                const QPointF& scenepos,
-                const TemporalScenarioPresenter& pres);
-
         static void createLayerContextMenu(
                 QMenu& menu,
-                const QPoint& pos,
-                const QPointF& scenepos,
+                QPoint pos,
+                QPointF scenepos,
+                const Process::LayerContextMenuManager&,
                 const Process::LayerPresenter& pres);
 
 };

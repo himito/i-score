@@ -1,5 +1,5 @@
 #pragma once
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/Dispatchers/SingleOngoingCommandDispatcher.hpp>
 #include <iscore/tools/SettableIdentifierGeneration.hpp>
 #include <QByteArray>
@@ -45,7 +45,7 @@ class SegmentModel;
 class CommandObjectBase
 {
     public:
-        CommandObjectBase(Presenter* pres, iscore::CommandStackFacade&);
+        CommandObjectBase(Presenter* pres, const iscore::CommandStackFacade&);
         virtual ~CommandObjectBase();
 
         void setCurveState(Curve::StateBase* stateBase) { m_state = stateBase; }

@@ -1,9 +1,7 @@
-#include "SettingsDelegateViewInterface.hpp"
+#include "SettingsDelegateView.hpp"
 
 namespace iscore
 {
-SettingsDelegateViewInterface::~SettingsDelegateViewInterface()
-{
+SettingsDelegateView::~SettingsDelegateView() = default;
 
-}
 }

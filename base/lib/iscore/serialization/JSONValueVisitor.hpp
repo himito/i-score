@@ -39,7 +39,7 @@ class ISCORE_LIB_BASE_EXPORT Visitor<Reader<JSONValue>> : public AbstractVisitor
 
 
         template<template<class...> class T, typename... Args>
-        void readFrom(const T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = 0)
+        void readFrom(const T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = nullptr)
         {
             TSerializer<JSONValue, T<Args...>>::readFrom(*this, obj);
         }
@@ -78,7 +78,7 @@ class ISCORE_LIB_BASE_EXPORT Visitor<Writer<JSONValue>> : public AbstractVisitor
         template<
                 template<class...> class T,
                 typename... Args>
-        void writeTo(T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = 0)
+        void writeTo(T<Args...>& obj, typename std::enable_if<is_template<T<Args...>>::value, void>::type * = nullptr)
         {
             TSerializer<JSONValue, T<Args...>>::writeTo(*this, obj);
         }
@@ -96,16 +96,17 @@ class ISCORE_LIB_BASE_EXPORT Visitor<Writer<JSONValue>> : public AbstractVisitor
         QJsonValue val;
 };
 
+#include <experimental/optional>
 template<>
-struct TSerializer<JSONValue, boost::optional<int32_t>>
+struct TSerializer<JSONValue, optional<int32_t>>
 {
     static void readFrom(
             JSONValue::Serializer& s,
-            const boost::optional<int32_t>& obj)
+            const optional<int32_t>& obj)
     {
         if(obj)
         {
-            s.val = get(obj);
+            s.val = *obj;
         }
         else
         {
@@ -115,11 +116,11 @@ struct TSerializer<JSONValue, boost::optional<int32_t>>
 
     static void writeTo(
             JSONValue::Deserializer& s,
-            boost::optional<int32_t>& obj)
+            optional<int32_t>& obj)
     {
         if(s.val.toString() == iscore::StringConstant().none)
         {
-            obj.reset();
+            obj = iscore::none;
         }
         else
         {
@@ -129,15 +130,15 @@ struct TSerializer<JSONValue, boost::optional<int32_t>>
 };
 
 template<>
-struct TSerializer<JSONValue, boost::optional<double>>
+struct TSerializer<JSONValue, optional<double>>
 {
     static void readFrom(
             JSONValue::Serializer& s,
-            const boost::optional<double>& obj)
+            const optional<double>& obj)
     {
         if(obj)
         {
-            s.val = get(obj);
+            s.val = *obj;
         }
         else
         {
@@ -147,11 +148,11 @@ struct TSerializer<JSONValue, boost::optional<double>>
 
     static void writeTo(
             JSONValue::Deserializer& s,
-            boost::optional<double>& obj)
+            optional<double>& obj)
     {
         if(s.val.toString() == iscore::StringConstant().none)
         {
-            obj.reset();
+            obj = iscore::none;
         }
         else
         {

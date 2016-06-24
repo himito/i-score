@@ -21,36 +21,20 @@ namespace iscore
 {
 
 GUIApplicationContextPlugin::GUIApplicationContextPlugin(
-        const iscore::ApplicationContext& app,
-        const QString& name,
-        QObject* parent):
+        const iscore::GUIApplicationContext& app):
     context{app}
 {
 
 }
+
+GUIApplicationContextPlugin::~GUIApplicationContextPlugin() = default;
 
 void GUIApplicationContextPlugin::initialize()
 {
 
 }
 
-GUIApplicationContextPlugin::~GUIApplicationContextPlugin()
-{
-
-}
-
-void GUIApplicationContextPlugin::populateMenus(MenubarManager*)
-{
-
-}
-
-
-std::vector<OrderedToolbar> GUIApplicationContextPlugin::makeToolbars()
-{
-    return {};
-}
-
-std::vector<QAction*> GUIApplicationContextPlugin::actions()
+auto GUIApplicationContextPlugin::makeGUIElements() -> GUIElements
 {
     return {};
 }

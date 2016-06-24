@@ -1,5 +1,5 @@
 #pragma once
-#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenterInterface.hpp>
+#include <iscore/plugins/settingsdelegate/SettingsDelegatePresenter.hpp>
 
 namespace Ossia
 {
@@ -10,7 +10,7 @@ namespace Settings
 class Model;
 class View;
 class Presenter :
-        public iscore::SettingsDelegatePresenterInterface
+        public iscore::SettingsDelegatePresenter
 {
     public:
         using model_type = Model;

@@ -9,6 +9,7 @@
 
 #include <QSettings>
 #include <QString>
+#include <iscore/tools/QMapHelper.hpp>
 #include <QVariant>
 
 #include "DocumentBackups.hpp"
@@ -52,12 +53,13 @@ static void loadRestorableDocumentData(
         arr.push_back({data_file.readAll(), command_file.readAll()});
 
         data_file.close();
-        data_file.remove(); // TODO maybe we don't want to remove them that early?
+        data_file.remove(); // Note: maybe we don't want to remove them that early?
 
         command_file.close();
         command_file.remove();
     }
 }
+
 
 std::vector<std::pair<QByteArray, QByteArray> >
 iscore::DocumentBackups::restorableDocuments()
@@ -65,12 +67,14 @@ iscore::DocumentBackups::restorableDocuments()
     std::vector<std::pair<QByteArray, QByteArray>> arr;
     QSettings s{iscore::OpenDocumentsFile::path(), QSettings::IniFormat};
 
-    auto existing_files = s.value("iscore/docs").toMap();
+    auto docs = s.value("iscore/docs");
+    const auto existing_files = docs.toMap();
 
-    for(auto it = existing_files.keyBegin(); it != existing_files.keyEnd(); ++it)
+    for(const auto& file1 : QMap_keys(existing_files))
     {
-        auto& element = *it;
-        loadRestorableDocumentData(element, existing_files[element].toString(), arr);
+        if(file1.isEmpty())
+            continue;
+        loadRestorableDocumentData(file1, existing_files[file1].toString(), arr);
     }
 
     s.setValue("iscore/docs", QMap<QString, QVariant>{});

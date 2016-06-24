@@ -1,6 +1,9 @@
 #pragma once
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/command/CommandStackFacade.hpp>
+#include <iscore/selection/FocusManager.hpp>
+#include <boost/optional.hpp>
+class IdentifiedObjectAbstract;
 namespace iscore
 {
 class Document;
@@ -8,7 +11,6 @@ class CommandStack;
 class SelectionStack;
 class ObjectLocker;
 class DocumentPlugin;
-
 struct ISCORE_LIB_BASE_EXPORT DocumentContext
 {
         friend class iscore::Document;
@@ -16,9 +18,10 @@ struct ISCORE_LIB_BASE_EXPORT DocumentContext
 
         const iscore::ApplicationContext& app;
         iscore::Document& document;
-        iscore::CommandStackFacade& commandStack;
+        const iscore::CommandStackFacade commandStack;
         iscore::SelectionStack& selectionStack;
         iscore::ObjectLocker& objectLocker;
+        const iscore::FocusFacade focus;
 
         const std::vector<DocumentPlugin*>& pluginModels() const;
 
@@ -57,7 +60,7 @@ struct ISCORE_LIB_BASE_EXPORT DocumentContext
         DocumentContext(DocumentContext&&) = default;
         DocumentContext& operator=(const DocumentContext&) = default;
         DocumentContext& operator=(DocumentContext&&) = default;
-
 };
-// TODO DocumentComponents : model, pluginmodels...
+
+using MaybeDocument = boost::optional<const iscore::DocumentContext&>;
 }

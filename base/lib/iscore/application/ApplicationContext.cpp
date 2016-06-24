@@ -5,13 +5,19 @@ iscore::ApplicationContext::ApplicationContext(
         const iscore::ApplicationSettings& app,
         const iscore::ApplicationComponents& c,
         iscore::DocumentManager& d,
-        iscore::MenubarManager& m,
-        const std::vector<iscore::SettingsDelegateModelInterface*>& set):
+        iscore::MenuManager& m,
+        iscore::ToolbarManager& t,
+        iscore::ActionManager& a,
+        const std::vector<std::unique_ptr<iscore::SettingsDelegateModel>>& set):
     applicationSettings{app},
     components{c},
     documents{d},
-    menuBar{m},
+    menus{m},
+    toolbars{t},
+    actions{a},
     m_settings{set}
 {
 
 }
+
+iscore::ApplicationContext::~ApplicationContext() = default;

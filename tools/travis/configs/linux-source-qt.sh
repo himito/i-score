@@ -2,5 +2,8 @@
 set +eux
 export CC=gcc-5
 export CXX=g++-5
-source /opt/qt56/bin/qt56-env.sh
+export BOOST_ROOT=/opt/boost
+QT_ENV_SCRIPT=$(find /opt -name 'qt*-env.sh')
+source $QT_ENV_SCRIPT
+
 set -eux

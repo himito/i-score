@@ -1,4 +1,4 @@
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <core/document/DocumentBackups.hpp>
 #include <core/document/DocumentModel.hpp>
 #include <core/presenter/Presenter.hpp>
@@ -102,7 +102,7 @@ void DocumentManager::init(const ApplicationContext& ctx)
         prepareNewDocument(ctx);
         auto it = find_if(m_documents, [&] (auto other) { return other->model().id() == doc; });
         setCurrentDocument(ctx, it != m_documents.end() ? *it : nullptr);
-    });
+    }, Qt::QueuedConnection);
 
 
     con(m_view, &View::closeRequested,
@@ -124,8 +124,7 @@ void DocumentManager::init(const ApplicationContext& ctx)
 
 DocumentManager::~DocumentManager()
 {
-    QSettings settings("OSSIA", "i-score");
-    settings.setValue("RecentFiles", m_recentFiles->saveState());
+    saveRecentFilesState();
 
     // The documents have to be deleted before the application context plug-ins.
     // This is because the Local device has to be deleted last in OSSIAApplicationPlugin.
@@ -192,7 +191,7 @@ void DocumentManager::setCurrentDocument(
     {
         for(auto& panel : ctx.components.panels())
         {
-            panel.setModel(boost::none);
+            panel.setModel(iscore::none);
         }
     }
 
@@ -200,6 +199,7 @@ void DocumentManager::setCurrentDocument(
     {
         ctrl->on_documentChanged(old, m_currentDocument);
     }
+    emit documentChanged(m_currentDocument);
 }
 
 bool DocumentManager::closeDocument(
@@ -249,7 +249,7 @@ void DocumentManager::forceCloseDocument(
     remove_one(m_documents, &doc);
     setCurrentDocument(
                 ctx,
-                m_documents.size() > 0 ? m_documents.back() : nullptr);
+                !m_documents.empty() ? m_documents.back() : nullptr);
 
     delete &doc;
 }
@@ -443,6 +443,7 @@ Document* DocumentManager::loadFile(
 
             m_currentDocument->metadata.setFileName(fileName);
             m_recentFiles->addRecentFile(fileName);
+            saveRecentFilesState();
         }
     }
 
@@ -494,9 +495,9 @@ bool DocumentManager::checkAndUpdateJson(
         loaded_version = Version{(*it).toInt()};
 
     LocalPluginVersionsMap local_plugins;
-    for(auto plug : ctx.components.plugins())
+    for(const auto& plug : ctx.components.addons())
     {
-        local_plugins.insert(plug);
+        local_plugins.insert(plug.plugin);
     }
 
     std::vector<LoadedPluginVersions> loading_plugins;
@@ -566,6 +567,13 @@ bool DocumentManager::checkAndUpdateJson(
     return mainLoadable && pluginsAvailable && pluginsLoadable;
 }
 
+void DocumentManager::saveRecentFilesState()
+{
+    QSettings settings("OSSIA", "i-score");
+    settings.setValue("RecentFiles", m_recentFiles->saveState());
+    m_recentFiles->saveState();
+}
+
 
 ISCORE_LIB_BASE_EXPORT
 void DocumentManager::restoreDocuments(
@@ -579,6 +587,7 @@ void DocumentManager::restoreDocuments(
 
 }
 
+// MOVEME
 Id<iscore::DocumentModel> getStrongId(const std::vector<iscore::Document*>& v)
 {
     using namespace std;

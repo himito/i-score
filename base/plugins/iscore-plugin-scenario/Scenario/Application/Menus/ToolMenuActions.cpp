@@ -9,12 +9,14 @@
 #include <QToolBar>
 #include <QVariant>
 
+#include <iscore/menu/MenuInterface.hpp>
 #include <Process/ExpandMode.hpp>
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 #include <Scenario/Application/ScenarioEditionSettings.hpp>
 #include <Scenario/Palette/Tool.hpp>
 #include "ToolMenuActions.hpp"
-#include <core/presenter/MenubarManager.hpp>
+#include <Scenario/Application/ScenarioActions.hpp>
+
 
 #include <iscore/widgets/SetIcons.hpp>
 
@@ -41,12 +43,10 @@ QAction* makeToolbarAction(const QString& name,
 }
 
 ToolMenuActions::ToolMenuActions(
-        iscore::ToplevelMenuElement menuElt,
         ScenarioApplicationPlugin* parent) :
-    ScenarioActions{menuElt, parent}
+    m_parent{parent}
 {
     m_scenarioToolActionGroup = new QActionGroup{this};
-    m_scenarioToolActionGroup->setDisabled(true);
 
     // NOTE : if a scenario isn't focused, they shouldn't event be clickable.
 
@@ -64,7 +64,7 @@ ToolMenuActions::ToolMenuActions(
     setIcons(m_selecttool, QString(":/icons/select_and_move_on.png"), QString(":/icons/select_and_move_off.png"));
 
     connect(m_selecttool, &QAction::toggled, this, [=](bool b) {
-        if (b)
+        if (b && m_parent->editionSettings().tool() != Scenario::Tool::Select)
             m_parent->editionSettings().setTool(Scenario::Tool::Select);
     });
 
@@ -73,12 +73,12 @@ ToolMenuActions::ToolMenuActions(
                           tr("Create"),
                           m_scenarioToolActionGroup,
                           Scenario::Tool::Create,
-                          tr("C"));
+                          tr(""));
 
     setIcons(m_createtool, QString(":/icons/create_on.png"), QString(":/icons/create_off.png"));
 
     connect(m_createtool, &QAction::triggered, this, [=](bool b) {
-        if(b)
+        if(b && m_parent->editionSettings().tool() != Scenario::Tool::Create)
             m_parent->editionSettings().setTool(Scenario::Tool::Create);
     });
 
@@ -91,7 +91,7 @@ ToolMenuActions::ToolMenuActions(
     setIcons(m_playtool, QString(":/icons/play_on.png"), QString(":/icons/play_off.png"));
 
     connect(m_playtool, &QAction::triggered, this, [=] (bool b) {
-        if(b)
+        if(b && m_parent->editionSettings().tool() != Scenario::Tool::Play)
             m_parent->editionSettings().setTool(Scenario::Tool::Play);
     });
 
@@ -111,8 +111,8 @@ ToolMenuActions::ToolMenuActions(
                             tr("Sequence"),
                             this,
                             ExpandMode::Fixed,
-                            tr("Shift"));
-    setIcons(m_shiftAction, QString(":/icones/sequence_on.png"), QString(":/icones/sequence_off.png"));
+                            tr(""));
+    setIcons(m_shiftAction, QString(":/icons/sequence_on.png"), QString(":/icons/sequence_off.png"));
 
     connect(m_shiftAction, &QAction::toggled, this, [=] (bool val)
     {
@@ -122,28 +122,28 @@ ToolMenuActions::ToolMenuActions(
     // SCALEMODE
     m_scenarioScaleModeActionGroup = new QActionGroup{this};
 
-    auto scale = makeToolbarAction(
+    m_scale = makeToolbarAction(
                      tr("Scale"),
                      m_scenarioScaleModeActionGroup,
                      ExpandMode::Scale,
                      tr("Alt+S"));
-    scale->setChecked(true);
+    m_scale->setChecked(true);
 
-    setIcons(scale, QString(":/icons/scale_on.png"), QString(":/icons/scale_off.png"));
+    setIcons(m_scale, QString(":/icons/scale_on.png"), QString(":/icons/scale_off.png"));
 
-    connect(scale, &QAction::triggered, this, [=]()
+    connect(m_scale, &QAction::triggered, this, [=]()
     {
         m_parent->editionSettings().setExpandMode(ExpandMode::Scale);
     });
 
-    auto grow = makeToolbarAction(
+    m_grow = makeToolbarAction(
                     tr("Grow/Shrink"),
                     m_scenarioScaleModeActionGroup,
                     ExpandMode::GrowShrink,
                     tr("Alt+D"));
-    setIcons(grow, QString(":/icons/grow_shrink_on.png"), QString(":/icons/grow_shrink_off.png"));
+    setIcons(m_grow, QString(":/icons/grow_shrink_on.png"), QString(":/icons/grow_shrink_off.png"));
 
-    connect(grow, &QAction::triggered, this, [=]()
+    connect(m_grow, &QAction::triggered, this, [=]()
     {
         m_parent->editionSettings().setExpandMode(ExpandMode::GrowShrink);
     });
@@ -219,13 +219,13 @@ ToolMenuActions::ToolMenuActions(
         switch(mode)
         {
             case ExpandMode::Scale:
-                if(!scale->isChecked())
-                    scale->setChecked(true);
+                if(!m_scale->isChecked())
+                    m_scale->setChecked(true);
                 break;
             case ExpandMode::GrowShrink:
             case ExpandMode::ForceGrow:
-                if(!grow->isChecked())
-                    grow->setChecked(true);
+                if(!m_grow->isChecked())
+                    m_grow->setChecked(true);
                 break;
             case ExpandMode::Fixed:
                 break;
@@ -240,54 +240,56 @@ ToolMenuActions::ToolMenuActions(
     });
 }
 
-void ToolMenuActions::fillMenuBar(iscore::MenubarManager *menu)
+void ToolMenuActions::makeGUIElements(iscore::GUIElements& ref)
 {
-    for(auto act : toolActions())
+    auto& scenario_proc_cond = m_parent->context.actions.condition<Process::EnableWhenFocusedProcessIs<Scenario::ScenarioModel>>();
+    auto& scenario_iface_cond = m_parent->context.actions.condition<Process::EnableWhenFocusedProcessIs<Scenario::ScenarioInterface>>();
+
+    iscore::Menu& menu = m_parent->context.menus.get().at(iscore::Menus::Edit());
+
+    // Tools
     {
-        menu->insertActionIntoToplevelMenu(m_menuElt, act);
+        auto bar = new QToolBar{tr("Tools")};
+        bar->addAction(m_selecttool);
+        bar->addAction(m_createtool);
+        bar->addAction(m_playtool);
+        bar->addAction(m_shiftAction);
+
+        ref.toolbars.emplace_back(bar, StringKey<iscore::Toolbar>("Tools"), 0, 1);
+
+        menu.menu()->addSeparator();
+        menu.menu()->addAction(m_selecttool);
+        menu.menu()->addAction(m_createtool);
+        menu.menu()->addAction(m_playtool);
+        menu.menu()->addAction(m_shiftAction);
+
+        ref.actions.add<Actions::SelectTool>(m_selecttool);
+        ref.actions.add<Actions::CreateTool>(m_createtool);
+        ref.actions.add<Actions::PlayTool>(m_playtool);
+        ref.actions.add<Actions::SequenceMode>(m_shiftAction);
+
+        scenario_iface_cond.add<Actions::SelectTool>();
+        scenario_iface_cond.add<Actions::PlayTool>();
+        scenario_proc_cond.add<Actions::CreateTool>();
+        scenario_proc_cond.add<Actions::SequenceMode>();
     }
 
-    menu->addSeparatorIntoToplevelMenu(m_menuElt, iscore::ToolMenuElement::Separator_Tool);
-    menu->insertActionIntoToplevelMenu(m_menuElt, m_shiftAction);
-    menu->addSeparatorIntoToplevelMenu(m_menuElt, iscore::ToolMenuElement::Separator_Tool);
-    for(auto act : modeActions())
+    // Scale modes
     {
-        menu->insertActionIntoToplevelMenu(m_menuElt, act);
-    }
-}
+        auto bar = new QToolBar{tr("Modes")};
+        bar->addAction(m_scale);
+        bar->addAction(m_grow);
 
-void ToolMenuActions::fillContextMenu(
-        QMenu *menu,
-        const Selection& sel,
-        const TemporalScenarioPresenter& pres,
-        const QPoint&,
-        const QPointF&)
-{
-    auto tool = menu->addMenu("Tool");
-    tool->addActions(toolActions());
-    tool->addAction(m_shiftAction);
-    auto resize_mode = menu->addMenu("Resize mode");
-    resize_mode->addActions(modeActions());
-    m_scenarioToolActionGroup->setDisabled(false);
-}
+        ref.toolbars.emplace_back(bar, StringKey<iscore::Toolbar>("Modes"), 0, 2);
 
-bool ToolMenuActions::populateToolBar(QToolBar *bar)
-{
-    bar->addActions(toolActions());
-    bar->addAction(m_shiftAction);
-    bar->addSeparator();
-    bar->addActions(modeActions());
+        menu.menu()->addSeparator();
+        menu.menu()->addAction(m_scale);
+        menu.menu()->addAction(m_grow);
 
-    return true;
-}
-
-void ToolMenuActions::setEnabled(bool arg)
-{
-    m_scenarioToolActionGroup->setEnabled(arg);
-    m_shiftAction->setEnabled(arg);
-    if(arg)
-    {
-        m_selecttool->setChecked(true);
+        ref.actions.add<Actions::Scale>(m_scale);
+        ref.actions.add<Actions::Grow>(m_grow);
+        scenario_iface_cond.add<Actions::Scale>();
+        scenario_iface_cond.add<Actions::Grow>();
     }
 }
 
@@ -305,20 +307,7 @@ void ToolMenuActions::keyReleased(int key)
     {
         m_shiftAction->setChecked(false);
     }
+    m_selecttool->trigger();
 }
 
-QList<QAction *> ToolMenuActions::modeActions()
-{
-    return m_scenarioScaleModeActionGroup->actions();
-}
-
-QList<QAction *> ToolMenuActions::toolActions()
-{
-    return m_scenarioToolActionGroup->actions();
-}
-
-QAction *ToolMenuActions::shiftAction()
-{
-    return m_shiftAction;
-}
 }

@@ -38,7 +38,7 @@
 #include <iscore/tools/SettableIdentifier.hpp>
 #include <iscore/tools/TreeNode.hpp>
 #include <Explorer/Explorer/ListeningManager.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <core/document/Document.hpp>
 
 #include <QApplication>
@@ -67,8 +67,21 @@ void RecordMessagesManager::stopRecording()
     {
         QObject::disconnect(con);
     }
+    m_recordCallbackConnections.clear();
 
     qApp->processEvents();
+
+    // Nothing was being recorded
+    if(!m_dispatcher)
+        return;
+
+    // Record and then stop
+    if(!m_firstValueReceived)
+    {
+        m_dispatcher->rollback();
+        return;
+    }
+
 
     for(auto& val : m_records)
     {
@@ -88,7 +101,7 @@ void RecordMessagesManager::stopRecording()
 }
 
 void RecordMessagesManager::recordInNewBox(
-        Scenario::ScenarioModel& scenar,
+        const Scenario::ScenarioModel& scenar,
         Scenario::Point pt)
 {
     using namespace std::chrono;
@@ -99,7 +112,7 @@ void RecordMessagesManager::recordInNewBox(
     m_explorer = &Explorer::deviceExplorerFromContext(doc);
 
     // Get the listening of the selected addresses
-    auto recordListening = GetAddressesToRecord(*m_explorer);
+    auto recordListening = GetAddressesToRecordRecursive(*m_explorer);
     if(recordListening.empty())
         return;
 
@@ -153,6 +166,7 @@ void RecordMessagesManager::recordInNewBox(
                 this, [=] (const State::Address& addr, const State::Value& val) {
             if(!m_firstValueReceived)
             {
+                emit requestPlay();
                 m_firstValueReceived = true;
                 start_time_pt = steady_clock::now();
                 m_recordTimer.start();

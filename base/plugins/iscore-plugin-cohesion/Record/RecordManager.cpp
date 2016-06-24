@@ -10,7 +10,7 @@
 #include <Scenario/Commands/Scenario/Creations/CreateTimeNode_Event_State.hpp>
 #include <Scenario/Commands/Scenario/Displacement/MoveNewEvent.hpp>
 #include <Scenario/Commands/Scenario/ShowRackInViewModel.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <core/document/Document.hpp>
 
 #include <QApplication>
@@ -75,8 +75,20 @@ void RecordManager::stopRecording()
     {
         QObject::disconnect(con);
     }
+    m_recordCallbackConnections.clear();
 
     qApp->processEvents();
+
+    // Nothing was being recorded
+    if(!m_dispatcher)
+        return;
+
+    // Record and then stop
+    if(!m_firstValueReceived)
+    {
+        m_dispatcher->rollback();
+        return;
+    }
 
     auto simplify = m_settings.getSimplify();
     auto simplifyRatio = m_settings.getSimplificationRatio();
@@ -88,31 +100,15 @@ void RecordManager::stopRecording()
     // Potentially simplify curve and transform it in segments
     for(const auto& recorded : records)
     {
-        const auto& addr = recorded.first;
-        auto& segt = recorded.second.segment;
+        Curve::PointArraySegment& segt = recorded.second.segment;
 
         auto& automation = *safe_cast<Automation::ProcessModel*>(
                     recorded.second.curveModel.parent());
 
-        // Here we add a last point with the current state of the things.
+        // Here we add a last point equal to the latest recorded point
         {
-            // Move end event by the current duration.
-            const auto& node = getNodeFromAddress(m_explorer->rootNode(), addr.address);
-            double newval = State::convert::value<double>(node.get<Device::AddressSettings>().value);
-
-            // Maybe add first point
-            if(!segt.points().empty())
-            {
-                auto begin_pt = *segt.points().begin();
-                if(begin_pt.first != 0.)
-                    segt.addPoint(0., begin_pt.second);
-            }
-            else
-            {
-                segt.addPoint(0, newval);
-            }
             // Add last point
-            segt.addPoint(msecs.msec(), newval);
+            segt.addPoint(msecs.msec(), segt.points().rbegin()->second);
 
             automation.setDuration(msecs);
         }
@@ -199,6 +195,7 @@ void RecordManager::parameterCallback(const State::Address &addr, const State::V
     }
     else
     {
+        emit requestPlay();
         m_firstValueReceived = true;
         start_time_pt = steady_clock::now();
         m_recordTimer.start();
@@ -212,9 +209,21 @@ void RecordManager::parameterCallback(const State::Address &addr, const State::V
         proc_data.segment.addPoint(0, newval);
     }
 }
+static int getReasonableUpdateInterval(int numberOfCurves)
+{
+    if(numberOfCurves < 10)
+        return 8;
+    if(numberOfCurves < 50)
+        return 16;
+    if(numberOfCurves < 100)
+        return 100;
+    if(numberOfCurves < 1000)
+        return 1000;
+    return 5000;
+}
 
 void RecordManager::recordInNewBox(
-        Scenario::ScenarioModel& scenar,
+        const Scenario::ScenarioModel& scenar,
         Scenario::Point pt)
 {
     using namespace std::chrono;
@@ -225,7 +234,7 @@ void RecordManager::recordInNewBox(
     m_explorer = &Explorer::deviceExplorerFromContext(doc);
 
     // Get the listening of the selected addresses
-    auto recordListening = GetAddressesToRecord(*m_explorer);
+    auto recordListening = GetAddressesToRecordRecursive(*m_explorer);
     if(recordListening.empty())
         return;
 
@@ -238,10 +247,12 @@ void RecordManager::recordInNewBox(
     Box box = CreateBox(scenar, pt, *m_dispatcher);
 
     //// Creation of the curves ////
+    int curve_count = 0;
     for(const auto& vec : recordListening)
     {
-        for(const auto& addr : vec)
+        for(const Device::FullAddressSettings& addr : vec)
         {
+            curve_count++;
             // Note : since we directly create the IDs here, we don't have to worry
             // about their generation.
             auto cmd_proc = new Scenario::Command::AddOnlyProcessToConstraint{
@@ -256,18 +267,28 @@ void RecordManager::recordInNewBox(
             cmd_layer->redo();
 
             autom.curve().clear();
-            auto segt = new Curve::PointArraySegment{
-                    Id<Curve::SegmentModel>{0},
-                    &autom.curve()};
 
             auto val = State::convert::value<float>(addr.value);
+            auto min = State::convert::value<float>(addr.domain.min);
+            auto max = State::convert::value<float>(addr.domain.max);
+
+            Curve::SegmentData seg;
+            seg.id = Id<Curve::SegmentModel>{0};
+            seg.start = {0, val};
+            seg.end = {1, -1};
+            seg.specificSegmentData =
+                    QVariant::fromValue(
+                        Curve::PointArraySegmentData{ 0, 1, min, max, { {0, val} } });
+            auto segt = new Curve::PointArraySegment{
+                        seg,
+                    &autom.curve()};
+
             segt->setStart({0, val});
             segt->setEnd({1, -1});
             segt->addPoint(0, val);
 
             autom.curve().addSegment(segt);
 
-            // TODO fetch initial min / max from AddressSettings ?
             records.insert(
                         std::make_pair(
                             addr,
@@ -282,7 +303,7 @@ void RecordManager::recordInNewBox(
     const auto& devicelist = m_explorer->deviceModel().list();
     //// Setup listening on the curves ////
     auto callback_to_use =
-            m_settings.getMode() == Curve::Settings::Mode::Parameter
+            m_settings.getCurveMode() == Curve::Settings::Mode::Parameter
             ? &RecordManager::parameterCallback
             : &RecordManager::messageCallback;
 
@@ -305,12 +326,13 @@ void RecordManager::recordInNewBox(
     }
 
     //// Start the record timer ////
+    m_recordTimer.setInterval(getReasonableUpdateInterval(curve_count));
     connect(&m_recordTimer, &QTimer::timeout,
             this, [=] () {
         // Move end event by the current duration.
         box.moveCommand.update(
-                    Path<Scenario::ScenarioModel>{},
-                    Id<Scenario::ConstraintModel>{},
+                    {},
+                    {},
                     box.endEvent,
                     pt.date + GetTimeDifference(start_time_pt),
                     0,

@@ -1,7 +1,7 @@
 #include <Process/LayerModel.hpp>
 #include <Process/LayerPresenter.hpp>
 #include <Process/Process.hpp>
-#include <Scenario/Application/Menus/ScenarioActions.hpp>
+
 #include <Scenario/Application/ScenarioApplicationPlugin.hpp>
 #include <Scenario/Commands/Constraint/AddLayerInNewSlot.hpp>
 #include <Scenario/Commands/Constraint/AddOnlyProcessToConstraint.hpp>
@@ -24,7 +24,7 @@
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 #include <iscore/command/Dispatchers/MacroCommandDispatcher.hpp>
 #include <iscore/selection/SelectionStack.hpp>
@@ -54,6 +54,8 @@ void ScenarioContextMenuManager::createSlotContextMenu(
         QMenu& menu,
         const SlotPresenter& slotp)
 {
+    using namespace Scenario::Command;
+    // TODO see http://stackoverflow.com/questions/21443023/capturing-a-reference-by-reference-in-a-c11-lambda
     auto& slotm = slotp.model();
 
     // First changing the process in the current slot
@@ -186,69 +188,35 @@ void ScenarioContextMenuManager::createSlotContextMenu(
 
 void ScenarioContextMenuManager::createLayerContextMenu(
         QMenu& menu,
-        const QPoint& pos,
-        const QPointF& scenepos,
+        QPoint pos,
+        QPointF scenepos,
+        const Process::LayerContextMenuManager& lcmmgr,
         const Process::LayerPresenter& pres)
 {
     using namespace iscore;
+
+    bool has_slot_menu = false;
     // Fill with slot actions
     if(auto slotp = dynamic_cast<SlotPresenter*>(pres.parent()))
     {
         auto& context = pres.context().context;
         if (context.selectionStack.currentSelection().toList().isEmpty())
         {
-            // submenu Slot created if needed
-            auto slotSubmenu = menu.findChild<QMenu*>(MenuInterface::name(iscore::ContextMenu::Slot));
-            if(!slotSubmenu)
-            {
-                slotSubmenu = menu.addMenu(MenuInterface::name(iscore::ContextMenu::Slot));
-                slotSubmenu->setTitle(MenuInterface::name(iscore::ContextMenu::Slot));
-            }
+            auto slotSubmenu = menu.addMenu(tr("Slot"));
             ScenarioContextMenuManager::createSlotContextMenu(context, *slotSubmenu, *slotp);
+            has_slot_menu = true;
         }
     }
 
     // Then the process-specific part
-    auto processMenu = menu.addMenu(iscore::MenuInterface::name(iscore::ContextMenu::Process));
-    pres.fillContextMenu(processMenu, pos, scenepos);
-}
-
-void ScenarioContextMenuManager::createScenarioContextMenu(
-        const iscore::DocumentContext& ctx,
-        QMenu& menu,
-        const QPoint& pos,
-        const QPointF& scenepos,
-        const TemporalScenarioPresenter& pres)
-{
-    auto selected = pres.layerModel().processModel().selectedChildren();
-
-    auto& appPlug = ctx.app.components.applicationPlugin<ScenarioApplicationPlugin>();
-    for(auto elt : appPlug.pluginActions())
+    if(has_slot_menu)
     {
-        // TODO make a class to encapsulate all the data
-        // required to set-up a context menu in a scenario.
-        elt->fillContextMenu(&menu, selected, pres, pos, scenepos);
-        menu.addSeparator();
+        auto processMenu = menu.addMenu(tr("Process"));
+        pres.fillContextMenu(*processMenu, pos, scenepos, lcmmgr);
     }
-
-    menu.addSeparator();
-    menu.addAction(appPlug.m_selectAll);
-    menu.addAction(appPlug.m_deselectAll);
-
-    auto createCommentAct = new QAction{"Add a Comment Block", &menu};
-
-    connect(createCommentAct, &QAction::triggered,
-            [&] ()
+    else
     {
-        auto scenPoint = Scenario::ConvertToScenarioPoint(scenepos, pres.zoomRatio(), pres.view().height());
-
-        auto cmd = new Scenario::Command::CreateCommentBlock{
-                   static_cast<Scenario::ScenarioModel&>(pres.layerModel().processModel()),
-                   scenPoint.date,
-                   scenPoint.y};
-        CommandDispatcher<>{ctx.commandStack}.submitCommand(cmd);
-    });
-
-    menu.addAction(createCommentAct);
+        pres.fillContextMenu(menu, pos, scenepos, lcmmgr);
+    }
 }
 }

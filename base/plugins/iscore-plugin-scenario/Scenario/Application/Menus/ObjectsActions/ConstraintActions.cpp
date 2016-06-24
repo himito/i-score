@@ -9,7 +9,7 @@
 #include <Scenario/Document/Constraint/Rack/RackModel.hpp>
 #include <Scenario/DialogWidget/AddProcessDialog.hpp>
 
-#include <core/presenter/MenubarManager.hpp>
+
 #include <core/document/Document.hpp>
 #include <iscore/document/DocumentInterface.hpp>
 #include <iscore/selection/Selectable.hpp>
@@ -25,7 +25,7 @@
 #include <Scenario/Commands/Constraint/AddProcessToConstraint.hpp>
 #include <Scenario/Commands/Cohesion/InterpolateStates.hpp>
 #include <Scenario/Commands/Cohesion/DoForSelectedConstraints.hpp>
-
+#include <Scenario/Application/ScenarioActions.hpp>
 #include <QAction>
 #include <QMenu>
 #include <QToolBar>
@@ -52,9 +52,8 @@ auto selectedConstraintsInCurrentDocument(const iscore::ApplicationContext& appC
 }
 
 ConstraintActions::ConstraintActions(
-        iscore::ToplevelMenuElement menuElt,
-        ScenarioApplicationPlugin* parent):
-    ScenarioActions(menuElt, parent)
+        ScenarioApplicationPlugin* parent) :
+    m_parent{parent}
 {
     const auto& appContext = parent->context;
     auto& fact = appContext.components.factory<Process::ProcessList>();
@@ -64,7 +63,6 @@ ConstraintActions::ConstraintActions(
         this, &ConstraintActions::addProcessInConstraint);
 
     m_addProcess = new QAction{tr("Add Process in constraint"), this};
-    m_addProcess->setWhatsThis(iscore::MenuInterface::name(iscore::ContextMenu::Constraint));
     connect(m_addProcess, &QAction::triggered,
             [&]()
     {
@@ -75,13 +73,11 @@ ConstraintActions::ConstraintActions(
 
     m_interp = new QAction {tr("Interpolate states"), this};
     m_interp->setShortcutContext(Qt::ApplicationShortcut);
-    m_interp->setShortcut(tr("Ctrl+K"));
     m_interp->setToolTip(tr("Interpolate states (Ctrl+K)"));
-    m_interp->setWhatsThis(iscore::MenuInterface::name(iscore::ContextMenu::Constraint));
     setIcons(m_interp, QString(":/icons/interpolate_on.png"), QString(":/icons/interpolate_off.png"));
     connect(m_interp, &QAction::triggered,
         this, [&] () {
-    DoForSelectedConstraints(m_parent->currentDocument()->context(), InterpolateStates);
+    DoForSelectedConstraints(m_parent->currentDocument()->context(), Command::InterpolateStates);
     });
 
 }
@@ -91,32 +87,51 @@ ConstraintActions::~ConstraintActions()
     delete m_addProcessDialog;
 }
 
-void ConstraintActions::fillMenuBar(iscore::MenubarManager* menu)
-{
-    menu->insertActionIntoToplevelMenu(m_menuElt, m_addProcess);
-    menu->insertActionIntoToplevelMenu(m_menuElt, m_interp);
-}
-
-void ConstraintActions::fillContextMenu(
-    QMenu* menu,
-    const Selection& sel,
-    const TemporalScenarioPresenter& pres,
-    const QPoint&,
-    const QPointF&)
+void ConstraintActions::makeGUIElements(iscore::GUIElements& ref)
 {
     using namespace iscore;
-    if(!sel.empty())
+
+
+    Menu& object = m_parent->context.menus.get().at(Menus::Object());
+    object.menu()->addAction(m_addProcess);
+    object.menu()->addAction(m_interp);
     {
+        auto bar = new QToolBar{tr("Constraint")};
+        bar->addAction(m_interp);
+        ref.toolbars.emplace_back(bar, StringKey<iscore::Toolbar>("Constraint"), 0, 0);
+    }
+
+    ref.actions.add<Actions::AddProcess>(m_addProcess);
+    ref.actions.add<Actions::InterpolateStates>(m_interp);
+
+    auto& cond = m_parent->context.actions.condition<iscore::EnableWhenSelectionContains<Scenario::ConstraintModel>>();
+    cond.add<Actions::AddProcess>();
+    cond.add<Actions::InterpolateStates>();
+}
+
+void ConstraintActions::setupContextMenu(Process::LayerContextMenuManager &ctxm)
+{
+    using namespace Process;
+    Process::LayerContextMenu cm = MetaContextMenu<ContextMenus::ConstraintContextMenu>::make();
+
+    cm.functions.push_back(
+    [this] (QMenu& menu, QPoint, QPointF, const Process::LayerContext& ctx)
+    {
+        using namespace iscore;
+        auto sel = ctx.context.selectionStack.currentSelection();
+        if(sel.empty())
+            return;
+
         QList<const ConstraintModel*> selectedConstraints = filterSelectionByType<ConstraintModel>(sel);
         if(selectedConstraints.size() == 1)
         {
             auto& cst = *selectedConstraints.front();
             if(!cst.racks.empty())
             {
-                auto rackMenu = menu->addMenu(iscore::MenuInterface::name(iscore::ContextMenu::Rack));
+                auto rackMenu = menu.addMenu(tr("Racks"));
 
                 // We have to find the constraint view model of this layer.
-                auto& vm = dynamic_cast<const TemporalScenarioLayerModel*>(&pres.layerModel())->constraint(cst.id());
+                auto& vm = dynamic_cast<const TemporalScenarioLayerModel*>(&ctx.layerPresenter.layerModel())->constraint(cst.id());
 
                 for(const RackModel& rack : cst.racks)
                 {
@@ -144,95 +159,17 @@ void ConstraintActions::fillContextMenu(
 
         if(selectedConstraints.size() >= 1)
         {
-            auto cstrSubmenu = menu->findChild<QMenu*>(MenuInterface::name(iscore::ContextMenu::Constraint));
-            if(!cstrSubmenu)
-            {
-                cstrSubmenu = menu->addMenu(MenuInterface::name(iscore::ContextMenu::Constraint));
-                cstrSubmenu->setTitle(MenuInterface::name(iscore::ContextMenu::Constraint));
-            }
-
+            auto cstrSubmenu = menu.addMenu(tr("Constraint"));
+            cstrSubmenu->setObjectName("Constraint");
             if(m_addProcess)
             {
                 cstrSubmenu->addAction(m_addProcess);
             }
             cstrSubmenu->addAction(m_interp);
         }
+    });
 
-    }
-}
-
-void ConstraintActions::fillContextMenu(
-        QMenu* menu,
-        const Selection&,
-        const ConstraintViewModel& vm,
-        const QPoint&,
-        const QPointF&)
-{
-    using namespace iscore;
-    auto& cst = vm.model();
-    if(!cst.racks.empty())
-    {
-        auto rackMenu = menu->addMenu(iscore::MenuInterface::name(iscore::ContextMenu::Rack));
-
-        for(const RackModel& rack : cst.racks)
-        {
-            auto act = new QAction{rack.metadata.name(), rackMenu};
-            connect(act, &QAction::triggered,
-                    this, [&] () {
-                auto cmd = new Scenario::Command::ShowRackInViewModel{vm, rack.id()};
-                CommandDispatcher<> dispatcher{m_parent->currentDocument()->context().commandStack};
-                dispatcher.submitCommand(cmd);
-            });
-
-            rackMenu->addAction(act);
-        }
-
-        auto hideAct = new QAction{tr("Hide"), rackMenu};
-        connect(hideAct, &QAction::triggered,
-                this, [&] () {
-            auto cmd = new Scenario::Command::HideRackInViewModel{vm};
-            CommandDispatcher<> dispatcher{m_parent->currentDocument()->context().commandStack};
-            dispatcher.submitCommand(cmd);
-        });
-        rackMenu->addAction(hideAct);
-    }
-
-    auto cstrSubmenu = menu->findChild<QMenu*>(MenuInterface::name(iscore::ContextMenu::Constraint));
-    if(!cstrSubmenu)
-    {
-        cstrSubmenu = menu->addMenu(MenuInterface::name(iscore::ContextMenu::Constraint));
-        cstrSubmenu->setTitle(MenuInterface::name(iscore::ContextMenu::Constraint));
-    }
-
-    if(m_addProcess)
-    {
-        cstrSubmenu->addAction(m_addProcess);
-    }
-    cstrSubmenu->addAction(m_interp);
-
-}
-
-void ConstraintActions::setEnabled(bool b)
-{
-    for (auto& act : actions())
-    {
-    act->setEnabled(b);
-    }
-}
-
-bool ConstraintActions::populateToolBar(QToolBar* b)
-{
-    b->addAction(m_interp);
-    return true;
-}
-
-QList<QAction*> ConstraintActions::actions() const
-{
-    QList<QAction*> lst{
-    m_interp,
-    m_addProcess
-    };
-    return lst;
+    ctxm.insert(std::move(cm));
 }
 
 void ConstraintActions::addProcessInConstraint(const UuidKey<Process::ProcessFactory>& processName)

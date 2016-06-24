@@ -4,7 +4,7 @@
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
 #include <boost/multi_index/hashed_index.hpp>
 #include <boost/operators.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QPoint>
 #include <algorithm>
 #include <vector>
@@ -29,7 +29,7 @@ namespace Curve
 class SegmentModel;
 MovePointCommandObject::MovePointCommandObject(
         Presenter* presenter,
-        iscore::CommandStackFacade& stack):
+        const iscore::CommandStackFacade& stack):
     CommandObjectBase{presenter, stack}
 {
 

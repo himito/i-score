@@ -19,7 +19,7 @@ struct SegmentData;
 class SegmentId
 {
     public:
-        using value_type = boost::optional<int32_t>;
+        using value_type = optional<int32_t>;
         explicit SegmentId() = default;
         explicit SegmentId(value_type val) : m_id {val} { }
         SegmentId(const SegmentId&) = delete;
@@ -67,17 +67,20 @@ struct SegmentData
         SegmentData& operator=(SegmentData&&) = default;
 
         SegmentData(
-                const Id<SegmentModel>& i,
-                Curve::Point s, Curve::Point e,
-                const Id<SegmentModel>& prev, const Id<SegmentModel>&  foll,
-                const UuidKey<Curve::SegmentFactory>& t, const QVariant& data):
-            id(i),
+                Id<SegmentModel> i,
+                Curve::Point s,
+                Curve::Point e,
+                Id<SegmentModel> prev,
+                Id<SegmentModel>  foll,
+                UuidKey<Curve::SegmentFactory> t,
+                QVariant data):
+            id(std::move(i)),
             start(s),
             end(e),
-            previous(prev),
-            following(foll),
+            previous(std::move(prev)),
+            following(std::move(foll)),
             type(t),
-            specificSegmentData(data)
+            specificSegmentData(std::move(data))
         {
 
         }

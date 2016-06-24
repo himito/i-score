@@ -18,24 +18,19 @@
 #include <OSSIA/Executor/TimeNodeElement.hpp>
 #include <Scenario/Document/Constraint/ConstraintDurations.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
+#include <Scenario/Document/State/StateModel.hpp>
+#include <Scenario/Document/Event/EventModel.hpp>
+#include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
 
 #include <OSSIA/Executor/ExecutorContext.hpp>
-#include <OSSIA/Executor/Settings/ExecutorModel.hpp>
 
 #include <OSSIA/OSSIA2iscore.hpp>
 
 
 namespace RecreateOnPlay
 {
-
-static void statusCallback(
-        OSSIA::TimeEvent::Status newStatus)
-{
-
-}
-
 BaseScenarioElement::BaseScenarioElement(
-        const Scenario::BaseScenario& element,
+        BaseScenarioRefContainer element,
         const Context& ctx,
         QObject *parent):
     QObject{parent},
@@ -43,8 +38,9 @@ BaseScenarioElement::BaseScenarioElement(
 {
     auto main_start_node = OSSIA::TimeNode::create();
     auto main_end_node = OSSIA::TimeNode::create();
-    auto main_start_event_it = main_start_node->emplace(main_start_node->timeEvents().begin(), statusCallback);
-    auto main_end_event_it = main_end_node->emplace(main_end_node->timeEvents().begin(), statusCallback);
+
+    auto main_start_event_it = main_start_node->emplace(main_start_node->timeEvents().begin(), [this] (auto&&...) { });
+    auto main_end_event_it = main_end_node->emplace(main_end_node->timeEvents().begin(), [this] (auto&&...) { });
     auto main_start_state = OSSIA::State::create();
     auto main_end_state = OSSIA::State::create();
 
@@ -54,19 +50,12 @@ BaseScenarioElement::BaseScenarioElement(
     // TODO PlayDuration of base constraint.
     // TODO PlayDuration of FullView
     auto main_constraint = OSSIA::TimeConstraint::create(
-                                [&] (const OSSIA::TimeValue& position,
-                               const OSSIA::TimeValue& date,
-                               std::shared_ptr<OSSIA::StateElement> state)
-    {
-        baseScenarioConstraintCallback(position, date, state);
-    },
+                                [] (auto&&...) {},
                                *main_start_event_it,
                                *main_end_event_it,
                                iscore::convert::time(element.constraint().duration.defaultDuration()),
                                iscore::convert::time(element.constraint().duration.minDuration()),
                                iscore::convert::time(element.constraint().duration.maxDuration()));
-
-    main_constraint->setGranularity(ctx.doc.app.settings<Settings::Model>().getRate());
 
     m_ossia_startTimeNode = new TimeNodeElement{main_start_node, element.startTimeNode(),  m_ctx.devices.list(), this};
     m_ossia_endTimeNode = new TimeNodeElement{main_end_node, element.endTimeNode(), m_ctx.devices.list(), this};
@@ -78,6 +67,19 @@ BaseScenarioElement::BaseScenarioElement(
     m_ossia_endState = new StateElement{element.endState(), main_end_state, m_ctx, this};
 
     m_ossia_constraint = new ConstraintElement{main_constraint, element.constraint(), m_ctx, this};
+
+    main_constraint->setExecutionStatusCallback(
+                [=] (OSSIA::Clock::ClockExecutionStatus c)
+    {
+        if(c == OSSIA::Clock::ClockExecutionStatus::STOPPED)
+        {
+            auto accumulator = OSSIA::State::create();
+            flattenAndFilter(main_end_state, accumulator);
+            accumulator->launch();
+
+            emit finished();
+        }
+    });
 }
 
 ConstraintElement *BaseScenarioElement::baseConstraint() const
@@ -115,22 +117,18 @@ StateElement *BaseScenarioElement::endState() const
     return m_ossia_endState;
 }
 
-void BaseScenarioElement::baseScenarioConstraintCallback(const OSSIA::TimeValue& position,
-                               const OSSIA::TimeValue& date,
-                               std::shared_ptr<OSSIA::StateElement> state)
-{
-    state->launch();
-
-    auto currentTime = Ossia::convert::time(date);
-
-    auto& cstdur = m_ossia_constraint->iscoreConstraint().duration;
-    const auto& maxdur = cstdur.maxDuration();
-
-    if(!maxdur.isInfinite())
-        cstdur.setPlayPercentage(currentTime / cstdur.maxDuration());
-    else
-        cstdur.setPlayPercentage(currentTime / cstdur.defaultDuration());
 }
 
+BaseScenarioRefContainer::BaseScenarioRefContainer(
+        Scenario::ConstraintModel& constraint,
+        Scenario::ScenarioInterface& s):
+    m_constraint{constraint},
+    m_startState{s.state(constraint.startState())},
+    m_endState{s.state(constraint.endState())},
+    m_startEvent{s.event(m_startState.eventId())},
+    m_endEvent{s.event(m_endState.eventId())},
+    m_startNode{s.timeNode(m_startEvent.timeNode())},
+    m_endNode{s.timeNode(m_endEvent.timeNode())}
+{
 
 }

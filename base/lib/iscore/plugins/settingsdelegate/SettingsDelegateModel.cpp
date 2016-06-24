@@ -1,9 +1,6 @@
-#include "SettingsDelegateModelInterface.hpp"
+#include "SettingsDelegateModel.hpp"
 
 namespace iscore
 {
-SettingsDelegateModelInterface::~SettingsDelegateModelInterface()
-{
-
-}
+SettingsDelegateModel::~SettingsDelegateModel() = default;
 }

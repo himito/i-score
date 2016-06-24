@@ -24,6 +24,7 @@ LocalDevice::LocalDevice(
     m_capas.canRemoveNode = false;
     m_capas.canSerialize = false;
 
+    setLogging_impl(isLogging());
     m_addedNodeCb = m_dev->addCallback(
                         [this] (const OSSIA::Node& n, const std::string& name, OSSIA::NodeChange chg)
     {
@@ -68,6 +69,7 @@ LocalDevice::~LocalDevice()
 void LocalDevice::disconnect()
 {
     // TODO handle listening ??
+    setLogging_impl(false);
 }
 
 bool LocalDevice::reconnect()

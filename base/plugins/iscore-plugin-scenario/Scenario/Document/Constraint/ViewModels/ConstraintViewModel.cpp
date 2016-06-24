@@ -29,7 +29,7 @@ void ConstraintViewModel::hideRack()
 
 void ConstraintViewModel::showRack(const Id<RackModel>& rackId)
 {
-    if(rackId.val().is_initialized())
+    if(rackId.val())
     {
         m_shownRack = rackId;
 
@@ -62,7 +62,7 @@ void ConstraintViewModel::on_rackRemoval(const RackModel& rack)
 ConstraintViewModel::ConstraintViewModel(
         const Id<ConstraintViewModel>& id,
         const QString& name,
-        const ConstraintModel& model,
+        ConstraintModel& model,
         QObject* parent) :
     IdentifiedObject<ConstraintViewModel> {id, name, parent},
     m_model {model}
@@ -74,7 +74,7 @@ ConstraintViewModel::~ConstraintViewModel()
     emit aboutToBeDeleted(this);
 }
 
-const ConstraintModel& ConstraintViewModel::model() const
+ConstraintModel& ConstraintViewModel::model() const
 {
     return m_model;
 }

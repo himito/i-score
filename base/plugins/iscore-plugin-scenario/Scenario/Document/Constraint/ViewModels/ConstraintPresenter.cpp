@@ -1,7 +1,7 @@
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <Scenario/Document/Constraint/Rack/RackPresenter.hpp>
 #include <Scenario/Document/Constraint/Rack/RackView.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <qnamespace.h>
 
 #include "ConstraintHeader.hpp"
@@ -43,6 +43,7 @@ ConstraintPresenter::ConstraintPresenter(
 {
     m_header->setParentItem(m_view);
     m_header->setConstraintView(m_view);
+    m_header->hide();
 
     con(m_viewModel.model().selection, &Selectable::changed,
             m_view, &ConstraintView::setSelected);
@@ -86,7 +87,7 @@ ConstraintPresenter::ConstraintPresenter(
     con(m_viewModel.model().consistency,   &ModelConsistency::warningChanged,
             m_view, &ConstraintView::setWarning);
 
-    if(m_viewModel.model().racks.size() > 0)
+    if(!m_viewModel.model().racks.empty())
     {
         if(m_viewModel.isRackShown())
         {
@@ -107,10 +108,7 @@ ConstraintPresenter::ConstraintPresenter(
     }
 }
 
-ConstraintPresenter::~ConstraintPresenter()
-{
-
-}
+ConstraintPresenter::~ConstraintPresenter() = default;
 
 void ConstraintPresenter::updateScaling()
 {
@@ -232,7 +230,7 @@ void ConstraintPresenter::on_rackShown(const Id<RackModel>& rackId)
 
 void ConstraintPresenter::on_rackHidden()
 {
-    if(model().racks.size() > 0)
+    if(!model().racks.empty())
     {
         clearRackPresenter();
 
@@ -247,7 +245,7 @@ void ConstraintPresenter::on_rackHidden()
 
 void ConstraintPresenter::on_noRacks()
 {
-    m_header->hide();
+    //m_header->hide();
     clearRackPresenter();
 
     m_header->setState(ConstraintHeader::State::Hidden);

@@ -27,7 +27,7 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
         Creation_FromEvent(
                 const ToolPalette_T& stateMachine,
                 const Path<Scenario_T>& scenarioPath,
-                iscore::CommandStackFacade& stack,
+                const iscore::CommandStackFacade& stack,
                 QState* parent):
             CreationState<Scenario_T, ToolPalette_T>{stateMachine, stack, std::move(scenarioPath), parent}
         {
@@ -38,7 +38,7 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
                 this->clearCreatedIds();
             });
 
-            QState* mainState = new QState{this};
+            auto mainState = new QState{this};
             mainState->setObjectName("Main state");
             {
                 auto pressed = new QState{mainState};
@@ -151,6 +151,11 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
                         return;
                     }
 
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        this->currentPoint.date = this->m_clickedPoint.date + TimeValue::fromMsecs(10);;
+                    }
+
                     this->m_dispatcher.template submitCommand<MoveNewEvent>(
                                 Path<Scenario_T>{this->m_scenarioPath},
                                 this->createdConstraints.last(),
@@ -168,6 +173,11 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
                         return;
                     }
 
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        return;
+                    }
+
                     this->m_dispatcher.template submitCommand<MoveNewState>(
                                 Path<Scenario_T>{this->m_scenarioPath},
                                 this->createdStates.last(),
@@ -179,6 +189,11 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
                     if(this->createdStates.empty())
                     {
                         this->rollback();
+                        return;
+                    }
+
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
                         return;
                     }
 
@@ -195,7 +210,7 @@ class Creation_FromEvent final : public CreationState<Scenario_T, ToolPalette_T>
                 });
             }
 
-            QState* rollbackState = new QState{this};
+            auto rollbackState = new QState{this};
             rollbackState->setObjectName("Rollback");
             iscore::make_transition<iscore::Cancel_Transition>(mainState, rollbackState);
             rollbackState->addTransition(finalState);

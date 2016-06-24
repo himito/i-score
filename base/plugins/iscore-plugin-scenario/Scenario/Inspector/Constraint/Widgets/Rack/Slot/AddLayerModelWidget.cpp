@@ -5,7 +5,7 @@
 #include <boost/iterator/indirect_iterator.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QBoxLayout>
 #include <QInputDialog>
 #include <QLabel>
@@ -29,13 +29,12 @@ namespace Scenario
 AddLayerModelWidget::AddLayerModelWidget(SlotInspectorSection* parentSlot) :
     QWidget {parentSlot}
 {
-    QHBoxLayout* layout = new iscore::MarginLess<QHBoxLayout>(this);
+    auto layout = new iscore::MarginLess<QHBoxLayout>(this);
 
     // Button
-    QToolButton* addButton = new QToolButton;
+    auto addButton = new QToolButton;
     addButton->setText("+");
-    QIcon addIcon;
-    makeIcons(&addIcon, QString(":/icons/condition_add_on.png"), QString(":/icons/condition_add_off.png"));
+    auto addIcon = makeIcons(":/icons/condition_add_on.png", ":/icons/condition_add_off.png");
     addButton->setIcon(addIcon);
 
     // Text
@@ -76,7 +75,7 @@ AddLayerModelWidget::AddLayerModelWidget(SlotInspectorSection* parentSlot) :
         }
 
         // 4. Present a dialog with the availble id's
-        if(available_models.size() > 0)
+        if(!available_models.empty())
         {
             bool ok = false;
             auto process_name =

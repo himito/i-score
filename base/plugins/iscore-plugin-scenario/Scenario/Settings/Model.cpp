@@ -2,43 +2,38 @@
 #include <QSettings>
 #include <QFile>
 #include <QJsonDocument>
-
+#include <iscore/plugins/customfactory/FactoryFamily.hpp>
 #include <Process/Style/Skin.hpp>
+
 namespace Scenario
 {
 namespace Settings
 {
-
-const QString Keys::skin = QStringLiteral("Skin/Skin");
-const QString Keys::graphicZoom = QStringLiteral("Skin/Zoom");
-const QString Keys::slotHeight = QStringLiteral("Skin/slotHeight");
-
-
-Model::Model()
+namespace Parameters
 {
-    QSettings s;
+        const iscore::sp<ModelSkinParameter> Skin{QStringLiteral("Skin/Skin"), "Default"};
+        const iscore::sp<ModelGraphicZoomParameter> GraphicZoom{QStringLiteral("Skin/Zoom"), 1};
+        const iscore::sp<ModelSlotHeightParameter> SlotHeight{QStringLiteral("Skin/slotHeight"), 400};
+        const iscore::sp<ModelDefaultDurationParameter> DefaultDuration{QStringLiteral("Skin/defaultDuration"), TimeValue::fromMsecs(15000)};
 
-    if(!s.contains(Keys::skin) ||
-       !s.contains(Keys::graphicZoom))
-    {
-        setFirstTimeSettings();
-    }
-    else
-    {
-        setSkin(s.value(Keys::skin).toString());
-        setGraphicZoom(s.value(Keys::graphicZoom).toDouble());
-        setSlotHeight(s.value(Keys::slotHeight).toReal());
-    }
+        auto list() {
+            return std::tie(Skin, GraphicZoom, SlotHeight, DefaultDuration);
+        }
+}
+
+Model::Model(QSettings& set, const iscore::ApplicationContext& ctx)
+{
+    iscore::setupDefaultSettings(set, Parameters::list(), *this);
 }
 
 QString Model::getSkin() const
 {
-    return m_skin;
+    return m_Skin;
 }
 
 void Model::setSkin(const QString& skin)
 {
-    if (m_skin == skin)
+    if (m_Skin == skin)
         return;
 
     QFile f(":/DefaultSkin.json");
@@ -67,57 +62,16 @@ void Model::setSkin(const QString& skin)
         qDebug() << "could not open" << f.fileName();
     }
 
-    m_skin = skin;
+    m_Skin = skin;
 
     QSettings s;
-    s.setValue(Keys::skin, m_skin);
+    s.setValue(Parameters::Skin.key, m_Skin);
     emit SkinChanged(skin);
 }
 
-double Model::getGraphicZoom() const
-{
-    return m_graphicZoom;
-}
-
-void Model::setGraphicZoom(double graphicZoom)
-{
-    if (graphicZoom == m_graphicZoom)
-        return;
-
-    m_graphicZoom = graphicZoom;
-
-    QSettings s;
-    s.setValue(Keys::graphicZoom, m_graphicZoom);
-    emit GraphicZoomChanged(m_graphicZoom);
-}
-
-void Model::setFirstTimeSettings()
-{
-    setSkin("Default");
-    m_graphicZoom = 1.;
-    m_slotHeight = 400;
-    QSettings s;
-    s.setValue(Keys::graphicZoom, m_graphicZoom);
-    s.setValue(Keys::skin, m_skin);
-    s.setValue(Keys::slotHeight, m_slotHeight);
-}
-
-qreal Model::getSlotHeight() const
-{
-    return m_slotHeight;
-}
-
-void Model::setSlotHeight(const qreal& slotHeight)
-{
-    if(slotHeight == m_slotHeight)
-        return;
-
-    m_slotHeight = slotHeight;
-
-    QSettings s;
-    s.setValue(Keys::slotHeight, m_slotHeight);
-    emit SlotHeightChanged(m_slotHeight);
-}
+ISCORE_SETTINGS_PARAMETER_CPP(double, Model, GraphicZoom)
+ISCORE_SETTINGS_PARAMETER_CPP(qreal, Model, SlotHeight)
+ISCORE_SETTINGS_PARAMETER_CPP(TimeValue, Model, DefaultDuration)
 
 }
 }

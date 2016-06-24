@@ -8,124 +8,124 @@
 #include <Scenario/Document/Event/EventModel.hpp>
 #include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
 #include <Scenario/Document/ScenarioDocument/ScenarioDocumentModel.hpp>
+#include <Scenario/Commands/TimeNode/TriggerCommandFactory/TriggerCommandFactoryList.hpp>
 
-#include <core/presenter/MenubarManager.hpp>
+
 #include <core/document/Document.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/tools/ModelPathSerialization.hpp>
 
+#include <Scenario/Application/ScenarioActions.hpp>
 #include <QAction>
 #include <QMenu>
 
 namespace Scenario
 {
-EventActions::EventActions(iscore::ToplevelMenuElement menuElt,
-               ScenarioApplicationPlugin* parent):
-     ScenarioActions(menuElt, parent)
+EventActions::EventActions(
+        ScenarioApplicationPlugin* parent):
+    m_parent{parent},
+    m_triggerCommandFactory{parent->context.components.factory<Command::TriggerCommandFactoryList>()}
 {
     using namespace iscore;
     m_addTrigger = new QAction{tr("Add Trigger"), this};
-    m_addTrigger->setWhatsThis(MenuInterface::name(ContextMenu::Event));
     connect(m_addTrigger, &QAction::triggered,
-        this, &EventActions::addTriggerToTimeNode);
+            this, &EventActions::addTriggerToTimeNode);
 
     m_removeTrigger = new QAction{tr("Remove Trigger"), this};
-    m_removeTrigger->setWhatsThis(MenuInterface::name(ContextMenu::Event));
     connect(m_removeTrigger, &QAction::triggered,
-        this, &EventActions::removeTriggerFromTimeNode);
+            this, &EventActions::removeTriggerFromTimeNode);
 }
 
-
-void EventActions::fillMenuBar(iscore::MenubarManager* menu)
-{
-    menu->insertActionIntoToplevelMenu(m_menuElt, m_addTrigger);
-    menu->insertActionIntoToplevelMenu(m_menuElt, m_removeTrigger);
-}
-
-void EventActions::fillContextMenu(
-    QMenu* menu,
-    const Selection& sel,
-    const TemporalScenarioPresenter& pres,
-    const QPoint& p1,
-    const QPointF& p2)
-{
-    fillContextMenu(menu, sel, p1, p2);
-}
-
-void EventActions::fillContextMenu(
-        QMenu* menu,
-        const Selection& sel,
-        const QPoint&,
-        const QPointF&)
+void EventActions::makeGUIElements(iscore::GUIElements& ref)
 {
     using namespace iscore;
-    if(!sel.empty())
+
+    Menu& object = m_parent->context.menus.get().at(Menus::Object());
+    object.menu()->addAction(m_addTrigger);
+    object.menu()->addAction(m_removeTrigger);
+
+    ref.actions.add<Actions::AddTrigger>(m_addTrigger);
+    ref.actions.add<Actions::RemoveTrigger>(m_removeTrigger);
+
+    auto& cond = m_parent->context.actions.condition<iscore::EnableWhenSelectionContains<Scenario::EventModel>>();
+    cond.add<Actions::AddTrigger>();
+    cond.add<Actions::RemoveTrigger>();
+}
+
+void EventActions::setupContextMenu(Process::LayerContextMenuManager &ctxm)
+{
+    using namespace Process;
+    Process::LayerContextMenu cm = MetaContextMenu<ContextMenus::EventContextMenu>::make();
+
+    cm.functions.push_back(
+                [this] (QMenu& menu, QPoint, QPointF, const Process::LayerContext& ctx)
     {
+        using namespace iscore;
+        auto sel = ctx.context.selectionStack.currentSelection();
+        if(sel.empty())
+            return;
+
         if(std::any_of(sel.cbegin(),
                        sel.cend(),
                        [] (const QObject* obj) { return dynamic_cast<const EventModel*>(obj); })) // TODO : event or timenode ?
         {
-            auto tnSubmenu = menu->findChild<QMenu*>(MenuInterface::name(iscore::ContextMenu::Event));
-            if(!tnSubmenu)
-            {
-                tnSubmenu = menu->addMenu(MenuInterface::name(iscore::ContextMenu::Event));
-                tnSubmenu->setTitle(MenuInterface::name(iscore::ContextMenu::Event));
-            }
-            tnSubmenu->addAction(m_addTrigger);
-            tnSubmenu->addAction(m_removeTrigger);
+            auto m = menu.addMenu(tr("Event"));
+
+            m->addAction(m_addTrigger);
+            m->addAction(m_removeTrigger);
         }
-    }
-}
+    });
 
-void EventActions::setEnabled(bool b)
-{
-    for (auto& act : actions())
-    {
-    act->setEnabled(b);
-    }
-}
-
-QList<QAction*> EventActions::actions() const
-{
-    QList<QAction*> lst{
-    m_addTrigger,
-    m_removeTrigger
-    };
-    return lst;
+    ctxm.insert(std::move(cm));
 }
 
 void EventActions::addTriggerToTimeNode()
 {
-    auto selectedTimeNodes = selectedElements(m_parent->focusedScenarioModel()->timeNodes);
+    auto si = focusedScenarioInterface(m_parent->currentDocument()->context());
+    ISCORE_ASSERT(si);
+    auto selectedTimeNodes = selectedElements(si->getTimeNodes());
 
     if(selectedTimeNodes.isEmpty())
     {
         // take tn from a selected event
-        auto selectedEvents = selectedElements(m_parent->focusedScenarioModel()->events);
+        auto selectedEvents = selectedElements(si->getEvents());
+        ISCORE_ASSERT(!selectedEvents.empty());
+        // TODO maybe states, etc... ?
+
         auto ev = selectedEvents.first();
-        auto scenar = static_cast<Scenario::ScenarioModel*>(ev->parent());
-        auto& tn = Scenario::parentTimeNode(*ev, *scenar);
+        auto& tn = Scenario::parentTimeNode(*ev, *si);
         selectedTimeNodes.append(&tn);
     }
 
-    auto cmd = new Scenario::Command::AddTrigger<Scenario::ScenarioModel>{**selectedTimeNodes.begin()};
-    emit dispatcher().submitCommand(cmd);
+    auto cmd = m_triggerCommandFactory.make(
+                   &Scenario::Command::TriggerCommandFactory::make_addTriggerCommand,
+                   **selectedTimeNodes.begin());
+
+    if(cmd)
+        emit dispatcher().submitCommand(cmd);
 }
 
 void EventActions::removeTriggerFromTimeNode()
 {
-    auto selectedTimeNodes = selectedElements(m_parent->focusedScenarioModel()->timeNodes);
+    auto si = focusedScenarioInterface(m_parent->currentDocument()->context());
+    auto selectedTimeNodes = selectedElements(si->getTimeNodes());
     if(selectedTimeNodes.isEmpty())
     {
-        auto selectedEvents = selectedElements(m_parent->focusedScenarioModel()->events);
+        auto selectedEvents = selectedElements(si->getEvents());
+        ISCORE_ASSERT(!selectedEvents.empty());
+        // TODO maybe states, etc... ?
+
         auto ev = selectedEvents.first();
-        auto scenar = static_cast<Scenario::ScenarioModel*>(ev->parent());
-        auto& tn = Scenario::parentTimeNode(*ev, *scenar);
+        auto& tn = Scenario::parentTimeNode(*ev, *si);
         selectedTimeNodes.append(&tn);
     }
 
-    auto cmd = new Scenario::Command::RemoveTrigger<Scenario::ScenarioModel>{**selectedTimeNodes.begin()};
-    emit dispatcher().submitCommand(cmd);
+    auto cmd = m_triggerCommandFactory.make(
+                   &Scenario::Command::TriggerCommandFactory::make_removeTriggerCommand,
+                   **selectedTimeNodes.begin());
+
+    if(cmd)
+        emit dispatcher().submitCommand(cmd);
 }
 
 CommandDispatcher<> EventActions::dispatcher()

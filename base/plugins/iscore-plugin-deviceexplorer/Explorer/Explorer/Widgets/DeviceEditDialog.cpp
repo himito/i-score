@@ -15,7 +15,7 @@
 #include <Device/Protocol/ProtocolSettingsWidget.hpp>
 #include "DeviceEditDialog.hpp"
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/widgets/SignalUtils.hpp>
 
@@ -84,13 +84,13 @@ DeviceEditDialog::initAvailableProtocols()
     //initialize previous settings
     m_previousSettings.clear();
 
-    for(const auto& prot : m_protocolList.list())
+    for(const auto& prot : m_protocolList)
     {
         m_protocolCBox->addItem(
-                    prot->prettyName(),
-                    QVariant::fromValue(prot->key<UuidKey<Device::ProtocolFactory>>()));
+                    prot.prettyName(),
+                    QVariant::fromValue(prot.concreteFactoryKey()));
 
-        m_previousSettings.append(prot->defaultSettings());
+        m_previousSettings.append(prot.defaultSettings());
     }
 
     m_index = m_protocolCBox->currentIndex();

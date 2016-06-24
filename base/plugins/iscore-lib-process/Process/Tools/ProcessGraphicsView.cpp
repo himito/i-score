@@ -17,6 +17,8 @@ ProcessGraphicsView::ProcessGraphicsView(QGraphicsScene* parent):
     setRenderHints(QPainter::Antialiasing | QPainter::SmoothPixmapTransform | QPainter::TextAntialiasing);
     setAlignment(Qt::AlignTop | Qt::AlignLeft);
     setCacheMode(QGraphicsView::CacheBackground);
+    setAttribute(Qt::WA_PaintOnScreen, true);
+    setAttribute(Qt::WA_OpaquePaintEvent, true);
 
     //m_graduations = new SceneGraduations{this};
     //scene()->addItem(m_graduations);

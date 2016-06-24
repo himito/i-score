@@ -17,6 +17,7 @@
 #include <Scenario/Palette/Transitions/StateTransitions.hpp>
 
 #include <Scenario/Palette/Tools/ScenarioRollbackStrategy.hpp>
+#include <QApplication>
 #include <QFinalState>
 
 
@@ -29,7 +30,7 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
         Creation_FromState(
                 const ToolPalette_T& stateMachine,
                 const Path<Scenario_T>& scenarioPath,
-                iscore::CommandStackFacade& stack,
+                const iscore::CommandStackFacade& stack,
                 QState* parent):
             CreationState<Scenario_T, ToolPalette_T>{stateMachine, stack, std::move(scenarioPath), parent}
         {
@@ -40,7 +41,7 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                 this->clearCreatedIds();
             });
 
-            QState* mainState = new QState{this};
+            auto mainState = new QState{this};
             {
                 auto pressed = new QState{mainState};
                 auto released = new QState{mainState};
@@ -150,10 +151,42 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                         return;
                     }
 
-                    if(this->m_parentSM.editionSettings().sequence())
+                    // Magnetism handling :
+                    // If we press "sequence"... we're always in sequence.
+                    //
+                    // Else, if we're < 0.005, we switch to "sequence"
+                    // Else, we keep the normal state.
+                    bool manual_sequence = qApp->keyboardModifiers() & Qt::ShiftModifier;
+                    if(!manual_sequence)
                     {
-                        const auto&  st = this->m_parentSM.model().state(this->clickedState);
+                        auto sequence = this->m_parentSM.editionSettings().sequence();
+                        auto magnetism_distance = std::abs(this->currentPoint.y - this->m_clickedPoint.y) < 0.005;
+                        if(!sequence && magnetism_distance)
+                        {
+                            this->m_parentSM.editionSettings().setSequence(true);
+                            this->rollback();
+                            createToNothing();
+                            return;
+                        }
+                        else if(sequence && !magnetism_distance)
+                        {
+                            this->m_parentSM.editionSettings().setSequence(false);
+                            this->rollback();
+                            createToNothing();
+                            return;
+                        }
+                    }
+
+                    auto sequence = this->m_parentSM.editionSettings().sequence();
+                    if(sequence)
+                    {
+                        const auto& st = this->m_parentSM.model().state(this->clickedState);
                         this->currentPoint.y = st.heightPercentage();
+                    }
+
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        this->currentPoint.date = this->m_clickedPoint.date + TimeValue::fromMsecs(10);;
                     }
 
                     this->m_dispatcher.template submitCommand<MoveNewEvent>(
@@ -162,7 +195,7 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                                 this->createdEvents.last(),
                                 this->currentPoint.date,
                                 this->currentPoint.y,
-                                stateMachine.editionSettings().sequence());
+                                sequence);
 
                 });
 
@@ -171,6 +204,11 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                     if(this->createdStates.empty())
                     {
                         this->rollback();
+                        return;
+                    }
+
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
                         return;
                     }
 
@@ -188,6 +226,11 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                         return;
                     }
 
+                    if(this->currentPoint.date <= this->m_clickedPoint.date)
+                    {
+                        return;
+                    }
+
                     this->m_dispatcher.template submitCommand<MoveNewState>(
                                 Path<Scenario_T>{this->m_scenarioPath},
                                 this->createdStates.last(),
@@ -201,7 +244,7 @@ class Creation_FromState final : public CreationState<Scenario_T, ToolPalette_T>
                 });
             }
 
-            QState* rollbackState = new QState{this};
+            auto rollbackState = new QState{this};
             iscore::make_transition<iscore::Cancel_Transition>(mainState, rollbackState);
             rollbackState->addTransition(finalState);
             QObject::connect(rollbackState, &QState::entered, [&] ()

@@ -4,75 +4,72 @@
 #include <Scenario/Application/ScenarioApplicationPlugin.hpp>
 #include <Scenario/Commands/Cohesion/RefreshStates.hpp>
 
-#include <core/presenter/MenubarManager.hpp>
+
 #include <core/document/Document.hpp>
 
+#include <Scenario/Application/ScenarioActions.hpp>
+
+#include <Process/Layer/LayerContextMenu.hpp>
 #include <QAction>
 #include <QMenu>
-
+#include <iscore/widgets/SetIcons.hpp>
 namespace Scenario
 {
-StateActions::StateActions(iscore::ToplevelMenuElement menuElt,
-               ScenarioApplicationPlugin* parent):
-    ScenarioActions(menuElt, parent)
+StateActions::StateActions(ScenarioApplicationPlugin* parent) :
+    m_parent{parent}
 {
+    m_refreshStates = new QAction {tr("Refresh states"), this};
+    m_refreshStates->setShortcutContext(Qt::ApplicationShortcut);
+    m_refreshStates->setShortcut(tr("Ctrl+U"));
+    m_refreshStates->setToolTip(tr("Ctrl+U"));
+    setIcons(m_refreshStates, QString(":/icons/refresh_on.png"), QString(":/icons/refresh_off.png"));
 
-    m_updateStates = new QAction {tr("Refresh states"), this};
-    m_updateStates->setShortcutContext(Qt::ApplicationShortcut);
-    m_updateStates->setShortcut(tr("Ctrl+U"));
-    m_updateStates->setToolTip(tr("Ctrl+U"));
-    m_updateStates->setWhatsThis(iscore::MenuInterface::name(iscore::ContextMenu::State));
-    connect(m_updateStates, &QAction::triggered,
-        this, [&] () {
-    Command::RefreshStates(m_parent->currentDocument()->context());
+    connect(m_refreshStates, &QAction::triggered,
+            this, [&] () {
+        Command::RefreshStates(m_parent->currentDocument()->context());
     });
-
 }
 
 
-void StateActions::fillMenuBar(iscore::MenubarManager* menu)
-{
-    menu->insertActionIntoToplevelMenu(m_menuElt,
-                       m_updateStates);
-}
-
-void StateActions::fillContextMenu(
-    QMenu* menu,
-    const Selection& sel,
-    const TemporalScenarioPresenter& pres,
-    const QPoint&,
-    const QPointF&)
+void StateActions::makeGUIElements(iscore::GUIElements& ref)
 {
     using namespace iscore;
-    if(!sel.empty())
+
+    Menu& object = m_parent->context.menus.get().at(Menus::Object());
+    object.menu()->addAction(m_refreshStates);
+
+    Toolbar& tb = *find_if(ref.toolbars, [] (auto& tb) {
+        return tb.key() == StringKey<iscore::Toolbar>("Constraint");
+    });
+    tb.toolbar()->addAction(m_refreshStates);
+
+    ref.actions.add<Actions::RefreshStates>(m_refreshStates);
+    auto& cond = m_parent->context.actions.condition<iscore::EnableWhenSelectionContains<Scenario::StateModel>>();
+    cond.add<Actions::RefreshStates>();
+}
+
+void StateActions::setupContextMenu(Process::LayerContextMenuManager& ctxm)
+{
+    using namespace Process;
+    Process::LayerContextMenu cm = MetaContextMenu<ContextMenus::StateContextMenu>::make();
+
+    cm.functions.push_back(
+    [this] (QMenu& menu, QPoint, QPointF, const Process::LayerContext& ctx)
     {
-    if(std::any_of(sel.cbegin(),
-               sel.cend(),
-               [] (const QObject* obj) { return dynamic_cast<const StateModel*>(obj); })) // TODO : event or timenode ?
-    {
-        auto stateSubmenu = menu->findChild<QMenu*>(MenuInterface::name(iscore::ContextMenu::State));
-        if(!stateSubmenu)
+        using namespace iscore;
+        auto sel = ctx.context.selectionStack.currentSelection();
+        if(sel.empty())
+            return;
+
+        if(any_of(sel, matches<Scenario::StateModel>{})) // TODO : event or timenode ?
         {
-        stateSubmenu = menu->addMenu(MenuInterface::name(iscore::ContextMenu::State));
-        stateSubmenu->setTitle(MenuInterface::name(iscore::ContextMenu::State));
+            auto stateSubmenu = menu.addMenu(tr("State"));
+            stateSubmenu->setObjectName("State");
+            stateSubmenu->addAction(m_refreshStates);
         }
+    });
 
-        stateSubmenu->addAction(m_updateStates);
-    }
-    }
-}
-
-void StateActions::setEnabled(bool b)
-{
-    for (auto& act : actions())
-    {
-    act->setEnabled(b);
-    }
-}
-
-QList<QAction*> StateActions::actions() const
-{
-    return {m_updateStates};
+    ctxm.insert(std::move(cm));
 }
 
 CommandDispatcher<> StateActions::dispatcher()

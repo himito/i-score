@@ -3,7 +3,7 @@ project(iscore_lib_base LANGUAGES CXX)
 iscore_common_setup()
 
 # Packages
-find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets Svg)
+find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets Svg QuickWidgets)
 
 # Files & main target
 file(GLOB_RECURSE HEADERS
@@ -14,7 +14,6 @@ qt5_add_resources(QRCS "${CMAKE_CURRENT_SOURCE_DIR}/resources/iscore.qrc")
 set(SRCS
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/StringConstants.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/menu/MenuInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/InvisibleRootNodeSerialization.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/ObjectPathSerialization.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/SettableIdentifierGeneration.cpp"
@@ -37,6 +36,8 @@ set(SRCS
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/application/ApplicationContext.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/application/ApplicationComponents.cpp"
+
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/actions/Action.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/document/DocumentInterface.cpp"
 
@@ -63,6 +64,8 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/ProjectSettings/ProjectSettingsPresenter.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/ProjectSettings/ProjectSettingsView.cpp"
 
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/Addon.cpp"
+
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/FactoryFamily_QtInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/FactoryInterface_QtInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/GUIApplicationContextPlugin_QtInterface.cpp"
@@ -87,7 +90,10 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/ClearLayout.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/DoubleSlider.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/SetIcons.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/QmlContainerPanel.cpp" # TODO MOVEME
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/Separator.cpp"
 
+"${CMAKE_CURRENT_SOURCE_DIR}/core/application/SafeQApplication.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/application/ApplicationInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/application/ApplicationRegistrar.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/application/ApplicationSettings.cpp"
@@ -105,8 +111,8 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/core/document/DocumentModel.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/document/DocumentSerialization.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/plugin/PluginManager.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/core/presenter/CoreApplicationPlugin.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/presenter/DocumentManager.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/core/presenter/MenubarManager.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/presenter/Presenter.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/settings/Settings.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/settings/SettingsPresenter.cpp"
@@ -122,7 +128,7 @@ set(SRCS
 add_library(iscore_lib_base ${SRCS} ${HEADERS} ${QRCS})
 
 target_link_libraries(iscore_lib_base
-        PUBLIC Qt5::Core Qt5::Widgets
+        PUBLIC Qt5::Core Qt5::Widgets Qt5::QuickWidgets
     PRIVATE Qt5::Svg QRecentFilesMenu)
 
 set_property(TARGET iscore_lib_base PROPERTY COTIRE_CXX_PREFIX_HEADER_INIT "${CMAKE_CURRENT_SOURCE_DIR}/iscore/prefix.hpp")

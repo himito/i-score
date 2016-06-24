@@ -8,16 +8,10 @@
 
 namespace Device
 {
-class ISCORE_LIB_DEVICE_EXPORT DeviceList
+class ISCORE_LIB_DEVICE_EXPORT DeviceList : public QObject
 {
+        Q_OBJECT
     public:
-        DeviceList() = default;
-
-        DeviceList(DeviceList&&) = delete;
-        DeviceList(const DeviceList&) = delete;
-        DeviceList& operator=(const DeviceList&) = delete;
-        DeviceList& operator=(DeviceList&&) = delete;
-
         auto find(const QString &name) const
         {
             return std::find_if(m_devices.cbegin(),
@@ -33,7 +27,14 @@ class ISCORE_LIB_DEVICE_EXPORT DeviceList
 
         const std::vector<DeviceInterface*>& devices() const;
 
+        void setLogging(bool);
+
+    signals:
+        void logInbound(const QString&) const;
+        void logOutbound(const QString&) const;
+
     private:
         std::vector<DeviceInterface*> m_devices;
+        bool m_logging = false;
 };
 }

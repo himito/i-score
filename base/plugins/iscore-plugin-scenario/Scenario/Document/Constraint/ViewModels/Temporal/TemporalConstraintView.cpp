@@ -3,6 +3,7 @@
 #include <QBrush>
 #include <QFont>
 #include <QGraphicsItem>
+#include <QGraphicsSceneEvent>
 #include <qnamespace.h>
 #include <QPainter>
 #include <QPainterPath>
@@ -33,6 +34,7 @@ TemporalConstraintView::TemporalConstraintView(
     m_counterItem{new SimpleTextItem{this}}
 {
     this->setParentItem(parent);
+    this->setAcceptDrops(true);
 
     this->setZValue(ZPos::Constraint);
     m_leftBrace = new LeftBraceView{*this, this};
@@ -52,6 +54,7 @@ TemporalConstraintView::TemporalConstraintView(
     m_labelItem->setAcceptHoverEvents(false);
     f.setPointSize(7);
     f.setStyleStrategy(QFont::NoAntialias);
+    f.setHintingPreference(QFont::HintingPreference::PreferFullHinting);
     m_counterItem->setFont(f);
     m_counterItem->setColor(ColorRef(&Skin::Light));
     m_counterItem->setAcceptedMouseButtons(Qt::MouseButton::NoButton);
@@ -66,6 +69,7 @@ void TemporalConstraintView::paint(
         const QStyleOptionGraphicsItem*,
         QWidget*)
 {
+    painter->setRenderHint(QPainter::Antialiasing, false);
     auto& skin = ScenarioStyle::instance();
 
     qreal min_w = minWidth();
@@ -196,17 +200,6 @@ void TemporalConstraintView::paint(
     if(!playedPath.isEmpty())
         painter->drawPath(playedPath);
 
-    {
-        auto& dur = presenter().model().duration;
-        auto progress = dur.defaultDuration() * dur.playPercentage();
-        if(!progress.isZero())
-        {
-            QString percent = progress.toString();
-            m_counterItem->setText(percent);
-        }
-    }
-
-
 #if defined(ISCORE_SCENARIO_DEBUG_RECTS)
     painter->setPen(Qt::darkRed);
     painter->setBrush(Qt::NoBrush);
@@ -225,6 +218,14 @@ void TemporalConstraintView::hoverLeaveEvent(QGraphicsSceneHoverEvent *h)
     QGraphicsObject::hoverLeaveEvent(h);
     emit constraintHoverLeave();
 }
+
+void TemporalConstraintView::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    emit dropReceived(event->pos(), event->mimeData());
+
+    event->accept();
+}
+
 void TemporalConstraintView::setLabel(const QString &label)
 {
     m_labelItem->setText(label);
@@ -240,6 +241,21 @@ void TemporalConstraintView::setExecutionState(ConstraintExecutionState s)
 {
     m_state = s;
     update();
+}
+
+void TemporalConstraintView::setExecutionDuration(TimeValue progress)
+{
+    if(!progress.isZero())
+    {
+        QString percent = progress.toString();
+        m_counterItem->setVisible(true);
+        m_counterItem->setText(percent);
+    }
+    else
+    {
+        m_counterItem->setVisible(false);
+    }
+
 }
 
 void TemporalConstraintView::setLabelColor(ColorRef labelColor)

@@ -15,7 +15,7 @@
 #include <Scenario/Settings/Model.hpp>
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/command/SerializableCommand.hpp>
 #include <iscore/tools/ModelPath.hpp>
 #include <iscore/tools/SettableIdentifierGeneration.hpp>
@@ -30,7 +30,7 @@
 #include <iscore/application/ApplicationContext.hpp>
 
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
-#include <iscore/plugins/customfactory/FactoryMap.hpp>
+
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/tools/ModelPathSerialization.hpp>
@@ -48,7 +48,7 @@ class AddProcessToConstraintBase : public iscore::SerializableCommand
         AddProcessToConstraintBase() = default;
         AddProcessToConstraintBase(
                 const ConstraintModel& constraint,
-                const UuidKey<Process::ProcessFactory>& process):
+                UuidKey<Process::ProcessFactory> process):
             m_addProcessCommand{
                 constraint,
                 getStrongId(constraint.processes),
@@ -417,7 +417,7 @@ class AddProcessDelegate<HasRacks, IsBaseConstraint>
 };
 
 
-inline iscore::SerializableCommand* make_AddProcessToConstraint(
+inline Scenario::Command::AddProcessToConstraintBase* make_AddProcessToConstraint(
         const ConstraintModel& constraint,
         const UuidKey<Process::ProcessFactory>& process)
 {
@@ -425,7 +425,7 @@ inline iscore::SerializableCommand* make_AddProcessToConstraint(
     auto noRackes = constraint.racks.empty();
 
 
-    iscore::SerializableCommand* cmd{};
+    Scenario::Command::AddProcessToConstraintBase* cmd{};
     if(noRackes)
     {
         cmd = new AddProcessToConstraint<AddProcessDelegate<HasNoRacks>>{

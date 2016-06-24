@@ -1,4 +1,4 @@
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <QBoxLayout>
 #include <QDebug>
 #include <QtGlobal>
@@ -17,43 +17,8 @@ ExpressionEditorWidget::ExpressionEditorWidget(const iscore::DocumentContext& do
     QWidget(parent),
     m_context{doc}
 {
+    this->setObjectName("ExpressionEditorWidget");
     m_mainLayout = new iscore::MarginLess<QVBoxLayout>{this};
-
-    auto btnWidg = new QWidget{this};
-    auto btnLay = new iscore::MarginLess<QHBoxLayout>{btnWidg};
-
-    auto validBtn = new QPushButton{tr("Ok"), btnWidg};
-    auto cancelBtn = new QPushButton{tr("Cancel"),btnWidg};
-    btnLay->addWidget(validBtn);
-    btnLay->addWidget(cancelBtn);
-
-    m_mainLayout->addWidget(btnWidg);
-
-    auto addButton = new QToolButton{this};
-    QIcon ic;
-    makeIcons(&ic, QString(":/icons/condition_add_on.png"), QString(":/icons/condition_add_off.png"));
-    addButton->setIcon(ic);
-
-    m_mainLayout->addWidget(addButton);
-
-    connect(validBtn, &QPushButton::clicked,
-            this, &ExpressionEditorWidget::on_editFinished);
-    connect(cancelBtn, &QPushButton::clicked,
-            this, [&] ()
-    {
-        if(m_expression.isEmpty()) {
-            for(auto& elt : m_relations)
-            {
-                delete elt;
-            }
-            m_relations.clear();
-            addNewTerm();
-        }
-        else
-            setExpression(*State::parseExpression(m_expression));
-    });
-    connect(addButton, &QPushButton::clicked,
-            this, &ExpressionEditorWidget::addNewTerm);
 }
 
 State::Expression ExpressionEditorWidget::expression()
@@ -74,6 +39,13 @@ State::Expression ExpressionEditorWidget::expression()
         }
         else
         {
+            if(!lastRel)
+            {
+                // TODO investigate with scan-build.
+                qDebug() << "We shouldn't be in this case";
+                continue;
+            }
+
             auto op = r->binOperator();
             if(op == State::BinaryOperator::Or)
             {
@@ -151,14 +123,14 @@ void ExpressionEditorWidget::exploreExpression(State::Expression expr)
             return_type operator()(const State::Relation& rel) const
             {
                 widg.addNewTerm();
-                if(widg.m_relations.size() > 0)
+                if(!widg.m_relations.empty())
                     widg.m_relations.back()->setRelation(rel);
             }
 
             return_type operator()(const State::Pulse& p) const
             {
                 widg.addNewTerm();
-                if(widg.m_relations.size() > 0)
+                if(!widg.m_relations.empty())
                     widg.m_relations.back()->setPulse(p);
             }
 
@@ -176,7 +148,7 @@ void ExpressionEditorWidget::exploreExpression(State::Expression expr)
                         widg.m_relations.at(i)->setOperator( op );
                 }
 
-                if(widg.m_relations.size() > 0)
+                if(!widg.m_relations.empty())
                     widg.m_relations.back()->setOperator( op );
             }
 
@@ -209,15 +181,14 @@ void ExpressionEditorWidget::addNewTerm()
     m_relations.push_back(relationEditor);
 
     m_mainLayout->addWidget(relationEditor);
-/*
- * TODO : this allow to remove the OK button but it crashes ...
-    connect(relationEditor, &SimpleExpressionEditorWidget::editingFinished,
-        this, &ExpressionEditorWidget::on_editFinished);
-*/
+
     connect(relationEditor, &SimpleExpressionEditorWidget::addTerm,
             this, &ExpressionEditorWidget::addNewTerm);
     connect(relationEditor, &SimpleExpressionEditorWidget::removeTerm,
             this, &ExpressionEditorWidget::removeTerm);
+    connect(relationEditor, &SimpleExpressionEditorWidget::editingFinished,
+            this, &ExpressionEditorWidget::on_editFinished,
+            Qt::QueuedConnection);
 }
 
 void ExpressionEditorWidget::removeTerm(int index)

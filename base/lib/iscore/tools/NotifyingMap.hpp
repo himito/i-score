@@ -51,7 +51,7 @@ class NotifyingMap
             added(*t);
         }
 
-        void remove(const T& elt)
+        void remove(T& elt)
         {
             removing(elt);
             m_map.remove(elt.id());

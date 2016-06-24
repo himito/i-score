@@ -6,7 +6,7 @@
 #include <Scenario/Document/Constraint/ConstraintDurations.hpp>
 #include <Scenario/Document/Constraint/Rack/RackModel.hpp>
 #include <Scenario/Document/ModelConsistency.hpp>
-#include <boost/optional/optional.hpp>
+#include <iscore/tools/std/Optional.hpp>
 #include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
 #include <iscore/selection/Selectable.hpp>
 #include <QObject>
@@ -49,7 +49,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT ConstraintModel final :
         iscore::Components components;
         Selectable selection;
         ModelMetadata metadata;
-        ModelConsistency consistency;
+        ModelConsistency consistency{nullptr};
         ConstraintDurations duration{*this};
 
         iscore::ElementPluginModelList pluginModelList;
