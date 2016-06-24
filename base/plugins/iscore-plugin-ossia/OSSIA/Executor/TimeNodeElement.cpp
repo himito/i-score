@@ -7,6 +7,7 @@
 
 #include "Editor/Expression.h"
 #include "TimeNodeElement.hpp"
+#include "ConstraintElement.hpp"
 
 namespace RecreateOnPlay
 {
@@ -39,6 +40,17 @@ TimeNodeElement::TimeNodeElement(
     connect(m_iscore_node.trigger(), &Scenario::TriggerModel::triggeredByGui,
             this, [&] () {
         try {
+
+            // Also launch the relevant states when triggerring by hand.
+            // Note : this will also launch the states of false conditions.
+            auto accumulator = OSSIA::State::create();
+            for(auto& ev : m_ossia_node->timeEvents())
+            {
+                OSSIA::TimeEvent& e = *ev;
+                flattenAndFilter(e.getState(), accumulator);
+            }
+            accumulator->launch();
+
             m_ossia_node->trigger();
         }
         catch(...)
