@@ -35,7 +35,7 @@ matrix:
   - os: osx
     env: CONF=osx-package CAN_DEPLOY=True
   - os: linux
-    env: CONF=linux-package CAN_DEPLOY=True
+    env: CONF=linux-package-appimage CAN_DEPLOY=True
 before_install:
 - ./tools/travis/deps.sh
 script:
