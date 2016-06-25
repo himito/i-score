@@ -1,54 +1,28 @@
 i-score
 =======
 
-
 i-score is an interactive intermedia sequencer - read more on http://i-score.org/.
 
 **This fork provides a plugin to generate an interactive score to control the improvisation according to larger structures found in an audio recording - read more [here](https://himito.gitlab.io/vmo_i-score_generator/).**
 
 ![i-score screenshot](/Documentation/iscore.png?raw=true)
 
-<!---
-Easiest way is to grab a release in Github releases.
-
-In order to build i-score, follow the instructions in INSTALL.md.
-Current builds tested on Mac OS X, Ubuntu 14.04, Debian GNU/Linux (Jessie, Sid), and ArchLinux.
-
-(the previous version source is located at : http://github.com/i-score/i-score)
--->
-
 ## Status
 
 [![Join the chat at https://gitter.im/OSSIA/i-score](https://badges.gitter.im/Join%20Chat.svg)](https://gitter.im/OSSIA/i-score?utm_source=badge&utm_medium=badge&utm_campaign=pr-badge&utm_content=badge)
 [![OpenHub](https://www.openhub.net/p/i-score/widgets/project_thin_badge.gif)](https://www.openhub.net/p/i-score)
 
-### Build
+### Status
+
 * Linux, OS X : [![Travis Status](https://api.travis-ci.org/himito/i-score.svg?branch=master)](https://travis-ci.org/himito/i-score)
 * Windows : [![Appveyor Status](https://ci.appveyor.com/api/projects/status/github/himito/i-score?branch=master&svg=true)](https://ci.appveyor.com/project/himito/i-score)
-[//]: # (* Coverity : [![Coverity Status](https://scan.coverity.com/projects/3356/badge.svg)](https://scan.coverity.com/projects/3356))
-[//]: # (* Coveralls : [![Coverage Status](https://coveralls.io/repos/OSSIA/i-score/badge.svg?branch=&service=github)](https://coveralls.io/github/OSSIA/i-score?branch=))
 
-<!---
-### Quick install
-* Arch Linux : (in the AUR4)
-`yaourt -S jamomacore-git iscore-git`
+### Releases
 
-* Ubuntu 14.04 :
+Releases are available for [Windows, Linux (via AppImage) and Mac OS X](https://github.com/himito/i-score/releases/latest).
 
-Installation of some dependencies is required :
+* Windows: install and run.
+* OS X: extract and run i-score.app.
+* Linux: make executable (right click -> permissions or `chmod +x`) and run the AppImage.
 
-    sudo add-apt-repository --yes ppa:ubuntu-toolchain-r/test
-
-    sudo apt-get update -qq
-    sudo apt-get dist-upgrade
-    sudo apt-get install -qq g++-5 libxml2 libportmidi0 libportaudio2 libsndfile1 libxcb-xinerama0
-
-    wget https://www.dropbox.com/s/0pmy14zlpqpyaq6/JamomaCore-0.6-dev-Linux.deb?dl=1 -O jamoma.deb
-    sudo dpkg -i jamoma.deb
--->
-
-Then [fetch the release here](https://github.com/himito/i-score/releases/latest).
-
-* Windows, OS X : [Latest release](https://github.com/himito/i-score/releases/latest)
-
-* For more see [here](https://github.com/OSSIA/i-score/wiki/Build-and-install).
+For more info, see [here](https://github.com/OSSIA/i-score/wiki/Build-and-install).
