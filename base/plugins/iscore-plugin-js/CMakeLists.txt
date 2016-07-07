@@ -18,6 +18,8 @@ file(GLOB_RECURSE HDRS
     "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
 )
 set(SRCS
+"${CMAKE_CURRENT_SOURCE_DIR}/JS/jsedit/jsedit.cpp"
+
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/StateProcess.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessModel.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessModelSerialization.cpp"
@@ -42,6 +44,6 @@ iscore_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
                      Qt5::Core Qt5::Widgets Qt5::Qml
-                     iscore_lib_base iscore_plugin_ossia iscore_lib_process iscore_lib_inspector iscore_lib_device iscore_plugin_deviceexplorer iscore_lib_dummyprocess)
+                     iscore_lib_base iscore_plugin_ossia iscore_lib_process iscore_lib_inspector iscore_lib_device iscore_plugin_deviceexplorer)
 
 setup_iscore_plugin(${PROJECT_NAME})

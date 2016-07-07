@@ -1,6 +1,8 @@
 #include <Scenario/Commands/Scenario/Displacement/MoveCommentBlock.hpp>
 #include <Scenario/Commands/Comment/SetCommentText.hpp>
 #include <Scenario/Document/Constraint/ViewModels/Temporal/TemporalConstraintViewModel.hpp>
+#include <Scenario/Commands/Scenario/Creations/CreateTimeNode_Event_State.hpp>
+#include <Scenario/Commands/Scenario/Creations/CreateConstraint_State_Event_TimeNode.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioLayerModel.hpp>
 #include <Scenario/Process/Temporal/TemporalScenarioView.hpp>
 #include <State/MessageListSerialization.hpp>
@@ -23,6 +25,7 @@
 #include <Scenario/Document/State/ItemModel/MessageItemModel.hpp>
 #include <Scenario/Palette/Tool.hpp>
 #include <Scenario/Process/AbstractScenarioLayerModel.hpp>
+#include <Scenario/Process/Algorithms/Accessors.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
 #include <Scenario/Process/Temporal/ScenarioViewInterface.hpp>
 #include <Scenario/Application/ScenarioActions.hpp>
@@ -37,8 +40,6 @@
 #include <iscore/tools/ModelPath.hpp>
 #include <iscore/tools/NotifyingMap.hpp>
 #include <iscore/tools/Todo.hpp>
-
-#include <Scenario/Commands/Scenario/Creations/CreateConstraint_State_Event_TimeNode.hpp>
 #include <algorithm>
 class MessageItemModel;
 class QMenu;
@@ -62,7 +63,7 @@ TemporalScenarioPresenter::TemporalScenarioPresenter(
     m_selectionDispatcher{context.selectionStack},
     m_sm{m_context, *this}
 {
-    const Scenario::ScenarioModel& scenario = model(m_layer);
+    const Scenario::ProcessModel& scenario = model(m_layer);
     /////// Setup of existing data
     // For each constraint & event, display' em
     for(const auto& state_model : scenario.states)
@@ -122,6 +123,9 @@ TemporalScenarioPresenter::TemporalScenarioPresenter(
     connect(m_view, &TemporalScenarioView::keyReleased,
             this,   &TemporalScenarioPresenter::keyReleased);
 
+    connect(m_view, &TemporalScenarioView::doubleClick,
+            this,   &TemporalScenarioPresenter::doubleClick);
+
     connect(m_view, &TemporalScenarioView::askContextMenu,
             this,   &TemporalScenarioPresenter::contextMenuRequested);
     connect(m_view, &TemporalScenarioView::dropReceived,
@@ -133,22 +137,21 @@ TemporalScenarioPresenter::TemporalScenarioPresenter(
                .handle(*this, pos, mime);
     });
 
-    con(model(m_layer), &Scenario::ScenarioModel::locked,
+    con(model(m_layer), &Scenario::ProcessModel::locked,
             m_view,     &TemporalScenarioView::lock);
-    con(model(m_layer), &Scenario::ScenarioModel::unlocked,
+    con(model(m_layer), &Scenario::ProcessModel::unlocked,
             m_view,     &TemporalScenarioView::unlock);
 
     connect(&layerModel().processModel(), &Process::ProcessModel::execution,
             this, [&] (bool b) {
                 if(b) {
-                    m_lastTool = editionSettings().tool();
                     editionSettings().setTool( Scenario::Tool::Playing);
                     editionSettings().setExecution(true); // tool locked
                 }
                 else // TODO restore last tool ?
                 {
                     editionSettings().setExecution(false); // tool unlock
-                    editionSettings().restoreTool(); // TODO see curvepresenter
+                    editionSettings().setTool( Scenario::Tool::Select);
                 }
 
     });
@@ -179,7 +182,7 @@ const Id<Process::ProcessModel>& TemporalScenarioPresenter::modelId() const
 
 Point TemporalScenarioPresenter::toScenarioPoint(QPointF pt) const
 {
-    return ConvertToScenarioPoint(pt, zoomRatio(), view().boundingRect().size().height());
+    return ConvertToScenarioPoint(pt, zoomRatio(), view().height());
 }
 
 void TemporalScenarioPresenter::setWidth(qreal width)
@@ -224,7 +227,7 @@ void TemporalScenarioPresenter::on_zoomRatioChanged(ZoomRatio val)
     }
 }
 
-const ScenarioModel &TemporalScenarioPresenter::processModel() const
+const ProcessModel &TemporalScenarioPresenter::processModel() const
 {
     return ::model(m_layer);
 }
@@ -261,7 +264,7 @@ void TemporalScenarioPresenter::fillContextMenu(
         auto scenPoint = Scenario::ConvertToScenarioPoint(scenepos, zoomRatio(), view().height());
 
         auto cmd = new Scenario::Command::CreateCommentBlock{
-                   static_cast<Scenario::ScenarioModel&>(layerModel().processModel()),
+                   static_cast<Scenario::ProcessModel&>(layerModel().processModel()),
                    scenPoint.date,
                    scenPoint.y};
         CommandDispatcher<>{ctx.commandStack}.submitCommand(cmd);
@@ -339,6 +342,16 @@ void TemporalScenarioPresenter::on_commentBlockRemoved(
 void TemporalScenarioPresenter::on_askUpdate()
 {
     m_view->update();
+}
+
+void TemporalScenarioPresenter::doubleClick(QPointF pt)
+{
+    auto sp = toScenarioPoint(pt);
+
+    // Just create a dot
+    auto cmd = new Command::CreateTimeNode_Event_State{processModel(), sp.date, sp.y};
+    CommandDispatcher<> {m_context.context.commandStack}.submitCommand(cmd);
+
 }
 
 void TemporalScenarioPresenter::on_focusChanged()
@@ -477,7 +490,7 @@ void TemporalScenarioPresenter::on_commentBlockCreated(const CommentBlockModel& 
     connect(cmt_pres, &CommentBlockPresenter::moved,
             this, [&] (QPointF scenPos)
     {
-        auto& scenarModel = static_cast<Scenario::ScenarioModel&>(this->layerModel().processModel());
+        auto& scenarModel = static_cast<Scenario::ProcessModel&>(this->layerModel().processModel());
         auto pos = Scenario::ConvertToScenarioPoint(scenPos, m_zoomRatio, m_view->height());
         m_ongoingDispatcher.submitCommand<MoveCommentBlock>(
                     scenarModel,

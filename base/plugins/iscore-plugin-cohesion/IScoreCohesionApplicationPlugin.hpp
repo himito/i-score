@@ -9,7 +9,7 @@
 class OSSIAApplicationPlugin;
 class QAction;
 namespace Scenario {
-class ScenarioModel;
+class ProcessModel;
 struct Point;
 }  // namespace Scenario
 class IScoreCohesionApplicationPlugin final :
@@ -20,16 +20,11 @@ class IScoreCohesionApplicationPlugin final :
         IScoreCohesionApplicationPlugin(
                 const iscore::GUIApplicationContext& app);
 
-        GUIElements makeGUIElements() override;
-
-        void record(const Scenario::ScenarioModel&, Scenario::Point pt);
-        void recordMessages(const Scenario::ScenarioModel&, Scenario::Point pt);
+        void record(const Scenario::ProcessModel&, Scenario::Point pt);
+        void recordMessages(const Scenario::ProcessModel&, Scenario::Point pt);
         void stopRecord();
 
     private:
-        QAction* m_snapshot{};
-        QAction* m_curves{};
-
         OSSIAApplicationPlugin* m_ossiaplug{};
         QAction* m_stopAction{};
 

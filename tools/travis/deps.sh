@@ -50,7 +50,7 @@ case "$TRAVIS_OS_NAME" in
       (cd /opt; sudo tar xaf qt5.6-static-release.tgz)
       sudo apt-get install -qq libxcb-icccm4-dev libxi-dev libxcb-image0-dev libxcb-keysyms1-dev libxcb-xkb-dev libxcb-render-util0-dev libxinerama-dev libxcb-xinerama0-dev libudev-dev
     else
-      sudo apt-get install -qq qt57-meta
+      sudo apt-get install -qq qt57-meta-full
     fi
 
     wget https://cmake.org/files/v3.6/cmake-3.6.0-rc1-Linux-x86_64.tar.gz -O cmake-linux.tgz

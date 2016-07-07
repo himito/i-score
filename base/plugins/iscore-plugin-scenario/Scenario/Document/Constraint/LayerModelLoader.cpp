@@ -1,4 +1,5 @@
 #include <Process/Process.hpp>
+#include <Process/ProcessList.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <iscore/tools/std/Optional.hpp>
 #include <QJsonObject>
@@ -16,6 +17,7 @@ namespace Process
 {
 template<>
 LayerModel* createLayerModel(
+        const Process::ProcessList& processes,
         Deserializer<DataStream>& deserializer,
         const Scenario::ConstraintModel& constraint,
         QObject* parent)
@@ -24,8 +26,13 @@ LayerModel* createLayerModel(
     deserializer.m_stream >> sharedProcessId;
 
     auto& process = constraint.processes.at(sharedProcessId);
-    auto viewmodel = process.loadLayer(deserializer.toVariant(),
-                                       parent);
+
+    auto proc_fac = processes.get(process.concreteFactoryKey());
+    ISCORE_ASSERT(proc_fac);
+    auto viewmodel = proc_fac->loadLayer(
+                         process,
+                         deserializer.toVariant(),
+                         parent);
 
     deserializer.checkDelimiter();
 
@@ -35,15 +42,23 @@ LayerModel* createLayerModel(
 
 template<>
 LayerModel* createLayerModel(
+        const Process::ProcessList& processes,
         Deserializer<JSONObject>& deserializer,
         const Scenario::ConstraintModel& constraint,
         QObject* parent)
 {
-    auto& process = constraint.processes.at(
-                fromJsonValue<Id<ProcessModel>>(deserializer.m_obj["SharedProcessId"]));
-    auto viewmodel = process.loadLayer(deserializer.toVariant(),
-                                            parent);
+    auto proc_id = fromJsonValue<Id<ProcessModel>>(deserializer.m_obj["SharedProcessId"]);
+    if(!proc_id)
+        return nullptr;
 
+    auto process_it = constraint.processes.find(proc_id);
+    if(process_it == constraint.processes.end())
+        return nullptr;
+
+    auto proc_fac = processes.get(process_it->concreteFactoryKey());
+    ISCORE_ASSERT(proc_fac);
+    auto viewmodel = proc_fac->loadLayer(
+                         *process_it, deserializer.toVariant(), parent);
     return viewmodel;
 }
 

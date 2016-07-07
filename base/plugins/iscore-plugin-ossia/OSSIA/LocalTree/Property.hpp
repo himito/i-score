@@ -66,8 +66,7 @@ struct PropertyWrapper : public BaseCallbackWrapper
             BaseCallbackWrapper{param_node, param_addr},
             property{prop}
         {
-            callbackIt = addr->addCallback([=] (const OSSIA::Value* v) {
-                if(v)
+            callbackIt = addr->addCallback([=] (const OSSIA::Value& v) {
                     property.set(Ossia::convert::ToValue(v));
             });
 
@@ -76,15 +75,13 @@ struct PropertyWrapper : public BaseCallbackWrapper
                 auto newVal = State::Value::fromValue(property.get());
                 try
                 {
-                    auto cl = addr->cloneValue();
-                    auto res = Ossia::convert::ToValue(cl);
+                    auto res = Ossia::convert::ToValue( addr->cloneValue());
 
                     if(newVal != res)
                     {
                         auto new_ossia_val = iscore::convert::toOSSIAValue(newVal);
-                        addr->pushValue(new_ossia_val.get());
+                        addr->pushValue(*new_ossia_val);
                     }
-                    delete cl;
                 }
                 catch(...)
                 {
@@ -96,7 +93,7 @@ struct PropertyWrapper : public BaseCallbackWrapper
             {
                 auto new_ossia_val = iscore::convert::toOSSIAValue(
                             State::Value::fromValue(property.get()));
-                addr->setValue(new_ossia_val.get());
+                addr->setValue(*new_ossia_val);
             }
         }
 };

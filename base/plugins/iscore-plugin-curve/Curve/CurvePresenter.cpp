@@ -30,6 +30,8 @@
 #include <Curve/Segment/CurveSegmentList.hpp>
 #include <Curve/Segment/CurveSegmentModel.hpp>
 #include <Curve/Segment/CurveSegmentView.hpp>
+
+#include <Curve/Segment/Power/PowerCurveSegmentModel.hpp>
 #include "CurveModel.hpp"
 #include "CurvePresenter.hpp"
 #include "CurveView.hpp"
@@ -459,42 +461,167 @@ void Presenter::removeSelection()
 {
     // We remove all that is selected,
     // And set the bounds correctly
-    QSet<Id<SegmentModel>> segmentsToDelete;
+    std::set<Id<SegmentModel>> segmentsToDelete;
 
+    // First find the segments that will be deleted.
+    // If a point is selected, the segments linked to that point
+    // will be deleted, too.
     for(const auto& elt : m_model.selectedChildren())
     {
         if(auto point = dynamic_cast<const PointModel*>(elt.data()))
         {
-            if(point->previous())
-                segmentsToDelete.insert(point->previous());
-            if(point->following())
-                segmentsToDelete.insert(point->following());
+            if(point->previous() && point->following())
+            {
+                if(point->previous())
+                    segmentsToDelete.insert(point->previous());
+                if(point->following())
+                    segmentsToDelete.insert(point->following());
+            }
         }
 
+        /*
         if(auto segmt = dynamic_cast<const SegmentModel*>(elt.data()))
         {
             segmentsToDelete.insert(segmt->id());
         }
+        */
     }
 
+    if(segmentsToDelete.empty())
+        return;
+
+    double y0 = 0;
+    double y1 = 1;
+    bool firstRemoved = false;
+    bool lastRemoved = false;
+    // Then remove
     auto newSegments = model().toCurveData();
-    auto it = newSegments.begin();
-    while(it != newSegments.end())
     {
-        if(segmentsToDelete.contains(it->id))
+        auto it = newSegments.begin();
+        while(it != newSegments.end())
         {
-            it = newSegments.erase(it);
-            continue;
+            if(contains(segmentsToDelete,it->id))
+            {
+                if(it->start.x() == 0)
+                {
+                    firstRemoved = true;
+                    y0 = it->start.y();
+                }
+                else if(it->end.x() == 1)
+                {
+                    lastRemoved = true;
+                    y1 = it->end.y();
+                }
+                it = newSegments.erase(it);
+                continue;
+            }
+
+            if(it->previous && contains(segmentsToDelete, it->previous))
+                it->previous = Id<SegmentModel>{};
+            if(it->following && contains(segmentsToDelete, it->following))
+                it->following = Id<SegmentModel>{};
+
+            it++;
+        }
+    }
+
+    // Recreate if appropriate
+    if(editionSettings().removePointBehaviour() == RemovePointBehaviour::RemoveAndAddSegment)
+    {
+        // Find the "holes" in the new segment list.
+        sort(newSegments, [] (const SegmentData& s1, const SegmentData& s2) {
+            return s1.x() < s2.x();
+        });
+
+        // First if there is no segments, we recreate one.
+        if(newSegments.empty())
+        {
+            SegmentData d;
+            d.start = QPointF{0, y0};
+            d.end = QPointF{1, y1};
+            d.id = getSegmentId(newSegments);
+            d.type = Metadata<ConcreteFactoryKey_k, DefaultCurveSegmentModel>::get();
+            d.specificSegmentData = QVariant::fromValue(DefaultCurveSegmentData{});
+            newSegments.push_back(d);
+        }
+        else
+        {
+            if(firstRemoved)
+            {
+                // Recreate a segment from x = 0 to the beginning of the first segment.
+                auto it = newSegments.begin();
+
+                // Create a new segment
+                SegmentData d;
+                d.start = QPointF{0, y0};
+                d.end = it->start;
+                d.following = it->id;
+                d.id = getSegmentId(newSegments);
+                d.type = Metadata<ConcreteFactoryKey_k, DefaultCurveSegmentModel>::get();
+                d.specificSegmentData = QVariant::fromValue(DefaultCurveSegmentData{});
+                it->previous = d.id;
+
+                newSegments.insert(it, d);
+            }
+
+            if(lastRemoved)
+            {
+                // Recreate a segment from x = 0 to the beginning of the first segment.
+                auto it = newSegments.rbegin();
+
+                // Create a new segment
+                SegmentData d;
+                d.end = QPointF{1, y1};
+                d.start = it->end;
+                d.previous = it->id;
+                d.id = getSegmentId(newSegments);
+                d.type = Metadata<ConcreteFactoryKey_k, DefaultCurveSegmentModel>::get();
+                d.specificSegmentData = QVariant::fromValue(DefaultCurveSegmentData{});
+                it->following = d.id;
+
+
+                newSegments.insert(newSegments.end(), d);
+            }
         }
 
-        if(it->previous && segmentsToDelete.contains(it->previous))
-            it->previous = Id<SegmentModel>{};
-        if(it->following && segmentsToDelete.contains(it->following))
-            it->following = Id<SegmentModel>{};
+        // Then try to fill the holes
+        auto it = newSegments.begin();
+        for(; it != newSegments.end(); )
+        {
+            // Check if it's the last segment
+            auto next = it + 1;
+            if(next == newSegments.end())
+                break;
 
-        it++;
+            if(it->following)
+            {
+                it = next;
+            }
+            else
+            {
+                // Create a new segment
+                SegmentData d;
+                d.start = it->end;
+                d.end = next->start;
+                d.previous = it->id;
+                d.following = next->id;
+                d.id = getSegmentId(newSegments);
+                d.type = Metadata<ConcreteFactoryKey_k, DefaultCurveSegmentModel>::get();
+                d.specificSegmentData = QVariant::fromValue(DefaultCurveSegmentData{});
+                it->following = d.id;
+                next->previous = d.id;
+
+                it = newSegments.insert(it, d);
+                //it is now at the position of the new segment.
+
+                ++it;
+                // it is now at the position of next
+            }
+        }
+
     }
 
+    // Apply the changes.
     m_commandDispatcher.submitCommand(
                 new UpdateCurve{
                     m_model,

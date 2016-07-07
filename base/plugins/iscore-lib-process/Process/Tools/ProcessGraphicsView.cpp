@@ -7,7 +7,7 @@
 #include <QPainterPath>
 #include <QWheelEvent>
 #include <QKeyEvent>
-
+#include <QScrollBar>
 #include "ProcessGraphicsView.hpp"
 
 ProcessGraphicsView::ProcessGraphicsView(QGraphicsScene* parent):
@@ -20,6 +20,10 @@ ProcessGraphicsView::ProcessGraphicsView(QGraphicsScene* parent):
     setAttribute(Qt::WA_PaintOnScreen, true);
     setAttribute(Qt::WA_OpaquePaintEvent, true);
 
+#if defined(__APPLE__)
+    setOptimizationFlags(QGraphicsView::IndirectPainting);
+#endif
+
     //m_graduations = new SceneGraduations{this};
     //scene()->addItem(m_graduations);
 
@@ -30,6 +34,14 @@ ProcessGraphicsView::ProcessGraphicsView(QGraphicsScene* parent):
 void ProcessGraphicsView::setGrid(QPainterPath&& newGrid)
 {
     //m_graduations->setGrid(std::move(newGrid));
+}
+
+void ProcessGraphicsView::scrollHorizontal(double dx)
+{
+    if(auto bar = horizontalScrollBar())
+    {
+        bar->setValue(bar->value() + dx);
+    }
 }
 
 void ProcessGraphicsView::resizeEvent(QResizeEvent* ev)

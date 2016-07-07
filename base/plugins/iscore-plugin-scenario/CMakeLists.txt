@@ -14,8 +14,6 @@ find_package(Qt5 5.3 REQUIRED COMPONENTS WebSockets)
 endif()
 
 find_package(Threads)
-### Dummy process ###
-add_subdirectory(DummyProcess)
 
 ### Scenario plugin ###
 file(GLOB_RECURSE HDRS
@@ -123,6 +121,8 @@ set(SRCS ${SRCS}
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/Cohesion/CreateCurveFromStates.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/Cohesion/InterpolateStates.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/Cohesion/RefreshStates.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/Cohesion/CreateCurves.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/Cohesion/SnapshotParameters.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/State/RemoveMessageNodes.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Commands/State/AddMessagesToState.cpp"
@@ -153,6 +153,7 @@ set(SRCS ${SRCS}
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Menus/ObjectsActions/StateActions.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Drops/ScenarioDropHandler.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Drops/MessageDropHandler.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/Drops/AutomationDropHandler.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/ScenarioApplicationPlugin.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Scenario/Application/ScenarioEditionSettings.cpp"
 

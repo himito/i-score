@@ -22,7 +22,7 @@
 #include <QStringList>
 #include <QStyleFactory>
 #include <QFileInfo>
-
+#include <QDir>
 #include <iscore/tools/SettableIdentifierGeneration.hpp>
 #include <algorithm>
 #include <vector>
@@ -43,6 +43,7 @@
 #include <iscore/widgets/OrderedToolbar.hpp>
 #include <core/document/DocumentModel.hpp>
 #include <core/undo/Panel/UndoPanelFactory.hpp>
+
 #include "iscore_git_info.hpp"
 
 namespace iscore {
@@ -126,6 +127,10 @@ void Application::init()
 
     this->setObjectName("Application");
     this->setParent(qApp);
+    qApp->addLibraryPath(qApp->applicationDirPath() + "/plugins");
+#if defined(_MSC_VER)
+    QDir::setCurrent(qApp->applicationDirPath());
+#endif
     iscore::setQApplicationSettings(*qApp);
 
     // MVP
@@ -173,11 +178,14 @@ void Application::initDocuments()
     }
     else
     {
-        if(!m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>().empty())
+        auto& documentKinds = m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>();
+        if(!documentKinds.empty() && m_presenter->documentManager().documents().empty())
+        {
             m_presenter->documentManager().newDocument(
                         ctx,
                         Id<iscore::DocumentModel>{iscore::random_id_generator::getRandomId()},
-                        *m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>().begin());
+                        *m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>().begin()); 
+        }
     }
 
     connect(m_app, &SafeQApplication::fileOpened,

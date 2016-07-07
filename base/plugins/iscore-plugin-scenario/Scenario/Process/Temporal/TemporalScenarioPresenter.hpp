@@ -109,7 +109,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
         const auto& getComments() const
         { return m_comments; }
 
-        const ScenarioModel& processModel() const;
+        const ProcessModel& processModel() const;
         TemporalScenarioView& view() const
         { return *m_view; }
         const ZoomRatio& zoomRatio() const
@@ -156,6 +156,7 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
         void on_askUpdate();
 
     private:
+        void doubleClick(QPointF);
         void on_focusChanged() override;
 
         template<typename Map, typename Id>
@@ -184,8 +185,5 @@ class ISCORE_PLUGIN_SCENARIO_EXPORT TemporalScenarioPresenter final :
 
         iscore::SelectionDispatcher m_selectionDispatcher;
         Scenario::ToolPalette m_sm;
-
-        Scenario::Tool m_lastTool{Scenario::Tool::Select};
-
 };
 }

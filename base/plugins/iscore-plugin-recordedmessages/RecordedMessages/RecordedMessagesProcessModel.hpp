@@ -31,6 +31,7 @@ class ISCORE_PLUGIN_RECORDEDMESSAGES_EXPORT ProcessModel final : public Process:
 {
         ISCORE_SERIALIZE_FRIENDS(ProcessModel, DataStream)
         ISCORE_SERIALIZE_FRIENDS(ProcessModel, JSONObject)
+        PROCESS_METADATA_IMPL(RecordedMessages::ProcessModel)
     Q_OBJECT
     public:
         explicit ProcessModel(
@@ -58,50 +59,14 @@ class ISCORE_PLUGIN_RECORDEDMESSAGES_EXPORT ProcessModel final : public Process:
         { return m_messages; }
 
         // Process interface
-        Process::ProcessModel* clone(
-                const Id<Process::ProcessModel>& newId,
-                QObject* newParent) const override;
-
-        UuidKey<Process::ProcessFactory>concreteFactoryKey() const override
-        {
-            return Metadata<ConcreteFactoryKey_k, ProcessModel>::get();
-        }
-
-        QString prettyName() const override;
-        QByteArray makeLayerConstructionData() const override;
-
         void setDurationAndScale(const TimeValue& newDuration) override;
         void setDurationAndGrow(const TimeValue& newDuration) override;
         void setDurationAndShrink(const TimeValue& newDuration) override;
-
-        void startExecution() override;
-        void stopExecution() override;
-        void reset() override;
-
-        ProcessStateDataInterface* startStateData() const override;
-        ProcessStateDataInterface* endStateData() const override;
-
-        Selection selectableChildren() const override;
-        Selection selectedChildren() const override;
-        void setSelection(const Selection& s) const override;
-
-        void serialize_impl(const VisitorVariant& vis) const override;
 
     signals:
         void messagesChanged();
 
     protected:
-        Process::LayerModel* makeLayer_impl(
-                const Id<Process::LayerModel>& viewModelId,
-                const QByteArray& constructionData,
-                QObject* parent) override;
-        Process::LayerModel* loadLayer_impl(
-                const VisitorVariant&,
-                QObject* parent) override;
-        Process::LayerModel* cloneLayer_impl(
-                const Id<Process::LayerModel>& newId,
-                const Process::LayerModel& source,
-                QObject* parent) override;
 
     private:
         RecordedMessagesList m_messages;

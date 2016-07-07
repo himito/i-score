@@ -41,53 +41,17 @@ ProcessModel::ProcessModel(
     metadata.setName(QString("Process.%1").arg(*this->id().val()));
 }
 
-
-QByteArray ProcessModel::makeLayerConstructionData() const { return {}; }
-
-
-LayerModel*ProcessModel::makeLayer(
-        const Id<LayerModel>& viewModelId,
-        const QByteArray& constructionData,
-        QObject* parent)
+ProcessModel::ProcessModel(Deserializer<DataStream>& vis, QObject* parent) :
+    IdentifiedObject(vis, parent)
 {
-    auto lm = makeLayer_impl(viewModelId, constructionData, parent);
-    addLayer(lm);
-
-    return lm;
+    vis.writeTo(*this);
 }
 
-
-LayerModel*ProcessModel::loadLayer(
-        const VisitorVariant& v,
-        QObject* parent)
+ProcessModel::ProcessModel(Deserializer<JSONObject>& vis, QObject* parent) :
+    IdentifiedObject(vis, parent)
 {
-    auto lm = loadLayer_impl(v, parent);
-    addLayer(lm);
-
-    return lm;
+    vis.writeTo(*this);
 }
-
-LayerModel*ProcessModel::cloneLayer(
-        const Id<LayerModel>& newId,
-        const LayerModel& source,
-        QObject* parent)
-{
-    auto lm = cloneLayer_impl(newId, source, parent);
-    addLayer(lm);
-
-    return lm;
-}
-
-
-LayerModel*ProcessModel::makeTemporaryLayer(
-        const Id<LayerModel>& newId,
-        const LayerModel& source,
-        QObject* parent)
-{
-    return cloneLayer_impl(newId, source, parent);
-}
-
-
 
 std::vector<LayerModel*> ProcessModel::layers() const
 {

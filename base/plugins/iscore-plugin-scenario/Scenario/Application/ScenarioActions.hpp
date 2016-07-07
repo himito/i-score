@@ -19,11 +19,11 @@ inline const Scenario::ScenarioInterface* focusedScenarioInterface(const iscore:
     }
     return nullptr;
 }
-inline const Scenario::ScenarioModel* focusedScenarioModel(const iscore::DocumentContext& ctx)
+inline const Scenario::ProcessModel* focusedScenarioModel(const iscore::DocumentContext& ctx)
 {
     if(auto layer = dynamic_cast<const Process::LayerModel*>(ctx.document.focusManager().get()))
     {
-        return dynamic_cast<Scenario::ScenarioModel*>(&layer->processModel());
+        return dynamic_cast<Scenario::ProcessModel*>(&layer->processModel());
     }
     return nullptr;
 }
@@ -61,7 +61,7 @@ class EnableWhenScenarioModelObject final :
                 return;
             }
 
-            auto proc = dynamic_cast<const Scenario::ScenarioModel*>(&lm->processModel());
+            auto proc = dynamic_cast<const Scenario::ProcessModel*>(&lm->processModel());
             if(!proc)
             {
                 setEnabled(mgr, false);
@@ -139,7 +139,7 @@ class EnableWhenScenarioInterfaceObject final :
 ISCORE_DECLARE_FOCUSED_OBJECT_CONDITION(Scenario::TemporalScenarioLayerModel)
 ISCORE_DECLARE_DOCUMENT_CONDITION(Scenario::ScenarioDocumentModel)
 
-ISCORE_DECLARE_FOCUSED_PROCESS_CONDITION(Scenario::ScenarioModel)
+ISCORE_DECLARE_FOCUSED_PROCESS_CONDITION(Scenario::ProcessModel)
 ISCORE_DECLARE_FOCUSED_PROCESS_CONDITION(Scenario::ScenarioInterface)
 
 ISCORE_DECLARE_SELECTED_OBJECT_CONDITION(Scenario::ConstraintModel)
@@ -183,15 +183,23 @@ ISCORE_DECLARE_ACTION(RemoveTrigger, "&Remove Trigger", Scenario, QKeySequence::
 
 // State
 ISCORE_DECLARE_ACTION(RefreshStates, "Refresh St&ates", Scenario, Qt::CTRL + Qt::Key_U)
+ISCORE_DECLARE_ACTION(Snapshot,"Snapshot in Event", Scenario, QKeySequence(QObject::tr("Ctrl+L")))
 
 // Constraint
 ISCORE_DECLARE_ACTION(AddProcess, "&Add a process", Scenario, QKeySequence::UnknownKey)
 ISCORE_DECLARE_ACTION(InterpolateStates, "&Interpolate states", Scenario, Qt::CTRL + Qt::Key_K)
+ISCORE_DECLARE_ACTION(CreateCurves, "Create Curves", Scenario, QKeySequence(QObject::tr("Ctrl+J")))
 ISCORE_DECLARE_ACTION(MergeTimeNodes, "&Merge TimeNodes", Scenario, Qt::SHIFT + Qt::Key_M)
 
+// Navigation
+ISCORE_DECLARE_ACTION(MoveUp, "&Move up", Scenario, Qt::UpArrow)
+ISCORE_DECLARE_ACTION(MoveDown, "&Move down", Scenario, Qt::DownArrow)
+ISCORE_DECLARE_ACTION(MoveLeft, "&Move left", Scenario, Qt::LeftArrow)
+ISCORE_DECLARE_ACTION(MoveRight, "&Move right", Scenario, Qt::RightArrow)
+
 /// Context menus
-ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ScenarioObjectContextMenu)
-ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ScenarioModelContextMenu)
-ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ConstraintContextMenu)
-ISCORE_PROCESS_DECLARE_CONTEXT_MENU(EventContextMenu)
-ISCORE_PROCESS_DECLARE_CONTEXT_MENU(StateContextMenu)
+ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ISCORE_PLUGIN_SCENARIO_EXPORT, ScenarioObjectContextMenu)
+ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ISCORE_PLUGIN_SCENARIO_EXPORT, ScenarioModelContextMenu)
+ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ISCORE_PLUGIN_SCENARIO_EXPORT, ConstraintContextMenu)
+ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ISCORE_PLUGIN_SCENARIO_EXPORT, EventContextMenu)
+ISCORE_PROCESS_DECLARE_CONTEXT_MENU(ISCORE_PLUGIN_SCENARIO_EXPORT, StateContextMenu)

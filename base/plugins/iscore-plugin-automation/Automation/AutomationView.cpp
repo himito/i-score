@@ -6,33 +6,58 @@
 #include <qnamespace.h>
 #include <QPainter>
 #include <QRect>
+#include <QGraphicsSceneMouseEvent>
 
 #include "AutomationView.hpp"
 #include <Process/LayerView.hpp>
 
+const int fontSize = 8;
 namespace Automation
 {
 LayerView::LayerView(QGraphicsItem* parent) :
     Process::LayerView {parent}
 {
     setZValue(1);
-    this->setFlags(ItemClipsChildrenToShape | ItemIsSelectable | ItemIsFocusable);
+    setFlags(ItemClipsChildrenToShape | ItemIsSelectable | ItemIsFocusable);
+    setAcceptDrops(true);
+    auto f = Skin::instance().SansFont;
+    f.setPointSize(fontSize);
+
+    m_textcache.setFont(f);
+    m_textcache.setCacheEnabled(true);
+}
+
+LayerView::~LayerView()
+{
+
+}
+
+void LayerView::setDisplayedName(const QString& s)
+{
+    m_displayedName = s;
+
+    m_textcache.setText(s);
+    m_textcache.beginLayout();
+    QTextLine line = m_textcache.createLine();
+    line.setPosition(QPointF{0., 0.});
+
+    m_textcache.endLayout();
+
+    update();
 }
 
 void LayerView::paint_impl(QPainter* painter) const
 {
-    static const int fontSize = 8;
-    QRectF processNameRect{0, this->height() - 2*fontSize, 0.95 * this->width(), fontSize + 2 };
-
 #if !defined(ISCORE_IEEE_SKIN)
     if(m_showName)
     {
-        auto f = Skin::instance().SansFont;
-        f.setPointSize(fontSize);
-        painter->setFont(f);
-        painter->setPen(Qt::lightGray);
-        painter->drawText(processNameRect, Qt::AlignCenter, m_displayedName);
+        m_textcache.draw(painter, QPointF{5, fontSize});
     }
 #endif
+}
+
+void LayerView::dropEvent(QGraphicsSceneDragDropEvent *event)
+{
+    emit dropReceived(event->mimeData());
 }
 }

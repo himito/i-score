@@ -10,8 +10,8 @@ git clone https://code.qt.io/qt/qt5.git
 
 (
   cd qt5
-  git checkout 5.6.1
-  perl init-repository --module-subset=qtbase,qtimageformats,qtsvg,qtwebsockets,qttranslations,qtrepotools,qtdeclarative
+  git checkout 5.7
+  perl init-repository --module-subset=qtbase,qtimageformats,qtsvg,qtwebsockets,qttranslations,qtrepotools,qtdeclarative,qttools,qtdoc
 )
 
 export CC=/usr/local/bin/gcc
@@ -43,7 +43,6 @@ mkdir qt5-build
                    -glib \
                    -no-pulseaudio \
                    -no-alsa \
-                   -no-gtkstyle \
                    -no-compile-examples \
                    -no-cups \
                    -no-iconv \
@@ -54,8 +53,7 @@ mkdir qt5-build
                    -dbus-linked \
                    -no-gstreamer \
                    -no-system-proxies
-                   
+
   make -j$NPROC
   make install -j$NPROC
-                   
 )

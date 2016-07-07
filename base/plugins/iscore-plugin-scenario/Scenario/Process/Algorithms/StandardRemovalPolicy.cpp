@@ -1,3 +1,4 @@
+#include "StandardRemovalPolicy.hpp"
 #include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
 #include <Scenario/Process/Algorithms/StandardCreationPolicy.hpp>
 #include <Scenario/Process/ScenarioModel.hpp>
@@ -14,14 +15,14 @@
 #include <Scenario/Document/State/StateModel.hpp>
 #include <Scenario/Process/Algorithms/Accessors.hpp>
 #include <Scenario/Process/Algorithms/ProcessPolicy.hpp>
-#include "StandardRemovalPolicy.hpp"
+#include <Scenario/Process/Algorithms/VerticalMovePolicy.hpp>
 #include <iscore/tools/NotifyingMap.hpp>
 #include <iscore/tools/SettableIdentifier.hpp>
 
 namespace Scenario
 {
 static void removeEventFromTimeNode(
-        Scenario::ScenarioModel& scenario,
+        Scenario::ProcessModel& scenario,
         const Id<EventModel>& eventId)
 {
     // We have to make a copy else the iterator explodes.
@@ -44,7 +45,7 @@ static void removeEventFromTimeNode(
 
 
 void StandardRemovalPolicy::removeConstraint(
-        Scenario::ScenarioModel& scenario,
+        Scenario::ProcessModel& scenario,
         const Id<ConstraintModel>& constraintId)
 {
     auto cstr_it = scenario.constraints.find(constraintId);
@@ -65,7 +66,7 @@ void StandardRemovalPolicy::removeConstraint(
 
 
 void StandardRemovalPolicy::removeState(
-        Scenario::ScenarioModel& scenario,
+        Scenario::ProcessModel& scenario,
         StateModel& state)
 {
     if(state.previousConstraint())
@@ -82,11 +83,11 @@ void StandardRemovalPolicy::removeState(
 
     scenario.states.remove(&state);
 
-    qDebug() << "todo : update event extent";
+    updateEventExtent(ev.id(), scenario);
 }
 
 void StandardRemovalPolicy::removeEventStatesAndConstraints(
-        Scenario::ScenarioModel& scenario,
+        Scenario::ProcessModel& scenario,
         const Id<EventModel>& eventId)
 {
     auto& ev = scenario.event(eventId);
@@ -104,7 +105,7 @@ void StandardRemovalPolicy::removeEventStatesAndConstraints(
     scenario.events.remove(&ev);
 }
 
-void StandardRemovalPolicy::removeComment(Scenario::ScenarioModel& scenario, CommentBlockModel& cmt)
+void StandardRemovalPolicy::removeComment(Scenario::ProcessModel& scenario, CommentBlockModel& cmt)
 {
     scenario.comments.remove(&cmt);
 }

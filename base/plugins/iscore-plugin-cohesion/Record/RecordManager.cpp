@@ -223,7 +223,7 @@ static int getReasonableUpdateInterval(int numberOfCurves)
 }
 
 void RecordManager::recordInNewBox(
-        const Scenario::ScenarioModel& scenar,
+        const Scenario::ProcessModel& scenar,
         Scenario::Point pt)
 {
     using namespace std::chrono;
@@ -263,7 +263,8 @@ void RecordManager::recordInNewBox(
             auto& autom = static_cast<Automation::ProcessModel&>(proc);
 
 
-            auto cmd_layer = new Scenario::Command::AddLayerModelToSlot{box.slot, proc};
+            auto cmd_layer = new Scenario::Command::AddLayerModelToSlot{
+                             box.slot, proc};
             cmd_layer->redo();
 
             autom.curve().clear();

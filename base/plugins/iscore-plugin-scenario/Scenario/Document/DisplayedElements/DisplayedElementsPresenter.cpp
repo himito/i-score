@@ -157,9 +157,9 @@ void DisplayedElementsPresenter::on_displayedConstraintHeightChanged(double size
 {
     m_model->updateRect(
     {
-        ScenarioLeftSpace,
+        qreal(ScenarioLeftSpace),
         0,
-        m_constraintPresenter->abstractConstraintViewModel().model().duration.defaultDuration().toPixels(m_constraintPresenter->model().fullView()->zoom()),
+        m_constraintPresenter->abstractConstraintViewModel().model().duration.defaultDuration().toPixels(m_constraintPresenter->zoomRatio()),
         size
     });
 
