@@ -1,63 +1,66 @@
+#include <QObject>
+#include <QString>
 #include <core/document/Document.hpp>
 #include <core/document/DocumentModel.hpp>
 #include <core/document/DocumentPresenter.hpp>
-#include <QObject>
-#include <QString>
 #include <stdexcept>
 
 #include "DocumentInterface.hpp"
-#include <iscore/tools/ObjectPath.hpp>
+#include <iscore/model/path/ObjectPath.hpp>
 
 iscore::Document* iscore::IDocument::documentFromObject(const QObject* obj)
 {
-    QString objName {obj ? obj->objectName() : "INVALID"};
+  QString objName{obj ? obj->objectName() : "INVALID"};
 
-    while(obj && !qobject_cast<const Document*>(obj))
-    {
-        obj = obj->parent();
-    }
+  while (obj && !qobject_cast<const Document*>(obj))
+  {
+    obj = obj->parent();
+  }
 
-    if(!obj)
-    {
-        qDebug("fail");
-        throw std::runtime_error(
-            QString("Object (name: %1) is not part of a Document!")
+  if (!obj)
+  {
+    qDebug("fail");
+    throw std::runtime_error(
+        QStringLiteral("Object (name: %1) is not part of a Document!")
             .arg(objName)
             .toStdString());
-    }
+  }
 
-    return safe_cast<Document*>(const_cast<QObject*>(obj));
+  return safe_cast<Document*>(const_cast<QObject*>(obj));
 }
-
 
 iscore::Document* iscore::IDocument::documentFromObject(const QObject& obj)
 {
-    return documentFromObject(&obj);
+  return documentFromObject(&obj);
 }
 
-ObjectPath iscore::IDocument::unsafe_path(QObject const * const&  obj)
+ObjectPath iscore::IDocument::unsafe_path(QObject const* const& obj)
 {
-    return ObjectPath::pathBetweenObjects(&documentFromObject(obj)->model(), obj);
+  return ObjectPath::pathBetweenObjects(
+      &documentFromObject(obj)->model(), obj);
 }
 
-ObjectPath iscore::IDocument::unsafe_path(const QObject &obj)
+ObjectPath iscore::IDocument::unsafe_path(const QObject& obj)
 {
-    return unsafe_path(&obj);
+  return unsafe_path(&obj);
 }
 
-iscore::DocumentDelegatePresenterInterface& iscore::IDocument::presenterDelegate_generic(const iscore::Document& d)
+iscore::DocumentDelegatePresenter&
+iscore::IDocument::presenterDelegate_generic(const iscore::Document& d)
 {
-    return *d.presenter().presenterDelegate();
+  return d.presenter().presenterDelegate();
 }
 
-iscore::DocumentDelegateModelInterface& iscore::IDocument::modelDelegate_generic(const Document& d)
+iscore::DocumentDelegateModel&
+iscore::IDocument::modelDelegate_generic(const Document& d)
 {
-    return d.model().modelDelegate();
+  return d.model().modelDelegate();
 }
 
-ISCORE_LIB_BASE_EXPORT const iscore::DocumentContext&iscore::IDocument::documentContext(const QObject& obj)
+ISCORE_LIB_BASE_EXPORT const iscore::DocumentContext&
+iscore::IDocument::documentContext(const QObject& obj)
 {
-    auto doc = documentFromObject(obj);
-    ISCORE_ASSERT(doc);
-    return doc->context();
+  auto doc = documentFromObject(obj);
+  ISCORE_ASSERT(doc);
+  return doc->context();
 }

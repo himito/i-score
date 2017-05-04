@@ -8,21 +8,21 @@
 
 namespace Scenario
 {
-LocalTimeRulerView::LocalTimeRulerView():
-    AbstractTimeRulerView()
+LocalTimeRulerView::LocalTimeRulerView(QGraphicsView* v)
+  : AbstractTimeRulerView(v)
 {
-    m_graduationHeight = 10;
-    m_textPosition = 1.75 * m_graduationHeight;
-    m_height = 3 * m_graduationHeight;
-    m_color = ScenarioStyle::instance().LocalTimeRuler;
-    m_timeFormat = "ss''''z";
-    setZValue(1);
+  this->setCacheMode(QGraphicsItem::NoCache);
+  m_graduationHeight = 10;
+  m_textPosition = 1.75 * m_graduationHeight;
+  m_height = 3 * m_graduationHeight;
+  m_timeFormat = "ss''''z";
+  setZValue(1);
 }
 
 LocalTimeRulerView::~LocalTimeRulerView() = default;
 
 QRectF LocalTimeRulerView::boundingRect() const
 {
-    return QRectF{0, 0, m_width * 2, m_height};
+  return QRectF{0, 0, m_width * 2, m_height};
 }
 }

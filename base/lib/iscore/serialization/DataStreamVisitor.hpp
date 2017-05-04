@@ -1,450 +1,656 @@
 #pragma once
-#include <iscore/serialization/VisitorInterface.hpp>
+#include <iscore/tools/Todo.hpp>
 #include <QByteArray>
 #include <QDataStream>
-#include <sys/types.h>
+#include <iscore/serialization/VisitorInterface.hpp>
 #include <stdexcept>
+#include <sys/types.h>
 #include <type_traits>
 #include <vector>
-
-#include <iscore/tools/NamedObject.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <boost/container/flat_set.hpp>
+#include <iscore/serialization/VisitorTags.hpp>
 #include <iscore/tools/std/Optional.hpp>
+#include <iscore/model/EntityBase.hpp>
+
+#include <QVector2D>
+#include <QVector3D>
+#include <QVector4D>
+#include <string>
+
 namespace iscore
 {
-struct ApplicationContext;
+class ApplicationComponents;
 }
-
-template<typename T>
-using enable_if_QDataStreamSerializable =
-    typename std::enable_if_t<
-        std::is_arithmetic<T>::value ||
-        std::is_same<T, QStringList>::value ||
-        std::is_same<T, QVector3D>::value ||
-        std::is_same<T, QPointF>::value ||
-        std::is_same<T, QPoint>::value
->;
-
-template <class, class Enable = void>
-struct is_QDataStreamSerializable : std::false_type {};
-
-template <class T>
-struct is_QDataStreamSerializable<T, enable_if_QDataStreamSerializable<typename std::decay<T>::type> > : std::true_type {};
-
-
-
-class QIODevice;
-class QStringList;
-template <typename model> class IdentifiedObject;
-
-struct DataStreamInput
-{
-        QDataStream& stream;
-
-        template<typename T>
-        friend DataStreamInput& operator<<(DataStreamInput& s, T&& obj)
-        {
-            s.stream << obj;
-            return s;
-        }
-};
-
-struct DataStreamOutput
-{
-        QDataStream& stream;
-
-        template<typename T>
-        friend DataStreamOutput& operator>>(DataStreamOutput& s, T&& obj)
-        {
-            s.stream >> obj;
-            return s;
-        }
-};
-
+#if defined(ISCORE_DEBUG_DELIMITERS)
+#define ISCORE_DEBUG_INSERT_DELIMITER do { insertDelimiter(); } while(0)
+#define ISCORE_DEBUG_INSERT_DELIMITER2(Vis) do { Vis.insertDelimiter(); } while(0)
+#define ISCORE_DEBUG_CHECK_DELIMITER do { checkDelimiter(); } while(0)
+#define ISCORE_DEBUG_CHECK_DELIMITER2(Vis) do { Vis.checkDelimiter(); } while(0)
+#else
+#define ISCORE_DEBUG_INSERT_DELIMITER
+#define ISCORE_DEBUG_INSERT_DELIMITER2(Vis)
+#define ISCORE_DEBUG_CHECK_DELIMITER
+#define ISCORE_DEBUG_CHECK_DELIMITER2(Vis)
+#endif
 
 /**
+ * \file DataStreamVisitor.hpp
+ *
  * This file contains facilities
  * to serialize an object using QDataStream.
  *
  * Generally, it is used with QByteArrays, but it works with any QIODevice.
  */
-class DataStream;
+template <typename T>
+using enable_if_QDataStreamSerializable =
+    typename std::enable_if_t<
+      std::is_arithmetic<T>::value
+   || std::is_same<T, QStringList>::value
+   || std::is_same<T, QVector2D>::value
+   || std::is_same<T, QVector3D>::value
+   || std::is_same<T, QVector4D>::value
+   || std::is_same<T, QPointF>::value
+   || std::is_same<T, QPoint>::value
+   || std::is_same<T, std::string>::value>;
 
+template <class, class Enable = void>
+struct is_QDataStreamSerializable : std::false_type
+{
+};
+
+template <class T>
+struct
+    is_QDataStreamSerializable<T, enable_if_QDataStreamSerializable<typename std::decay<T>::type>>
+    : std::true_type
+{
+};
+
+ISCORE_LIB_BASE_EXPORT QDataStream& operator<<(QDataStream& s, char c);
+ISCORE_LIB_BASE_EXPORT QDataStream& operator>>(QDataStream& s, char& c);
+
+ISCORE_LIB_BASE_EXPORT QDataStream&
+operator<<(QDataStream& stream, const std::string& obj);
+ISCORE_LIB_BASE_EXPORT QDataStream&
+operator>>(QDataStream& stream, std::string& obj);
+
+class QIODevice;
+class QStringList;
+
+struct DataStreamInput
+{
+  QDataStream& stream;
+
+  template <typename T>
+  friend DataStreamInput& operator<<(DataStreamInput& s, T&& obj)
+  {
+    s.stream << std::forward<T>(obj);
+    return s;
+  }
+};
+
+struct DataStreamOutput
+{
+  QDataStream& stream;
+
+  template <typename T>
+  friend DataStreamOutput& operator>>(DataStreamOutput& s, T&& obj)
+  {
+    s.stream >> obj;
+    return s;
+  }
+};
+
+class DataStreamReader;
+class DataStreamWriter;
 class DataStream
 {
-    public:
-        using Serializer = Visitor<Reader<DataStream>>;
-        using Deserializer = Visitor<Writer<DataStream>>;
-        static constexpr SerializationIdentifier type()
-        {
-            return 2;
-        }
+public:
+  using Serializer = DataStreamReader;
+  using Deserializer = DataStreamWriter;
+  static constexpr SerializationIdentifier type()
+  {
+    return 2;
+  }
 };
 
-template<>
-class ISCORE_LIB_BASE_EXPORT Visitor<Reader<DataStream>> : public AbstractVisitor
+class ISCORE_LIB_BASE_EXPORT DataStreamReader
+    : public AbstractVisitor
 {
-    public:
-        using is_visitor_tag = std::integral_constant<bool, true>;
+public:
 
-        VisitorVariant toVariant() { return {*this, DataStream::type()}; }
+  using is_visitor_tag = std::integral_constant<bool, true>;
 
-        Visitor();
-        Visitor(const Visitor&) = delete;
-        Visitor& operator=(const Visitor&) = delete;
+  VisitorVariant toVariant()
+  {
+    return {*this, DataStream::type()};
+  }
 
-        Visitor(QByteArray* array);
-        Visitor(QIODevice* dev);
+  DataStreamReader();
+  DataStreamReader(QByteArray* array);
+  DataStreamReader(QIODevice* dev);
 
-        template<typename T>
-        static auto marshall(const T& t)
-        {
-            QByteArray arr;
-            Visitor<Reader<DataStream>> reader{&arr};
-            reader.readFrom(t);
-            return arr;
-        }
+  DataStreamReader(const DataStreamReader&) = delete;
+  DataStreamReader& operator=(const DataStreamReader&) = delete;
 
-        template<template<class...> class T,
-                 typename... Args>
-        void readFrom(
-                const T<Args...>& obj,
-                typename std::enable_if_t<
-                    is_template<T<Args...>>::value &&
-                    !is_abstract_base<T<Args...>>::value> * = nullptr)
-        {
-            TSerializer<DataStream, void, T<Args...>>::readFrom(*this, obj);
-        }
+  template <typename T>
+  static auto marshall(const T& t)
+  {
+    QByteArray arr;
+    DataStreamReader reader{&arr};
+    reader.readFrom(t);
+    return arr;
+  }
 
-        template<typename T,
-                 std::enable_if_t<
-                     is_abstract_base<T>::value
-                     >* = nullptr>
-        void readFrom(const T& obj)
-        {
-            AbstractSerializer<DataStream, T>::readFrom(*this, obj);
-        }
+  //! Called by code that wants to serialize.
+  template<typename T>
+  void readFrom(const T& obj)
+  {
+    readFrom_impl(obj, typename serialization_tag<T>::type{});
+  }
 
-        template<typename T>
-        void readFrom_impl(const T&);
+  /**
+   * @brief insertDelimiter
+   *
+   * Adds a delimiter that is to be checked by the reader.
+   */
+  void insertDelimiter()
+  {
+    m_stream << int32_t(0xDEADBEEF);
+  }
 
-        template<typename T,
-                 std::enable_if_t<
-                     !std::is_enum<T>::value &&
-                     !is_template<T>::value &&
-                     !is_abstract_base<T>::value
-                     >* = nullptr>
-        void readFrom(const T&);
+  auto& stream()
+  {
+    return m_stream;
+  }
 
-        template<typename T,
-                 std::enable_if_t<
-                     std::is_enum<T>::value &&
-                     !is_template<T>::value>* = nullptr>
-        void readFrom(const T& elt)
-        {
-            m_stream << (int32_t) elt;
-        }
+  //! Serializable types should reimplement this method
+  //! It is not to be called by user code.
+  template <typename T>
+  void read(const T&);
 
-        /**
-         * @brief insertDelimiter
-         *
-         * Adds a delimiter that is to be checked by the reader.
-         */
-        void insertDelimiter()
-        {
-            m_stream << int32_t (0xDEADBEEF);
-        }
+private:
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_template_tag)
+  {
+    TSerializer<DataStream, T>::readFrom(*this, obj);
+  }
 
-        auto& stream() { return m_stream; }
-    private:
-        QDataStream m_stream_impl;
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_object_tag)
+  {
+    TSerializer<DataStream, IdentifiedObject<T>>::readFrom(*this, obj);
+    read(obj);
+  }
 
-    public:
-        const iscore::ApplicationContext& context;
-        DataStreamInput m_stream{m_stream_impl};
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_entity_tag)
+  {
+    TSerializer<DataStream, iscore::Entity<T>>::readFrom(*this, obj);
+    read(obj);
+  }
+
+  template<typename T, typename Fun>
+  void readFromAbstract(const T& obj, Fun f)
+  {
+    // We save in a byte array so that
+    // we have a chance to save it as-is and reload it later
+    // if the plug-in is not found on the system.
+    QByteArray b;
+    DataStream::Serializer sub{&b};
+
+    // First read the key
+    ISCORE_DEBUG_INSERT_DELIMITER2(sub);
+    sub.readFrom(obj.concreteKey().impl());
+    ISCORE_DEBUG_INSERT_DELIMITER2(sub);
+
+    // Read our object
+    f(sub);
+
+    // Read the implementation of the derived class, through a virtual function.
+    obj.serialize_impl(sub.toVariant());
+
+    // Finish our object
+    ISCORE_DEBUG_INSERT_DELIMITER2(sub);
+
+    // Save the bundle
+    m_stream << std::move(b);
+  }
+
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_abstract_tag)
+  {
+    readFromAbstract(
+          obj,
+          [&] (DataStreamReader& sub)
+    {
+      // Read the implementation of the base object
+      sub.read(obj);
+    });
+  }
+
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_abstract_object_tag)
+  {
+    readFromAbstract(
+          obj,
+          [&] (DataStreamReader& sub)
+    {
+      sub.readFrom_impl(obj, visitor_object_tag{});
+    });
+  }
+
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_abstract_entity_tag)
+  {
+    readFromAbstract(
+          obj,
+          [&] (DataStreamReader& sub)
+    {
+      sub.readFrom_impl(obj, visitor_entity_tag{});
+    });
+  }
+
+  //! Used to serialize general objects that won't fit in the other categories
+  template <typename T>
+  void readFrom_impl(
+      const T& obj, visitor_default_tag)
+  {
+    read(obj);
+  }
+
+  //! Used to serialize enums.
+  template<typename T>
+  void readFrom_impl(const T& elt, visitor_enum_tag)
+  {
+    m_stream << (int32_t)elt;
+  }
+
+  QDataStream m_stream_impl;
+
+public:
+  const iscore::ApplicationComponents& components;
+  DataStreamInput m_stream{m_stream_impl};
 };
 
-template<>
-class ISCORE_LIB_BASE_EXPORT Visitor<Writer<DataStream>> : public AbstractVisitor
+
+class ISCORE_LIB_BASE_EXPORT DataStreamWriter
+    : public AbstractVisitor
 {
-    public:
-        using is_visitor_tag = std::integral_constant<bool, true>;
+public:
+  using type = DataStream;
+  using is_visitor_tag = std::integral_constant<bool, true>;
+  using is_deserializer_tag = std::integral_constant<bool, true>;
 
-        VisitorVariant toVariant() { return {*this, DataStream::type()}; }
+  VisitorVariant toVariant()
+  {
+    return {*this, DataStream::type()};
+  }
 
-        Visitor();
-        Visitor(const Visitor&) = delete;
-        Visitor& operator=(const Visitor&) = delete;
+  DataStreamWriter();
+  DataStreamWriter(const DataStreamWriter&) = delete;
+  DataStreamWriter& operator=(const DataStreamWriter&) = delete;
 
-        Visitor(const QByteArray& array);
-        Visitor(QIODevice* dev);
+  DataStreamWriter(const QByteArray& array);
+  DataStreamWriter(QIODevice* dev);
 
+  template <typename T>
+  static auto unmarshall(const QByteArray& arr)
+  {
+    T data;
+    DataStreamWriter wrt{arr};
+    wrt.writeTo(data);
+    return data;
+  }
 
-        template<typename T>
-        static auto unmarshall(const QByteArray& arr)
-        {
-            T data;
-            Visitor<Writer<DataStream>> wrt{arr};
-            wrt.writeTo(data);
-            return data;
-        }
+  //! Serializable types should reimplement this method
+  //! It is not to be called by user code.
+  template <typename T>
+  void write(T&);
 
-        template<
-                template<class...> class T,
-                typename... Args>
-        void writeTo(
-                T<Args...>& obj,
-                typename std::enable_if<is_template<T<Args...>>::value, void>::type * = nullptr)
-        {
-            TSerializer<DataStream, void, T<Args...>>::writeTo(*this, obj);
-        }
+  template<typename T>
+  void writeTo(T& obj)
+  {
+    writeTo_impl(obj, typename serialization_tag<T>::type{});
+  }
 
-        template<typename T,
-                 std::enable_if_t<!std::is_enum<T>::value && !is_template<T>::value>* = nullptr >
-        void writeTo(T&);
+  /**
+   * @brief checkDelimiter
+   *
+   * Checks if a delimiter is present at the current
+   * stream position, and fails if it isn't.
+   */
+  void checkDelimiter()
+  {
+    int val{};
+    m_stream >> val;
 
-        template<typename T,
-                 std::enable_if_t<std::is_enum<T>::value && !is_template<T>::value>* = nullptr>
-        void writeTo(T& elt)
-        {
-            int32_t e;
-            m_stream >> e;
-            elt = static_cast<T>(e);
-        }
+    if (val != int32_t(0xDEADBEEF))
+    {
+      ISCORE_BREAKPOINT;
+      throw std::runtime_error("Corrupt save file.");
+    }
+  }
 
-        /**
-         * @brief checkDelimiter
-         *
-         * Checks if a delimiter is present at the current
-         * stream position, and fails if it isn't.
-         */
-        void checkDelimiter()
-        {
-            int val{};
-            m_stream >> val;
+  auto& stream()
+  {
+    return m_stream;
+  }
 
-            if(val != int32_t (0xDEADBEEF))
-            {
-                ISCORE_BREAKPOINT;
-                throw std::runtime_error("Corrupt save file.");
-            }
-        }
+private:
+  template <typename T>
+  void writeTo_impl(T& obj, visitor_template_tag)
+  {
+    TSerializer<DataStream, T>::writeTo(*this, obj);
+  }
 
-        auto& stream() { return m_stream; }
-    private:
-        QDataStream m_stream_impl;
+  template <typename T, typename OtherTag>
+  void writeTo_impl(T& obj, OtherTag)
+  {
+    write(obj);
+  }
 
-    public:
-        const iscore::ApplicationContext& context;
-        DataStreamOutput m_stream{m_stream_impl};
+  template <typename T>
+  void writeTo_impl(T& elt, visitor_enum_tag)
+  {
+    int32_t e;
+    m_stream >> e;
+    elt = static_cast<T>(e);
+  }
+
+  QDataStream m_stream_impl;
+
+public:
+  const iscore::ApplicationComponents& components;
+  DataStreamOutput m_stream{m_stream_impl};
 };
-
 
 // TODO instead why not add a iscore_serializable tag to our classes ?
-template<typename T,
-         std::enable_if_t<
-             ! std::is_arithmetic<T>::value
-          && ! std::is_same<T, QStringList>::value>* = nullptr>
-QDataStream& operator<< (QDataStream& stream, const T& obj)
+template <
+    typename T,
+    std::
+        enable_if_t<!std::is_arithmetic<T>::value && !std::is_same<T, QStringList>::value>* = nullptr>
+QDataStream& operator<<(QDataStream& stream, const T& obj)
 {
-    Visitor<Reader<DataStream>> reader{stream.device()};
-    reader.readFrom(obj);
-    return stream;
+  DataStreamReader reader{stream.device()};
+  reader.readFrom(obj);
+  return stream;
 }
 
-template<typename T,
-         std::enable_if_t<
-             ! std::is_arithmetic<T>::value
-          && ! std::is_same<T, QStringList>::value>* = nullptr>
-QDataStream& operator>> (QDataStream& stream, T& obj)
+template <
+    typename T,
+    std::
+        enable_if_t<!std::is_arithmetic<T>::value && !std::is_same<T, QStringList>::value>* = nullptr>
+QDataStream& operator>>(QDataStream& stream, T& obj)
 {
-    Visitor<Writer<DataStream>> writer{stream.device()};
-    writer.writeTo(obj);
+  DataStreamWriter writer{stream.device()};
+  writer.writeTo(obj);
 
-    return stream;
+  return stream;
 }
 
-template<typename U>
-struct TSerializer<DataStream, void, Id<U>>
+template <typename U>
+struct TSerializer<DataStream, Id<U>>
 {
-    static void readFrom(
-            DataStream::Serializer& s,
-            const Id<U>& obj)
-    {
-        s.stream() << bool (obj.val());
+  static void readFrom(DataStream::Serializer& s, const Id<U>& obj)
+  {
+    s.stream() << obj.val();
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
 
-        if(obj.val())
-        {
-            s.stream() << *obj.val();
-        }
+  static void writeTo(DataStream::Deserializer& s, Id<U>& obj)
+  {
+    int32_t val{};
+    s.stream() >> val;
+    obj.setVal(val);
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename T>
+struct TSerializer<DataStream, IdentifiedObject<T>>
+{
+  template<typename U>
+  static void
+  readFrom(DataStream::Serializer& s, const IdentifiedObject<U>& obj)
+  {
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+    s.stream() << obj.objectName();
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+    s.readFrom(obj.id());
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  template<typename U>
+  static void writeTo(DataStream::Deserializer& s, IdentifiedObject<U>& obj)
+  {
+    QString name;
+    Id<T> id;
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+    s.stream() >> name;
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+    obj.setObjectName(name);
+    s.writeTo(id);
+    obj.setId(std::move(id));
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename T>
+struct TSerializer<DataStream, optional<T>>
+{
+  static void readFrom(DataStream::Serializer& s, const optional<T>& obj)
+  {
+    s.stream() << static_cast<bool>(obj);
+
+    if (obj)
+    {
+      s.stream() << *obj;
+    }
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, optional<T>& obj)
+  {
+    bool b{};
+    s.stream() >> b;
+
+    if (b)
+    {
+      T val;
+      s.stream() >> val;
+      obj = val;
+    }
+    else
+    {
+      obj = ossia::none;
+    }
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename T>
+struct TSerializer<DataStream, QList<T>>
+{
+  static void readFrom(DataStream::Serializer& s, const QList<T>& obj)
+  {
+    s.stream() << obj;
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, QList<T>& obj)
+  {
+    s.stream() >> obj;
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename T, std::size_t N>
+struct TSerializer<DataStream, std::array<T, N>>
+{
+  static void
+  readFrom(DataStream::Serializer& s, const std::array<T, N>& arr)
+  {
+    for (std::size_t i = 0U; i < N; i++)
+      s.stream() << arr[i];
+
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, std::array<T, N>& arr)
+  {
+    for (std::size_t i = 0U; i < N; i++)
+      s.stream() >> arr[i];
+
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename... Args>
+struct
+    TSerializer<
+       DataStream,
+       std::vector<Args...>,
+       std::enable_if_t<!is_QDataStreamSerializable<typename std::vector<Args...>::value_type>::value>>
+{
+  static void
+  readFrom(DataStream::Serializer& s, const std::vector<Args...>& vec)
+  {
+    s.stream() << (int32_t)vec.size();
+    for (const auto& elt : vec)
+      s.readFrom(elt);
+
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, std::vector<Args...>& vec)
+  {
+    int32_t n;
+    s.stream() >> n;
+
+    vec.clear();
+    vec.resize(n);
+    for (int i = 0; i < n; i++)
+    {
+      s.writeTo(vec[i]);
     }
 
-    static void writeTo(
-            DataStream::Deserializer& s,
-            Id<U>& obj)
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
+
+template <typename... Args>
+struct
+    TSerializer<
+      DataStream,
+      std::vector<Args...>,
+      std::enable_if_t<is_QDataStreamSerializable<typename std::vector<Args...>::value_type>::value>>
+{
+  static void
+  readFrom(DataStream::Serializer& s, const std::vector<Args...>& vec)
+  {
+    s.stream() << (int32_t)vec.size();
+    for (const auto& elt : vec)
+      s.stream() << elt;
+
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, std::vector<Args...>& vec)
+  {
+    int32_t n = 0;
+    s.stream() >> n;
+
+    vec.clear();
+    vec.resize(n);
+    for (int i = 0; i < n; i++)
     {
-        bool init {};
-        int32_t val {};
-        s.stream() >> init;
-
-        if(init)
-        {
-            s.stream() >> val;
-            obj.setVal(val);
-        }
-        else
-        {
-            obj.unset();
-        }
+      s.stream() >> vec[i];
     }
+
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
 };
 
-
-template<typename T>
-struct TSerializer<DataStream, void, IdentifiedObject<T>>
+template <typename U>
+struct TSerializer<DataStream, UuidKey<U>>
 {
-        static void readFrom(
-                DataStream::Serializer& s,
-                const IdentifiedObject<T>& obj)
-        {
-            s.readFrom(static_cast<const NamedObject&>(obj));
-            s.readFrom(obj.id());
-        }
+  static void readFrom(DataStream::Serializer& s, const UuidKey<U>& uid)
+  {
+    s.stream().stream.writeRawData(
+        (const char*)uid.impl().data, sizeof(uid.impl().data));
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
 
-        static void writeTo(
-                DataStream::Deserializer& s,
-                IdentifiedObject<T>& obj)
-        {
-            Id<T> id;
-            s.writeTo(id);
-            obj.setId(std::move(id));
-        }
-
+  static void writeTo(DataStream::Deserializer& s, UuidKey<U>& uid)
+  {
+    s.stream().stream.readRawData(
+        (char*)uid.impl().data, sizeof(uid.impl().data));
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
 };
 
-template<typename T>
-struct TSerializer<DataStream, void, optional<T>>
+template<typename T, typename U>
+struct TSerializer<DataStream, iscore::hash_map<T, U>>
 {
-        static void readFrom(
-                DataStream::Serializer& s,
-                const optional<T>& obj)
-        {
-            s.stream() << static_cast<bool>(obj);
+  static void readFrom(
+      DataStream::Serializer& s,
+      const iscore::hash_map<T, U>& obj)
+  {
+    auto& st = s.stream();
+    st << (int32_t) obj.size();
+    for(const auto& e : obj)
+    {
+      st << e.first << e.second;
+    }
+  }
 
-            if(obj)
-            {
-                s.stream() << *obj;
-            }
-        }
-
-        static void writeTo(
-                DataStream::Deserializer& s,
-                optional<T>& obj)
-        {
-            bool b {};
-            s.stream() >> b;
-
-            if(b)
-            {
-                T val;
-                s.stream() >> val;
-                obj = val;
-            }
-            else
-            {
-                obj = iscore::none;
-            }
-        }
+  static void writeTo(
+      DataStream::Deserializer& s,
+      iscore::hash_map<T, U>& obj)
+  {
+    auto& st = s.stream();
+    int32_t n;
+    st >> n;
+    for(int i = 0; i < n; i++)
+    {
+      T key;
+      U value;
+      st >> key >> value;
+      obj.emplace(std::move(key), std::move(value));
+    }
+  }
 };
 
-template<typename T>
-struct TSerializer<DataStream, void, QList<T>>
+template <typename T>
+struct TSerializer<DataStream, boost::container::flat_set<T>>
 {
-        static void readFrom(
-                DataStream::Serializer& s,
-                const QList<T>& obj)
-        {
-            s.stream() << obj;
-        }
+  using type = boost::container::flat_set<T>;
+  static void readFrom(DataStream::Serializer& s, const type& obj)
+  {
+    s.stream() << (int32_t)obj.size();
+    for(const auto& e : obj)
+      s.stream() << e;
+  }
 
-        static void writeTo(
-                DataStream::Deserializer& s,
-                QList<T>& obj)
-        {
-            s.stream() >> obj;
-        }
-};
-
-template<typename... Args>
-struct TSerializer<
-        DataStream,
-        std::enable_if_t<!is_QDataStreamSerializable<typename std::vector<Args...>::value_type>::value>,
-        std::vector<Args...>>
-{
-        static void readFrom(
-                DataStream::Serializer& s,
-                const std::vector<Args...>& vec)
-        {
-            s.stream() << (int32_t)vec.size();
-            for(const auto& elt : vec)
-                s.readFrom(elt);
-
-            s.insertDelimiter();
-        }
-
-        static void writeTo(
-                DataStream::Deserializer& s,
-                std::vector<Args...>& vec)
-        {
-            int32_t n = 0;
-            s.stream() >> n;
-
-            vec.clear();
-            vec.resize(n);
-            for(int i = 0; i < n; i++)
-            {
-                s.writeTo(vec[i]);
-            }
-
-            s.checkDelimiter();
-        }
-};
-
-template<typename... Args>
-struct TSerializer<
-        DataStream,
-        std::enable_if_t<is_QDataStreamSerializable<typename std::vector<Args...>::value_type>::value>,
-        std::vector<Args...>>
-{
-        static void readFrom(
-                DataStream::Serializer& s,
-                const std::vector<Args...>& vec)
-        {
-            s.stream() << (int32_t)vec.size();
-            for(const auto& elt : vec)
-                s.stream() << elt;
-
-            s.insertDelimiter();
-        }
-
-        static void writeTo(
-                DataStream::Deserializer& s,
-                std::vector<Args...>& vec)
-        {
-            int32_t n = 0;
-            s.stream() >> n;
-
-            vec.clear();
-            vec.resize(n);
-            for(int i = 0; i < n; i++)
-            {
-                s.stream() >> vec[i];
-            }
-
-            s.checkDelimiter();
-        }
+  static void writeTo(DataStream::Deserializer& s, type& obj)
+  {
+    int32_t n;
+    s.stream() >> n;
+    for(; n --> 0;)
+    {
+      T val;
+      s.stream() >> val;
+      obj.insert(std::move(val));
+    }
+  }
 };
 
 
-Q_DECLARE_METATYPE(Visitor<Reader<DataStream>>*)
-Q_DECLARE_METATYPE(Visitor<Writer<DataStream>>*)
+Q_DECLARE_METATYPE(DataStreamReader*)
+Q_DECLARE_METATYPE(DataStreamWriter*)

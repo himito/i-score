@@ -1,64 +1,62 @@
 #pragma once
 #include "AddressSettingsWidget.hpp"
-#include <iscore/widgets/SpinBoxes.hpp>
+#include <ossia/editor/value/value_conversion.hpp>
 #include <QComboBox>
 #include <QDebug>
+#include <QFormLayout>
 #include <QGridLayout>
 #include <QLabel>
 #include <QLineEdit>
 #include <QSpinBox>
-#include <QFormLayout>
 #include <State/ValueConversion.hpp>
-
+#include <State/Widgets/Values/NumericValueWidget.hpp>
+#include <iscore/widgets/SpinBoxes.hpp>
 
 namespace Explorer
 {
-template<typename T>
+template <typename T>
 class AddressNumericSettingsWidget final : public AddressSettingsWidget
 {
-    public:
-        explicit AddressNumericSettingsWidget(QWidget* parent = nullptr)
-            : AddressSettingsWidget(parent)
-        {
-            using namespace iscore;
-            m_valueSBox = new SpinBox<T>(this);
-            m_minSBox = new SpinBox<T>(this);
-            m_maxSBox = new SpinBox<T>(this);
+public:
+  explicit AddressNumericSettingsWidget(QWidget* parent = nullptr)
+      : AddressSettingsWidget(parent)
+  {
+    using namespace iscore;
+    m_valueSBox = new SpinBox<T>(this);
+    m_domainEdit = new State::NumericDomainWidget<T>{this};
 
-            m_layout->insertRow(0, tr("Value"), m_valueSBox);
-            m_layout->insertRow(1, tr("Min"), m_minSBox);
-            m_layout->insertRow(2, tr("Max"), m_maxSBox);
+    m_layout->insertRow(0, makeLabel(tr("Value"), this), m_valueSBox);
+    m_layout->insertRow(1, makeLabel(tr("Domain"), this), m_domainEdit);
 
-            m_valueSBox->setValue(0);
-            m_minSBox->setValue(0);
-            m_maxSBox->setValue(100);
-        }
+    m_valueSBox->setValue(0);
+    m_domainEdit->set_domain(ossia::make_domain(T{0}, T{1}));
+  }
 
-        Device::AddressSettings getSettings() const override
-        {
-            auto settings = getCommonSettings();
-            settings.value.val = T(m_valueSBox->value());
-            settings.domain.min.val = T(m_minSBox->value());
-            settings.domain.max.val = T(m_maxSBox->value());
-            return settings;
-        }
+  Device::AddressSettings getSettings() const override
+  {
+    auto settings = getCommonSettings();
+    settings.value.val = T(m_valueSBox->value());
+    settings.domain = m_domainEdit->domain();
+    return settings;
+  }
 
-        void setSettings(const Device::AddressSettings& settings) override
-        {
-            setCommonSettings(settings);
-            m_valueSBox->setValue(State::convert::value<T>(settings.value));
+  Device::AddressSettings getDefaultSettings() const override
+  {
+    Device::AddressSettings s;
+    s.value.val = T{0};
+    s.domain = ossia::make_domain(T{0}, T{1});
+    return s;
+  }
 
-            m_minSBox->setValue(State::convert::value<T>(settings.domain.min));
-            m_maxSBox->setValue(State::convert::value<T>(settings.domain.max));
+  void setSettings(const Device::AddressSettings& settings) override
+  {
+    setCommonSettings(settings);
+    m_valueSBox->setValue(State::convert::value<T>(settings.value));
+    m_domainEdit->set_domain(settings.domain);
+  }
 
-            // TODO if the "values" part of the domain is set, we
-            // have to display a combobox instead.
-        }
-
-    private:
-        typename iscore::TemplatedSpinBox<T>::spinbox_type* m_valueSBox;
-        typename iscore::TemplatedSpinBox<T>::spinbox_type* m_minSBox;
-        typename iscore::TemplatedSpinBox<T>::spinbox_type* m_maxSBox;
+private:
+  typename iscore::TemplatedSpinBox<T>::spinbox_type* m_valueSBox{};
+  State::NumericDomainWidget<T>* m_domainEdit{};
 };
 }
-

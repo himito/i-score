@@ -10,13 +10,17 @@ AddressNoneSettingsWidget::AddressNoneSettingsWidget(QWidget* parent)
 
 Device::AddressSettings AddressNoneSettingsWidget::getSettings() const
 {
-    auto set = getCommonSettings();
-    set.value = State::ValueImpl{State::no_value_t{}};
-    return set;
+  return getCommonSettings();
 }
 
-void AddressNoneSettingsWidget::setSettings(const Device::AddressSettings& settings)
+void AddressNoneSettingsWidget::setSettings(
+    const Device::AddressSettings& settings)
 {
-    setCommonSettings(settings);
+  setCommonSettings(settings);
+}
+
+Device::AddressSettings AddressNoneSettingsWidget::getDefaultSettings() const
+{
+  return {};
 }
 }

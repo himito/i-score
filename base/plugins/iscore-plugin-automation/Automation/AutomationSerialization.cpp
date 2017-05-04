@@ -1,95 +1,72 @@
-#include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/serialization/JSONVisitor.hpp>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <algorithm>
+#include <iscore/serialization/DataStreamVisitor.hpp>
+#include <iscore/serialization/JSONVisitor.hpp>
 
-#include "AutomationLayerModel.hpp"
 #include "AutomationModel.hpp"
+#include <ossia/editor/dataspace/dataspace_visitors.hpp>
 #include <Curve/CurveModel.hpp>
 #include <State/Address.hpp>
-#include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
 #include <iscore/serialization/JSONValueVisitor.hpp>
 #include <iscore/serialization/VisitorCommon.hpp>
 
-namespace Process { class LayerModel; }
-class QObject;
-struct VisitorVariant;
-template <typename T> class Reader;
-template <typename T> class Writer;
-
-template<>
-void Visitor<Reader<DataStream>>::readFrom_impl(
-        const Automation::ProcessModel& autom)
+template <>
+void DataStreamReader::read(
+    const Automation::ProcessModel& autom)
 {
-    readFrom(*autom.pluginModelList);
+  readFrom(autom.curve());
 
-    readFrom(autom.curve());
+  m_stream << autom.address();
+  m_stream << autom.min();
+  m_stream << autom.max();
+  m_stream << autom.tween();
 
-    m_stream << autom.address();
-    m_stream << autom.min();
-    m_stream << autom.max();
-
-    insertDelimiter();
-}
-
-template<>
-void Visitor<Writer<DataStream>>::writeTo(
-        Automation::ProcessModel& autom)
-{
-    autom.pluginModelList = new iscore::ElementPluginModelList{*this, &autom};
-
-    autom.setCurve(new Curve::Model{*this, &autom});
-
-    State::Address address;
-    double min, max;
-
-    m_stream >> address >> min >> max;
-
-    autom.setAddress(address);
-    autom.setMin(min);
-    autom.setMax(max);
-
-    checkDelimiter();
+  insertDelimiter();
 }
 
 
-
-
-template<>
-void Visitor<Reader<JSONObject>>::readFrom_impl(
-        const Automation::ProcessModel& autom)
+template <>
+void DataStreamWriter::write(Automation::ProcessModel& autom)
 {
-    m_obj["PluginsMetadata"] = toJsonValue(*autom.pluginModelList);
+  autom.setCurve(new Curve::Model{*this, &autom});
 
-    m_obj["Curve"] = toJsonObject(autom.curve());
-    m_obj["Address"] = toJsonObject(autom.address());
-    m_obj["Min"] = autom.min();
-    m_obj["Max"] = autom.max();
-}
+  State::AddressAccessor address;
+  double min, max;
+  bool tw;
 
-template<>
-void Visitor<Writer<JSONObject>>::writeTo(
-        Automation::ProcessModel& autom)
-{
-    Deserializer<JSONValue> elementPluginDeserializer(m_obj["PluginsMetadata"]);
-    autom.pluginModelList = new iscore::ElementPluginModelList{elementPluginDeserializer, &autom};
+  m_stream >> address >> min >> max >> tw;
 
-    Deserializer<JSONObject> curve_deser{m_obj["Curve"].toObject()};
-    autom.setCurve(new Curve::Model{curve_deser, &autom});
+  autom.setAddress(address);
+  autom.setMin(min);
+  autom.setMax(max);
+  autom.setTween(tw);
 
-    autom.setAddress(fromJsonObject<State::Address>(m_obj["Address"]));
-    autom.setMin(m_obj["Min"].toDouble());
-    autom.setMax(m_obj["Max"].toDouble());
+  checkDelimiter();
 }
 
 
-// Dynamic stuff
-namespace Automation
+template <>
+void JSONObjectReader::read(
+    const Automation::ProcessModel& autom)
 {
-void ProcessModel::serialize_impl(const VisitorVariant& vis) const
-{
-    serialize_dyn(vis, *this);
+  obj["Curve"] = toJsonObject(autom.curve());
+  obj[strings.Address] = toJsonObject(autom.address());
+  obj[strings.Min] = autom.min();
+  obj[strings.Max] = autom.max();
+  obj["Tween"] = autom.tween();
 }
 
+
+template <>
+void JSONObjectWriter::write(Automation::ProcessModel& autom)
+{
+  JSONObject::Deserializer curve_deser{obj["Curve"].toObject()};
+  autom.setCurve(new Curve::Model{curve_deser, &autom});
+
+  autom.setAddress(
+      fromJsonObject<State::AddressAccessor>(obj[strings.Address]));
+  autom.setMin(obj[strings.Min].toDouble());
+  autom.setMax(obj[strings.Max].toDouble());
+  autom.setTween(obj["Tween"].toBool());
 }

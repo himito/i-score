@@ -7,56 +7,52 @@
 #include <Device/Protocol/DeviceSettings.hpp>
 
 class QComboBox;
-class QGridLayout;
+class QFormLayout;
 class QWidget;
 
 namespace Device
 {
-class DynamicProtocolList;
+class ProtocolFactoryList;
 class ProtocolSettingsWidget;
 }
 namespace Explorer
 {
 class DeviceEditDialog final : public QDialog
 {
-        Q_OBJECT
+  Q_OBJECT
 
-    public:
-        explicit DeviceEditDialog(
-                const Device::DynamicProtocolList& pl,
-                QWidget* parent);
-        ~DeviceEditDialog();
+public:
+  explicit DeviceEditDialog(
+      const Device::ProtocolFactoryList& pl, QWidget* parent);
+  ~DeviceEditDialog();
 
-        Device::DeviceSettings getSettings() const;
-        QString getPath() const;
+  Device::DeviceSettings getSettings() const;
+  QString getPath() const;
 
-        void setSettings(const Device::DeviceSettings& settings);
+  void setSettings(const Device::DeviceSettings& settings);
 
-        // This mode will display a warning to
-        // the user if he has to edit the device again.
-        void setEditingInvalidState(bool);
+  // This mode will display a warning to
+  // the user if he has to edit the device again.
+  void setEditingInvalidState(bool);
 
+protected slots:
 
-    protected slots:
+  void updateProtocolWidget();
 
-        void updateProtocolWidget();
+protected:
+  void buildGUI();
 
-    protected:
+  void initAvailableProtocols();
 
-        void buildGUI();
+protected:
+  const Device::ProtocolFactoryList& m_protocolList;
 
-        void initAvailableProtocols();
+  QComboBox* m_protocolCBox;
+  Device::ProtocolSettingsWidget* m_protocolWidget;
+  QFormLayout* m_layout;
+  QList<Device::DeviceSettings> m_previousSettings;
+  int m_index;
 
-    protected:
-        const Device::DynamicProtocolList& m_protocolList;
-
-        QComboBox* m_protocolCBox;
-        Device::ProtocolSettingsWidget* m_protocolWidget;
-        QGridLayout* m_gLayout;
-        QList<Device::DeviceSettings> m_previousSettings;
-        int m_index;
-
-        bool m_invalidState{false};
+  bool m_invalidState{false};
 };
 }
-

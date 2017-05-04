@@ -26,15 +26,19 @@ option(ISCORE_OPENGL "Use OpenGL for rendering" OFF)
 option(ISCORE_IEEE "Use a graphical skin adapted to publication" OFF)
 option(ISCORE_WEBSOCKETS "Run a websocket server in the scenario" OFF)
 option(ISCORE_TESTBED "Enable the testbed. See Tests/testbed/README" OFF)
+option(ISCORE_PLAYER "Build standalone player" OFF)
 option(DEFINE_ISCORE_SCENARIO_DEBUG_RECTS "Enable to have debug rects around elements of a scenario" OFF)
 
+option(ISCORE_SPLIT_DEBUG "Split debug information" ON)
 option(ISCORE_COVERAGE "Enable coverage" OFF)
 
 include("${ISCORE_CONFIGURATION}")
 
+set(CMAKE_DEBUG_POSTFIX "")
 if(APPLE)
     set(ISCORE_ADDON_PLATFORM "darwin-amd64")
     set(ISCORE_ADDON_SUFFIX "amd64.dylib")
+    set(ISCORE_OPENGL ON)
 elseif(WIN32)
     set(ISCORE_ADDON_PLATFORM "windows-x86")
     set(ISCORE_ADDON_SUFFIX "x86.dll")
@@ -55,6 +59,7 @@ if(NACL)
   set(ISCORE_STATIC_QT True)
 endif()
 
+add_definitions(-DQT_DISABLE_DEPRECATED_BEFORE=0x050800)
 if(ISCORE_STATIC_QT)
   if(UNIX AND NOT APPLE)
     set(ISCORE_STATIC_PLUGINS True)
@@ -98,11 +103,15 @@ endif()
 # $ cmake -DCMAKE_MODULE_PATH={path/to/qt/5.3}/{gcc64,clang,msvc2013...}/lib/cmake/Qt5
 
 # Settings
+include(ProcessorCount)
 include(GenerateExportHeader)
 
-cmake_policy(SET CMP0020 NEW)
-cmake_policy(SET CMP0042 NEW)
+if(UNIX AND NOT APPLE AND NOT ISCORE_STATIC_PLUGINS AND DEPLOYMENT_BUILD)
+  set(CMAKE_INSTALL_RPATH "plugins")
+  set(CMAKE_INSTALL_RPATH_USE_LINK_PATH TRUE)
+endif()
 
+set(CMAKE_POSITION_INDEPENDENT_CODE 1)
 set(CMAKE_SKIP_INSTALL_ALL_DEPENDENCY True)
 set(ISCORE_ROOT_SOURCE_DIR "${CMAKE_CURRENT_SOURCE_DIR}")
 set(CTEST_OUTPUT_ON_FAILURE ON)
@@ -119,6 +128,8 @@ endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" MATCHES "MSVC")
     set(CXX_IS_MSVC True)
+    set(CMAKE_CXX_STANDARD_LIBRARIES "${CMAKE_CXX_STANDARD_LIBRARIES} runtimeobject.lib")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /bigobj")
 endif()
 
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
@@ -126,22 +137,14 @@ if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   execute_process(COMMAND ${CMAKE_CXX_COMPILER} -dumpversion
                   OUTPUT_VARIABLE GCC_VERSION)
 
-  if (GCC_VERSION VERSION_LESS 4.9)
-    message(FATAL_ERROR "i-score requires at least g++-4.9 to build")
-  endif()
-
-  # Note : http://stackoverflow.com/questions/31355692/cmake-support-for-gccs-link-time-optimization-lto
-  if(ISCORE_ENABLE_LTO)
-    find_program(CMAKE_GCC_AR NAMES ${_CMAKE_TOOLCHAIN_PREFIX}gcc-ar${_CMAKE_TOOLCHAIN_SUFFIX} HINTS ${_CMAKE_TOOLCHAIN_LOCATION})
-    find_program(CMAKE_GCC_NM NAMES ${_CMAKE_TOOLCHAIN_PREFIX}gcc-nm HINTS ${_CMAKE_TOOLCHAIN_LOCATION})
-    find_program(CMAKE_GCC_RANLIB NAMES ${_CMAKE_TOOLCHAIN_PREFIX}gcc-ranlib HINTS ${_CMAKE_TOOLCHAIN_LOCATION})
-
-    set(CMAKE_AR "${CMAKE_GCC_AR}")
-    set(CMAKE_NM "${CMAKE_GCC_NM}")
-    set(CMAKE_RANLIB "${CMAKE_GCC_RANLIB}")
+  if (GCC_VERSION VERSION_LESS 5.1)
+    message(FATAL_ERROR "i-score requires at least g++-5.1 to build. ")
   endif()
 endif()
 
+if(ISCORE_ENABLE_LTO)
+  setup_lto()
+endif()
 
 # Useful header files
 include(WriteCompilerDetectionHeader)

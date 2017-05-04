@@ -1,46 +1,43 @@
 #include "CurvePointModel.hpp"
-#include <iscore/tools/IdentifiedObject.hpp>
+#include <iscore/model/IdentifiedObject.hpp>
 
 class QObject;
 
 namespace Curve
 {
-PointModel::PointModel(const Id<PointModel>& id, QObject* parent):
-    IdentifiedObject<PointModel>{id, "CurvePointModel", parent}
+PointModel::PointModel(const Id<PointModel>& id, QObject* parent)
+    : IdentifiedObject<PointModel>{id, "CurvePointModel", parent}
 {
-
 }
 
-const Id<SegmentModel>& PointModel::following() const
+const OptionalId<SegmentModel>& PointModel::following() const
 {
-    return m_following;
+  return m_following;
 }
 
-void PointModel::setFollowing(const Id<SegmentModel> &following)
+void PointModel::setFollowing(const OptionalId<SegmentModel>& following)
 {
-    m_following = following;
+  m_following = following;
 }
 
 Curve::Point PointModel::pos() const
 {
-    return m_pos;
+  return m_pos;
 }
 
-void PointModel::setPos(const Curve::Point &pos)
+void PointModel::setPos(const Curve::Point& pos)
 {
-    m_pos = pos;
-    emit posChanged();
+  m_pos = pos;
+  emit posChanged();
 }
 
-
-
-const Id<SegmentModel> &PointModel::previous() const
+const OptionalId<SegmentModel>& PointModel::previous() const
 {
-    return m_previous;
+  return m_previous;
 }
 
-void PointModel::setPrevious(const Id<SegmentModel> &previous)
+void PointModel::setPrevious(const OptionalId<SegmentModel>& previous)
 {
-    m_previous = previous;
+  m_previous = previous;
 }
 }

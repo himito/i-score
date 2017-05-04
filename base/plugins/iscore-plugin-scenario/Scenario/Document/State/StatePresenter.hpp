@@ -1,55 +1,50 @@
 #pragma once
+#include <Scenario/Document/State/StateView.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
-#include <iscore/tools/NamedObject.hpp>
-#include <QPoint>
-#include <iscore_plugin_scenario_export.h>
-#include <iscore/tools/SettableIdentifier.hpp>
 
-class QGraphicsItem;
-class QMimeData;
-class QObject;
+#include <iscore/model/Identifier.hpp>
+#include <iscore/widgets/GraphicsItem.hpp>
+#include <iscore_plugin_scenario_export.h>
 
 namespace Scenario
 {
 class StateModel;
-class StateView;
-class ISCORE_PLUGIN_SCENARIO_EXPORT StatePresenter final : public NamedObject
+class ISCORE_PLUGIN_SCENARIO_EXPORT StatePresenter final : public QObject
 {
-        Q_OBJECT
+  Q_OBJECT
 
-    public:
-        StatePresenter(const StateModel& model,
-                       QGraphicsItem* parentview,
-                       QObject* parent);
+public:
+  StatePresenter(
+      const StateModel& model, QGraphicsItem* parentview, QObject* parent);
 
-        virtual ~StatePresenter();
+  virtual ~StatePresenter();
 
-        const Id<StateModel>& id() const;
+  const Id<StateModel>& id() const;
 
-        StateView* view() const;
+  StateView* view() const;
 
-        const StateModel& model() const;
+  const StateModel& model() const;
 
-        bool isSelected() const;
+  bool isSelected() const;
 
-        void handleDrop(const QMimeData* mime);
+  void handleDrop(const QMimeData* mime);
 
-    signals:
-        void pressed(const QPointF&);
-        void moved(const QPointF&);
-        void released(const QPointF&);
+signals:
+  void pressed(const QPointF&);
+  void moved(const QPointF&);
+  void released(const QPointF&);
 
-        void hoverEnter();
-        void hoverLeave();
+  void hoverEnter();
+  void hoverLeave();
 
-        void askUpdate();
+  void askUpdate();
 
-    private:
-        void updateStateView();
+private:
+  void updateStateView();
 
-        const StateModel& m_model;
-        StateView* m_view {};
+  const StateModel& m_model;
+  graphics_item_ptr<StateView> m_view{};
 
-        CommandDispatcher<> m_dispatcher;
+  CommandDispatcher<> m_dispatcher;
 };
 }

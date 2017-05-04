@@ -1,14 +1,14 @@
 #pragma once
 #include <Scenario/Palette/ScenarioPoint.hpp>
 
-#include <iscore/tools/ModelPath.hpp>
 #include <iscore/statemachine/StateMachineUtils.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <Scenario/Document/Constraint/Slot.hpp>
 
-#include <QStateMachine>
-#include <QState>
 #include <QAbstractTransition>
 #include <QPointF>
-
+#include <QState>
+#include <QStateMachine>
 
 namespace Scenario
 {
@@ -16,54 +16,57 @@ class EventModel;
 class TimeNodeModel;
 class ConstraintModel;
 class StateModel;
-class SlotModel;
 // OPTIMIZEME this when we have all the tools
-template<typename Scenario_T>
+template <typename Scenario_T>
 class StateBase : public QState
 {
-    public:
-        StateBase(const Path<Scenario_T>& scenar, QState* parent):
-            QState{parent},
-            m_scenarioPath{scenar}
-        { }
+public:
+  StateBase(const Path<Scenario_T>& scenar, QState* parent)
+      : QState{parent}, m_scenarioPath{scenar}
+  {
+  }
 
-        void clear()
-        {
-            clickedEvent = Id<EventModel>{};
-            clickedTimeNode = Id<TimeNodeModel>{};
-            clickedConstraint = Id<ConstraintModel>{};
-            clickedState = Id<StateModel>{};
+  void clear()
+  {
+    clickedEvent = ossia::none;
+    clickedTimeNode = ossia::none;
+    clickedConstraint = ossia::none;
+    clickedState = ossia::none;
 
-            currentPoint = Scenario::Point();
-        }
+    hoveredEvent = ossia::none;
+    hoveredTimeNode = ossia::none;
+    hoveredConstraint = ossia::none;
+    hoveredState = ossia::none;
 
-        Id<StateModel> clickedState;
-        Id<EventModel> clickedEvent;
-        Id<TimeNodeModel> clickedTimeNode;
-        Id<ConstraintModel> clickedConstraint;
+    currentPoint = Scenario::Point();
+  }
 
-        Id<StateModel> hoveredState;
-        Id<EventModel> hoveredEvent;
-        Id<TimeNodeModel> hoveredTimeNode;
-        Id<ConstraintModel> hoveredConstraint;
+  OptionalId<StateModel> clickedState;
+  OptionalId<EventModel> clickedEvent;
+  OptionalId<TimeNodeModel> clickedTimeNode;
+  OptionalId<ConstraintModel> clickedConstraint;
 
-        Scenario::Point currentPoint;
+  OptionalId<StateModel> hoveredState;
+  OptionalId<EventModel> hoveredEvent;
+  OptionalId<TimeNodeModel> hoveredTimeNode;
+  OptionalId<ConstraintModel> hoveredConstraint;
 
-    protected:
-        Path<Scenario_T> m_scenarioPath;
+  Scenario::Point currentPoint;
+
+protected:
+  Path<Scenario_T> m_scenarioPath;
 };
 
 class SlotState : public QState
 {
-    public:
-        SlotState(QState* parent):
-            QState{parent}
-        { }
+public:
+  SlotState(QState* parent) : QState{parent}
+  {
+  }
 
-        Path<SlotModel> currentSlot;
+  SlotPath currentSlot;
 
-        QPointF m_originalPoint;
-        double m_originalHeight{};
+  QPointF m_originalPoint;
+  double m_originalHeight{};
 };
-
 }

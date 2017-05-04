@@ -1,105 +1,116 @@
 #pragma once
+#include <Loop/LoopProcessModel.hpp>
 #include <Loop/LoopViewUpdater.hpp>
 #include <Loop/Palette/LoopToolPalette.hpp>
 #include <Process/LayerPresenter.hpp>
-#include <Scenario/Document/BaseScenario/BaseScenarioPresenter.hpp>
 #include <QDebug>
 #include <QPoint>
+#include <Scenario/Document/BaseScenario/BaseScenarioPresenter.hpp>
 
 #include <Process/Focus/FocusDispatcher.hpp>
 #include <Process/ProcessContext.hpp>
 #include <Process/ZoomHelper.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
+#include <iscore/widgets/GraphicsItem.hpp>
 
-namespace Process { class LayerModel; }
-namespace Process { class ProcessModel; }
+
+namespace Process
+{
+class ProcessModel;
+}
 class QMenu;
 class QObject;
 namespace Scenario
 {
 class TemporalConstraintPresenter;
 }
-namespace Loop {
-class Layer;
+namespace Loop
+{
 class LayerView;
 class ProcessModel;
-}  // namespace Loop
-namespace iscore {
+} // namespace Loop
+namespace iscore
+{
 class CommandStackFacade;
 struct DocumentContext;
-}  // namespace iscore
-
+} // namespace iscore
 
 namespace Loop
 {
-inline void removeSelection(const Loop::ProcessModel& model, const iscore::CommandStackFacade& )
+inline void removeSelection(
+    const Loop::ProcessModel& model, const iscore::CommandStackFacade&)
 {
-
 }
-
-inline void clearContentFromSelection(const Loop::ProcessModel& model, const iscore::CommandStackFacade& )
-{
-    ISCORE_TODO;
-}
+void clearContentFromSelection(
+    const Loop::ProcessModel& model, const iscore::CommandStackFacade&);
 }
 
 namespace Loop
 {
-class LayerPresenter final :
-        public Process::LayerPresenter,
-        public BaseScenarioPresenter<Loop::ProcessModel, Scenario::TemporalConstraintPresenter>
+class LayerPresenter final
+    : public Process::LayerPresenter,
+      public BaseScenarioPresenter<Loop::ProcessModel, Scenario::TemporalConstraintPresenter>
 {
-        Q_OBJECT
-        friend class ViewUpdater;
-    public:
-        LayerPresenter(
-                const Loop::Layer&,
-                LayerView* view,
-                const Process::ProcessPresenterContext& ctx,
-                QObject* parent);
+  Q_OBJECT
+  friend class ViewUpdater;
 
-        ~LayerPresenter();
-        LayerView& view() const
-        { return *m_view; }
+public:
+  LayerPresenter(
+      const Loop::ProcessModel&,
+      LayerView* view,
+      const Process::ProcessPresenterContext& ctx,
+      QObject* parent);
 
-        using BaseScenarioPresenter<Loop::ProcessModel, Scenario::TemporalConstraintPresenter>::event;
-        using QObject::event;
+  ~LayerPresenter();
+  LayerView& view() const
+  {
+    return *m_view;
+  }
 
-        void setWidth(qreal width) override;
-        void setHeight(qreal height) override;
+  using BaseScenarioPresenter<Loop::ProcessModel, Scenario::TemporalConstraintPresenter>::
+      event;
+  using QObject::event;
 
-        void putToFront() override;
-        void putBehind() override;
+  void setWidth(qreal width) override;
+  void setHeight(qreal height) override;
 
-        void on_zoomRatioChanged(ZoomRatio) override;
-        void parentGeometryChanged() override;
+  void putToFront() override;
+  void putBehind() override;
 
-        const Process::LayerModel& layerModel() const override;
-        const Id<Process::ProcessModel>& modelId() const override;
+  void on_zoomRatioChanged(ZoomRatio) override;
+  void parentGeometryChanged() override;
 
-        ZoomRatio zoomRatio() const
-        { return m_zoomRatio; }
+  const Loop::ProcessModel& model() const override;
+  const Id<Process::ProcessModel>& modelId() const override;
 
-        void fillContextMenu(QMenu&,
-                             QPoint pos,
-                             QPointF scenepos,
-                             const Process::LayerContextMenuManager&) const override;
+  ZoomRatio zoomRatio() const
+  {
+    return m_zoomRatio;
+  }
 
-    signals:
-        void pressed(QPointF);
-        void moved(QPointF);
-        void released(QPointF);
-        void escPressed();
+  void fillContextMenu(
+      QMenu&,
+      QPoint pos,
+      QPointF scenepos,
+      const Process::LayerContextMenuManager&) const override;
 
-    private:
-        const Loop::Layer& m_layer;
-        LayerView* m_view{};
+signals:
+  void pressed(QPointF);
+  void moved(QPointF);
+  void released(QPointF);
+  void escPressed();
 
-        ZoomRatio m_zoomRatio {};
+private:
+  void updateAllElements();
+  void on_constraintExecutionTimer();
 
-        ViewUpdater m_viewUpdater;
+  const Loop::ProcessModel& m_layer;
+  graphics_item_ptr<LayerView> m_view;
 
-        ToolPalette m_palette;
-        void updateAllElements();
+  ZoomRatio m_zoomRatio{};
+
+  ViewUpdater m_viewUpdater;
+
+  ToolPalette m_palette;
 };
 }

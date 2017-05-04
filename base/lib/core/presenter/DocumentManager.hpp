@@ -1,149 +1,159 @@
 #pragma once
-#include <core/document/Document.hpp>
-#include <core/document/DocumentBuilder.hpp>
 #include <QObject>
 #include <QString>
-#include <set>
 #include <algorithm>
-#include <vector>
+#include <core/document/Document.hpp>
+#include <core/document/DocumentBuilder.hpp>
+#include <iscore/tools/Version.hpp>
 #include <iscore_lib_base_export.h>
+#include <set>
+#include <vector>
 class QRecentFilesMenu;
-namespace iscore {
+namespace iscore
+{
 class Document;
 struct ApplicationContext;
 class View;
-}  // namespace iscore
+} // namespace iscore
 
 namespace iscore
 {
-class ISCORE_LIB_BASE_EXPORT DocumentManager : public QObject
+
+struct DocumentList
 {
-        Q_OBJECT
-    public:
-        DocumentManager(
-                iscore::View& view,
-                QObject* parentPresenter);
+public:
+  const std::vector<Document*>& documents() const
+  {
+    return m_documents;
+  }
 
-        void init(const iscore::ApplicationContext& ctx);
+  std::vector<Document*>& documents()
+  {
+    return m_documents;
+  }
 
-        ~DocumentManager();
+  Document* currentDocument() const
+  {
+    return m_currentDocument;
+  }
 
-        auto recentFiles() const
-        { return m_recentFiles; }
+  void setCurrentDocument(Document* d)
+  {
+    m_currentDocument = d;
+  }
 
-        // Document management
-        Document* setupDocument(const iscore::ApplicationContext& ctx,
-                                iscore::Document* doc);
-
-        template<typename... Args>
-        void newDocument(
-                const iscore::ApplicationContext& ctx,
-                Args&&... args)
-        {
-            prepareNewDocument(ctx);
-            setupDocument(
-                        ctx,
-                        m_builder.newDocument(ctx, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        Document* loadDocument(
-                const iscore::ApplicationContext& ctx,
-                Args&&... args)
-        {
-            auto cur = currentDocument();
-            if(cur && cur->virgin())
-            {
-                forceCloseDocument(ctx, *cur);
-            }
-            prepareNewDocument(ctx);
-            return setupDocument(
-                        ctx, m_builder.loadDocument(ctx, std::forward<Args>(args)...));
-        }
-
-        template<typename... Args>
-        void restoreDocument(
-                const iscore::ApplicationContext& ctx,
-                Args&&... args)
-        {
-            prepareNewDocument(ctx);
-            setupDocument(
-                        ctx, m_builder.restoreDocument(ctx, std::forward<Args>(args)...));
-        }
-
-        // Restore documents after a crash
-        void restoreDocuments(const iscore::ApplicationContext& ctx);
-
-        const std::vector<Document*>& documents() const
-        { return m_documents; }
-        std::vector<Document*>& documents()
-        { return m_documents; }
-
-        Document* currentDocument() const;
-        void setCurrentDocument(
-                const iscore::ApplicationContext& ctx,
-                Document* doc);
-
-        // Returns true if the document was closed.
-        bool closeDocument(
-                const iscore::ApplicationContext& ctx,
-                Document&);
-        void forceCloseDocument(
-                const iscore::ApplicationContext& ctx,
-                Document&);
-
-
-        // Methods to save and load
-        bool saveDocument(Document&);
-        bool saveDocumentAs(Document&);
-
-        bool saveStack();
-        Document* loadStack(
-                const iscore::ApplicationContext& ctx);
-        Document* loadStack(
-                const iscore::ApplicationContext& ctx,
-                const QString&);
-
-        Document* loadFile(
-                const iscore::ApplicationContext& ctx);
-        Document* loadFile(
-                const iscore::ApplicationContext& ctx,
-                const QString& filename);
-
-        void prepareNewDocument(
-                const iscore::ApplicationContext& ctx);
-
-        bool closeAllDocuments(
-                const iscore::ApplicationContext& ctx);
-
-        bool preparingNewDocument() const;
-
-    signals:
-        void documentChanged(iscore::Document*);
-
-    private:
-        /**
-         * @brief checkAndUpdateJson
-         * @return boolean indicating if the document is loadable
-         */
-        bool checkAndUpdateJson(
-                QJsonDocument&,
-                const iscore::ApplicationContext& ctx);
-
-        void saveRecentFilesState();
-
-        iscore::View& m_view;
-
-        DocumentBuilder m_builder;
-
-        std::vector<Document*> m_documents;
-        Document* m_currentDocument{};
-        QPointer<QRecentFilesMenu> m_recentFiles{};
-
-        bool m_preparingNewDocument{};
-
-
+protected:
+  std::vector<Document*> m_documents;
+  Document* m_currentDocument{};
 };
-}
+
+/**
+ * @brief Owns the documents
+ */
+class ISCORE_LIB_BASE_EXPORT DocumentManager
+    : public QObject
+    , public DocumentList
+{
+  Q_OBJECT
+public:
+  DocumentManager(iscore::View& view, QObject* parentPresenter);
+
+  void init(const iscore::GUIApplicationContext& ctx);
+
+  ~DocumentManager();
+
+  auto recentFiles() const
+  {
+    return m_recentFiles;
+  }
+
+  // Document management
+  Document*
+  setupDocument(const iscore::GUIApplicationContext& ctx, iscore::Document* doc);
+
+  template <typename... Args>
+  void newDocument(const iscore::GUIApplicationContext& ctx, Args&&... args)
+  {
+    prepareNewDocument(ctx);
+    setupDocument(
+        ctx, m_builder.newDocument(ctx, std::forward<Args>(args)...));
+  }
+
+  template <typename... Args>
+  Document* loadDocument(const iscore::GUIApplicationContext& ctx, Args&&... args)
+  {
+    auto cur = currentDocument();
+    if (cur && cur->virgin())
+    {
+      forceCloseDocument(ctx, *cur);
+    }
+    prepareNewDocument(ctx);
+    return setupDocument(
+        ctx, m_builder.loadDocument(ctx, std::forward<Args>(args)...));
+  }
+
+  template <typename... Args>
+  void restoreDocument(const iscore::GUIApplicationContext& ctx, Args&&... args)
+  {
+    prepareNewDocument(ctx);
+    setupDocument(
+        ctx, m_builder.restoreDocument(ctx, std::forward<Args>(args)...));
+  }
+
+  // Restore documents after a crash
+  void restoreDocuments(const iscore::GUIApplicationContext& ctx);
+
+  void
+  setCurrentDocument(const iscore::GUIApplicationContext& ctx, Document* doc);
+
+  // Returns true if the document was closed.
+  bool closeDocument(const iscore::GUIApplicationContext& ctx, Document&);
+  void forceCloseDocument(const iscore::GUIApplicationContext& ctx, Document&);
+
+  // Methods to save and load
+  bool saveDocument(Document&);
+  bool saveDocumentAs(Document&);
+
+  bool saveStack();
+  Document* loadStack(const iscore::GUIApplicationContext& ctx);
+  Document* loadStack(const iscore::GUIApplicationContext& ctx, const QString&);
+
+  Document* loadFile(const iscore::GUIApplicationContext& ctx);
+  Document*
+  loadFile(const iscore::GUIApplicationContext& ctx, const QString& filename);
+
+  bool closeAllDocuments(const iscore::GUIApplicationContext& ctx);
+
+  bool preparingNewDocument() const;
+
+signals:
+  void documentChanged(iscore::Document*);
+
+private:
+  void prepareNewDocument(const iscore::GUIApplicationContext& ctx);
+
+  /**
+   * @brief checkAndUpdateJson
+   * @return boolean indicating if the document is loadable
+   */
+  bool
+  checkAndUpdateJson(QJsonDocument&, const iscore::GUIApplicationContext& ctx);
+
+  bool updateJson(
+      QJsonObject& object,
+      iscore::Version json_ver,
+      iscore::Version iscore_ver);
+
+  void saveRecentFilesState();
+
+  iscore::View& m_view;
+
+  DocumentBuilder m_builder;
+
+  QPointer<QRecentFilesMenu> m_recentFiles{};
+
+  bool m_preparingNewDocument{};
+};
 
 Id<iscore::DocumentModel> getStrongId(const std::vector<iscore::Document*>& v);
+}

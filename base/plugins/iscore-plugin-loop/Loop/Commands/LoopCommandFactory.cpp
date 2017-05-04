@@ -1,15 +1,19 @@
 #include "LoopCommandFactory.hpp"
-#include <iscore/command/SerializableCommand.hpp>
+#include <iscore/command/Command.hpp>
 
-const CommandParentFactoryKey& LoopCommandFactoryName() {
-    static const CommandParentFactoryKey key{"Loop"};
-    return key;
+const CommandGroupKey& LoopCommandFactoryName()
+{
+  static const CommandGroupKey key{"Loop"};
+  return key;
 }
 
-namespace Loop {
+namespace Loop
+{
 class ProcessModel;
-}  // namespace Loop
+} // namespace Loop
 
-template<>
-const CommandParentFactoryKey& CommandFactoryName<Loop::ProcessModel>()
-{ return LoopCommandFactoryName(); }
+template <>
+const CommandGroupKey& CommandFactoryName<Loop::ProcessModel>()
+{
+  return LoopCommandFactoryName();
+}

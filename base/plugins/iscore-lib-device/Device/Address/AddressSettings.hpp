@@ -1,108 +1,186 @@
 #pragma once
+#include <Device/Address/ClipMode.hpp>
+#include <Device/Address/Domain.hpp>
+#include <Device/Address/IOType.hpp>
 #include <QString>
 #include <QVariant>
 #include <QVariantList>
-#include "IOType.hpp"
-#include "ClipMode.hpp"
-#include "Domain.hpp"
 #include <State/Message.hpp>
+#include <State/Unit.hpp>
 #include <iscore/tools/Metadata.hpp>
+#include <ossia/detail/any_map.hpp>
+#include <ossia/network/base/node_attributes.hpp>
+#include <ossia/network/common/address_properties.hpp>
 #include <iscore_lib_device_export.h>
+
+template <typename T>
+class TreeNode;
 namespace Device
 {
-using RefreshRate = int;
+class DeviceExplorerNode;
+
+/** A data-only tree of nodes.
+ *
+ * By opposition to ossia::net::node_base, these nodes
+ * contain pure data, no callbacks or complicated data structures.
+ * They can be serialized very easily and are used as the data model of
+ * Explorer::DeviceExplorerModel, as well as for serialization of devices.
+ */
+using Node = TreeNode<DeviceExplorerNode>;
+
 using RepetitionFilter = bool;
-
-struct AddressSettingsCommon
+struct ISCORE_LIB_DEVICE_EXPORT AddressSettingsCommon
 {
-    State::Value value;
-    Device::Domain domain;
+  AddressSettingsCommon() noexcept;
+  AddressSettingsCommon(const AddressSettingsCommon&) noexcept;
+  AddressSettingsCommon(AddressSettingsCommon&&) noexcept;
+  AddressSettingsCommon& operator=(const AddressSettingsCommon&) noexcept;
+  AddressSettingsCommon& operator=(AddressSettingsCommon&&) noexcept;
+  ~AddressSettingsCommon() noexcept;
 
-    Device::IOType ioType{};
-    Device::ClipMode clipMode{};
-    QString unit;
+  State::Value value;
+  Device::Domain domain;
 
-    Device::RepetitionFilter repetitionFilter{};
-    Device::RefreshRate rate{};
+  State::Unit unit;
 
-    int priority{};
+  optional<ossia::access_mode> ioType;
+  ossia::bounding_mode clipMode;
+  ossia::repetition_filter repetitionFilter{};
 
-    QStringList tags;
+  ossia::extended_attributes extendedAttributes;
+
+  operator const ossia::extended_attributes&() const { return extendedAttributes; }
+  operator ossia::extended_attributes&() { return extendedAttributes; }
+
 };
 
 // this one has only the name of the current node (e.g. 'a' for dev:/azazd/a)
-struct AddressSettings : public Device::AddressSettingsCommon
+struct ISCORE_LIB_DEVICE_EXPORT AddressSettings
+    : public Device::AddressSettingsCommon
 {
-        QString name;
+  AddressSettings() noexcept;
+  AddressSettings(const AddressSettings&) noexcept;
+  AddressSettings(AddressSettings&&) noexcept;
+  AddressSettings& operator=(const AddressSettings&) noexcept;
+  AddressSettings& operator=(AddressSettings&&) noexcept;
+  ~AddressSettings() noexcept;
+
+  QString name;
 };
 
 // This one has the whole path of the node in address
-struct FullAddressSettings : public Device::AddressSettingsCommon
+struct ISCORE_LIB_DEVICE_EXPORT FullAddressSettings
+    : public Device::AddressSettingsCommon
 {
-        struct as_parent;
-        struct as_child;
-        State::Address address;
+  FullAddressSettings() noexcept;
+  FullAddressSettings(const FullAddressSettings&) noexcept;
+  FullAddressSettings(FullAddressSettings&&) noexcept;
+  FullAddressSettings& operator=(const FullAddressSettings&) noexcept;
+  FullAddressSettings& operator=(FullAddressSettings&&) noexcept;
+  ~FullAddressSettings() noexcept;
 
-        template<typename T>
-        ISCORE_LIB_DEVICE_EXPORT static FullAddressSettings make(
-                const Device::AddressSettings& other,
-                const State::Address& addr);
+  // Maybe we should just use FullAddressSettings behind a flyweight
+  // pattern everywhere... (see mnmlstc/flyweight)
+  struct as_parent;
+  struct as_child;
+  State::Address address;
 
-        ISCORE_LIB_DEVICE_EXPORT static FullAddressSettings make(
-                const State::Message& mess);
-        // Specializations are in FullAddressSettings.cpp
+  template <typename T>
+  ISCORE_LIB_DEVICE_EXPORT static FullAddressSettings
+  make(const Device::AddressSettings& other, const State::Address& addr) noexcept;
+  template <typename T>
+  static FullAddressSettings make(
+      const Device::AddressSettings& other, const State::AddressAccessor& addr) noexcept
+  {
+    return make<T>(other, addr.address);
+  }
+
+  static FullAddressSettings
+  make(const State::Message& mess) noexcept;
+
+  static FullAddressSettings
+  make(const Device::Node& node) noexcept;
+  // Specializations are in FullAddressSettings.cpp
 };
 
-inline bool operator==(
-        const Device::AddressSettingsCommon& lhs,
-        const Device::AddressSettingsCommon& rhs)
+ISCORE_LIB_DEVICE_EXPORT bool operator==(
+    const Device::AddressSettingsCommon& lhs,
+    const Device::AddressSettingsCommon& rhs) noexcept;
+
+inline bool operator!=(
+    const Device::AddressSettingsCommon& lhs,
+    const Device::AddressSettingsCommon& rhs) noexcept
 {
-    return
-            lhs.value == rhs.value
-            && lhs.domain == rhs.domain
-            && lhs.ioType == rhs.ioType
-            && lhs.clipMode == rhs.clipMode
-            && lhs.unit == rhs.unit
-            && lhs.repetitionFilter == rhs.repetitionFilter
-            && lhs.rate == rhs.rate
-            && lhs.priority == rhs.priority
-            && lhs.tags == rhs.tags;
+  return !(lhs == rhs);
+}
+inline bool operator==(
+    const Device::AddressSettings& lhs, const Device::AddressSettings& rhs) noexcept
+{
+  return static_cast<const Device::AddressSettingsCommon&>(lhs)
+             == static_cast<const Device::AddressSettingsCommon&>(rhs)
+         && lhs.name == rhs.name;
 }
 
 inline bool operator!=(
-        const Device::AddressSettingsCommon& lhs,
-        const Device::AddressSettingsCommon& rhs)
+    const Device::AddressSettings& lhs, const Device::AddressSettings& rhs) noexcept
 {
-    return !(lhs == rhs);
+  return !(lhs == rhs);
 }
 inline bool operator==(
-        const Device::AddressSettings& lhs,
-        const Device::AddressSettings& rhs)
+    const Device::FullAddressSettings& lhs,
+    const Device::FullAddressSettings& rhs) noexcept
 {
-    return static_cast<const Device::AddressSettingsCommon&>(lhs) == static_cast<const Device::AddressSettingsCommon&>(rhs)
-            && lhs.name == rhs.name;
+  return static_cast<const Device::AddressSettingsCommon&>(lhs)
+             == static_cast<const Device::AddressSettingsCommon&>(rhs)
+         && lhs.address == rhs.address;
 }
 
 inline bool operator!=(
-        const Device::AddressSettings& lhs,
-        const Device::AddressSettings& rhs)
+    const Device::FullAddressSettings& lhs,
+    const Device::FullAddressSettings& rhs) noexcept
 {
-    return !(lhs == rhs);
-}
-inline bool operator==(
-        const Device::FullAddressSettings& lhs,
-        const Device::FullAddressSettings& rhs)
-{
-    return static_cast<const Device::AddressSettingsCommon&>(lhs) == static_cast<const Device::AddressSettingsCommon&>(rhs)
-            && lhs.address == rhs.address;
+  return !(lhs == rhs);
 }
 
-inline bool operator!=(
-        const Device::FullAddressSettings& lhs,
-        const Device::FullAddressSettings& rhs)
+struct ISCORE_LIB_DEVICE_EXPORT FullAddressAccessorSettings
 {
-    return !(lhs == rhs);
-}
+  FullAddressAccessorSettings() noexcept;
+  FullAddressAccessorSettings(const FullAddressAccessorSettings&) noexcept;
+  FullAddressAccessorSettings(FullAddressAccessorSettings&&) noexcept;
+  FullAddressAccessorSettings&
+  operator=(const FullAddressAccessorSettings&) noexcept;
+  FullAddressAccessorSettings&
+  operator=(FullAddressAccessorSettings&&) noexcept;
+  ~FullAddressAccessorSettings() noexcept;
+
+  FullAddressAccessorSettings(
+      const State::AddressAccessor& addr, const AddressSettingsCommon& f) noexcept;
+
+  explicit FullAddressAccessorSettings(
+      FullAddressSettings&& f) noexcept;
+
+  FullAddressAccessorSettings(
+      State::AddressAccessor&& addr, AddressSettingsCommon&& f) noexcept;
+
+  FullAddressAccessorSettings(
+      const State::AddressAccessor& addr,
+      const ossia::value& min,
+      const ossia::value& max) noexcept;
+
+  State::Value value;
+  Device::Domain domain;
+
+  optional<ossia::access_mode> ioType;
+  ossia::bounding_mode clipMode;
+  ossia::repetition_filter repetitionFilter{};
+
+  ossia::any_map extendedAttributes;
+
+  State::AddressAccessor address;
+};
 }
 
 JSON_METADATA(Device::AddressSettings, "AddressSettings")
+Q_DECLARE_METATYPE(Device::AddressSettings)
+Q_DECLARE_METATYPE(Device::FullAddressSettings)
+Q_DECLARE_METATYPE(Device::FullAddressAccessorSettings)

@@ -4,11 +4,6 @@ endif()
 
 set(ISCORE_BIN_INSTALL_DIR "bin")
 
-find_package(Jamoma)
-if(${Jamoma_FOUND})
-    copy_in_folder_jamoma(${ISCORE_BIN_INSTALL_DIR} "${JAMOMA_LIBS}" "${JAMOMA_PLUGINS}")
-endif()
-
 ### TODO InstallRequiredSystemLibraries ###
  # Compiler Runtime DLLs
 if (MSVC)
@@ -29,11 +24,7 @@ endif()
 
 
 # Qt Libraries
-if(${CMAKE_BUILD_TYPE} MATCHES "Debug")
-    set(DEBUG_CHAR "d")
-else()
-    set(DEBUG_CHAR "")
-endif()
+set(DEBUG_CHAR "$<$<CONFIG:Debug>:d>")
 
 get_target_property(QtCore_LOCATION Qt5::Core LOCATION)
 get_filename_component(QT_DLL_DIR ${QtCore_LOCATION} PATH)
@@ -43,8 +34,12 @@ file(GLOB ICU_DLLS "${QT_DLL_DIR}/icu*.dll")
 
 
 
+if(NOT OSSIA_STATIC)
+install(FILES "$<TARGET_FILE:ossia>"
+        DESTINATION ${ISCORE_BIN_INSTALL_DIR})
+endif()
+
 install(FILES
-  "$<TARGET_FILE:APIJamoma>"
   ${ICU_DLLS}
   "${QT_DLL_DIR}/Qt5Core${DEBUG_CHAR}.dll"
   "${QT_DLL_DIR}/Qt5Gui${DEBUG_CHAR}.dll"
@@ -58,6 +53,8 @@ install(FILES
 #  "${QT_DLL_DIR}/Qt5Test${DEBUG_CHAR}.dll"
   "${QT_DLL_DIR}/Qt5Quick${DEBUG_CHAR}.dll"
   "${QT_DLL_DIR}/Qt5QuickWidgets${DEBUG_CHAR}.dll"
+  "${QT_DLL_DIR}/Qt5QuickControls2${DEBUG_CHAR}.dll"
+  "${QT_DLL_DIR}/Qt5QuickTemplates2${DEBUG_CHAR}.dll"
   DESTINATION ${ISCORE_BIN_INSTALL_DIR})
 
 # Qt conf file
@@ -68,14 +65,24 @@ install(
   DESTINATION
     ${ISCORE_BIN_INSTALL_DIR})
 
-# Qt Platform Plugin
-install(FILES
-  "${QT_DLL_DIR}/../plugins/platforms/qwindows${DEBUG_CHAR}.dll"
-  DESTINATION ${ISCORE_BIN_INSTALL_DIR}/plugins/platforms)
+# Qt plug-ins
+set(QT_PLUGINS_DIR "${QT_DLL_DIR}/../plugins")
+set(QT_QML_PLUGINS_DIR "${QT_DLL_DIR}/../qml")
+set(plugin_dest_dir "${ISCORE_BIN_INSTALL_DIR}/plugins")
 
+install(FILES "${QT_PLUGINS_DIR}/platforms/qwindows${DEBUG_CHAR}.dll" DESTINATION "${plugin_dest_dir}/platforms")
+install(FILES "${QT_PLUGINS_DIR}/imageformats/qsvg${DEBUG_CHAR}.dll" DESTINATION "${plugin_dest_dir}/imagesformats")
+install(FILES "${QT_PLUGINS_DIR}/iconengines/qsvgicon${DEBUG_CHAR}.dll" DESTINATION "${plugin_dest_dir}/iconengines")
+install(DIRECTORY "${QT_QML_PLUGINS_DIR}/QtQuick" "${QT_QML_PLUGINS_DIR}/QtQuick.2" DESTINATION "${ISCORE_BIN_INSTALL_DIR}/qml")
 
+install(CODE "
+    file(GLOB_RECURSE DLLS_TO_REMOVE \"*.dll\")
+    list(FILTER DLLS_TO_REMOVE INCLUDE REGEX \"qml/.*/*dll\")
+    file(REMOVE \${DLLS_TO_REMOVE})
+    ")
+
+install(FILES "${QT_QML_PLUGINS_DIR}/QtQuick.2/qtquick2plugin${DEBUG_CHAR}.dll" DESTINATION "${ISCORE_BIN_INSTALL_DIR}/qml/QtQuick.2")
 # NSIS metadata
-
 set(CPACK_GENERATOR "NSIS")
 set(CPACK_PACKAGE_EXECUTABLES "i-score.exe;i-score")
 

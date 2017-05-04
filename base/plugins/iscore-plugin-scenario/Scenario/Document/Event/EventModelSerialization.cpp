@@ -1,97 +1,71 @@
 
-#include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/serialization/JSONVisitor.hpp>
 #include <QDataStream>
-#include <QtGlobal>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QtGlobal>
 #include <algorithm>
+#include <iscore/serialization/DataStreamVisitor.hpp>
+#include <iscore/serialization/JSONVisitor.hpp>
 
-#include <Process/ModelMetadata.hpp>
 #include <Process/TimeValue.hpp>
 #include <Scenario/Document/Event/EventModel.hpp>
 #include <Scenario/Document/VerticalExtent.hpp>
 #include <State/Expression.hpp>
-#include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
+#include <iscore/model/ModelMetadata.hpp>
 #include <iscore/serialization/JSONValueVisitor.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/tools/TreeNode.hpp>
+#include <iscore/model/Identifier.hpp>
+#include <iscore/model/tree/TreeNode.hpp>
 
-namespace Scenario
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+DataStreamReader::read(const Scenario::EventModel& ev)
 {
-class TimeNodeModel;
-}
-template <typename T> class IdentifiedObject;
-template <typename T> class Reader;
-template <typename T> class Writer;
+  m_stream << ev.m_timeNode << ev.m_states << ev.m_condition << ev.m_extent
+           << ev.m_date << ev.m_offset;
 
-
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Reader<DataStream>>::readFrom(const Scenario::EventModel& ev)
-{
-    readFrom(static_cast<const IdentifiedObject<Scenario::EventModel>&>(ev));
-
-    readFrom(ev.metadata);
-    readFrom(ev.pluginModelList);
-
-    m_stream << ev.m_timeNode
-             << ev.m_states
-             << ev.m_condition
-             << ev.m_extent
-             << ev.m_date;
-
-    insertDelimiter();
-}
-
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Writer<DataStream>>::writeTo(Scenario::EventModel& ev)
-{
-    writeTo(ev.metadata);
-    ev.pluginModelList = iscore::ElementPluginModelList(*this, &ev);
-
-    m_stream >> ev.m_timeNode
-             >> ev.m_states
-             >> ev.m_condition
-             >> ev.m_extent
-             >> ev.m_date;
-
-    checkDelimiter();
+  insertDelimiter();
 }
 
 
-
-
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Reader<JSONObject>>::readFrom(const Scenario::EventModel& ev)
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+DataStreamWriter::write(Scenario::EventModel& ev)
 {
-    readFrom(static_cast<const IdentifiedObject<Scenario::EventModel>&>(ev));
-    m_obj["Metadata"] = toJsonObject(ev.metadata);
+  m_stream >> ev.m_timeNode >> ev.m_states >> ev.m_condition >> ev.m_extent
+      >> ev.m_date >> ev.m_offset;
 
-    m_obj["TimeNode"] = toJsonValue(ev.m_timeNode);
-    m_obj["States"] = toJsonArray(ev.m_states);
-
-    m_obj["Condition"] = toJsonObject(ev.m_condition);
-
-    m_obj["Extent"] = toJsonValue(ev.m_extent);
-    m_obj["Date"] = toJsonValue(ev.m_date);
-
-    m_obj["PluginsMetadata"] = toJsonValue(ev.pluginModelList);
+  checkDelimiter();
 }
 
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Writer<JSONObject>>::writeTo(Scenario::EventModel& ev)
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+JSONObjectReader::read(const Scenario::EventModel& ev)
 {
-    ev.metadata = fromJsonObject<ModelMetadata>(m_obj["Metadata"]);
+  obj[strings.TimeNode] = toJsonValue(ev.m_timeNode);
+  obj[strings.States] = toJsonArray(ev.m_states);
 
-    ev.m_timeNode = fromJsonValue<Id<Scenario::TimeNodeModel>> (m_obj["TimeNode"]);
-    fromJsonValueArray(m_obj["States"].toArray(), ev.m_states);
+  obj[strings.Condition] = toJsonObject(ev.m_condition);
 
-    fromJsonObject(m_obj["Condition"], ev.m_condition);
+  obj[strings.Extent] = toJsonValue(ev.m_extent);
+  obj[strings.Date] = toJsonValue(ev.m_date);
+  obj[strings.Offset] = (int32_t)ev.m_offset;
+}
 
-    ev.m_extent = fromJsonValue<Scenario::VerticalExtent>(m_obj["Extent"]);
-    ev.m_date = fromJsonValue<TimeValue>(m_obj["Date"]);
 
-    Deserializer<JSONValue> elementPluginDeserializer(m_obj["PluginsMetadata"]);
-    ev.pluginModelList = iscore::ElementPluginModelList(elementPluginDeserializer, &ev);
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+JSONObjectWriter::write(Scenario::EventModel& ev)
+{
+  ev.m_timeNode
+      = fromJsonValue<Id<Scenario::TimeNodeModel>>(obj[strings.TimeNode]);
+  fromJsonValueArray(obj[strings.States].toArray(), ev.m_states);
+
+  fromJsonObject(obj[strings.Condition], ev.m_condition);
+
+  ev.m_extent = fromJsonValue<Scenario::VerticalExtent>(obj[strings.Extent]);
+  ev.m_date = fromJsonValue<TimeVal>(obj[strings.Date]);
+  ev.m_offset = static_cast<Scenario::OffsetBehavior>(obj[strings.Offset].toInt());
 }

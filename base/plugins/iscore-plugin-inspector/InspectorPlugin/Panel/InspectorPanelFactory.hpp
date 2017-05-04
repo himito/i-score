@@ -4,14 +4,11 @@
 namespace InspectorPanel
 {
 
-class PanelDelegateFactory final :
-        public iscore::PanelDelegateFactory
+class PanelDelegateFactory final : public iscore::PanelDelegateFactory
 {
-        ISCORE_CONCRETE_FACTORY_DECL("3c489368-c946-4f9f-8d6c-d051b724726c")
+  ISCORE_CONCRETE("3c489368-c946-4f9f-8d6c-d051b724726c")
 
-        std::unique_ptr<iscore::PanelDelegate> make(
-                const iscore::ApplicationContext& ctx) override;
+  std::unique_ptr<iscore::PanelDelegate>
+  make(const iscore::GUIApplicationContext& ctx) override;
 };
-
 }
-

@@ -1,47 +1,49 @@
 #pragma once
-#include <Scenario/Commands/ScenarioCommandFactory.hpp>
-#include <iscore/tools/std/Optional.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
 #include <QByteArray>
+#include <Scenario/Document/Constraint/Slot.hpp>
+#include <Scenario/Commands/ScenarioCommandFactory.hpp>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/tools/std/Optional.hpp>
 
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 
 struct DataStreamInput;
 struct DataStreamOutput;
-namespace Process { class LayerModel; }
+namespace Process
+{
+class ProcessModel;
+}
 
 namespace Scenario
 {
-class SlotModel;
 namespace Command
 {
 /**
-         * @brief The RemoveLayerFromSlot class
-         *
-         * Removes a process view from a slot.
-         */
-class RemoveLayerModelFromSlot final : public iscore::SerializableCommand
+ * @brief The RemoveLayerFromSlot class
+ *
+ * Removes a process view from a slot.
+ */
+class RemoveLayerModelFromSlot final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), RemoveLayerModelFromSlot, "Remove a layer from a slot")
-        public:
+  ISCORE_COMMAND_DECL(
+      ScenarioCommandFactoryName(),
+      RemoveLayerModelFromSlot,
+      "Remove a layer from a slot")
+public:
+  RemoveLayerModelFromSlot(
+      SlotPath&& slotPath, Id<Process::ProcessModel> layerId);
 
-            RemoveLayerModelFromSlot(
-                Path<SlotModel>&& slotPath,
-                Id<Process::LayerModel> layerId);
+  void undo() const override;
+  void redo() const override;
 
-        void undo() const override;
-        void redo() const override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
-
-    private:
-        Path<SlotModel> m_path;
-        Id<Process::LayerModel> m_layerId {};
-
-        QByteArray m_serializedLayerData;
+private:
+  SlotPath m_path;
+  Id<Process::ProcessModel> m_layerId{};
 };
 }
 }

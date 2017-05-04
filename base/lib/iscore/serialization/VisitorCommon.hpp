@@ -1,93 +1,92 @@
 #pragma once
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
-
 /**
  * This file contains usefule functions
  * for simple serialization / deserialization of the common types
  * used in i-score.
  */
-template<typename TheClass>
+template <typename TheClass>
 void serialize_dyn(const VisitorVariant& vis, const TheClass& s)
 {
-    if(vis.identifier == DataStream::type())
-    {
-        static_cast<DataStream::Serializer&>(vis.visitor).readFrom_impl(s);
-        return;
-    }
-    else if(vis.identifier == JSONObject::type())
-    {
-        static_cast<JSONObject::Serializer&>(vis.visitor).readFrom_impl(s);
-        return;
-    }
+  if (vis.identifier == DataStream::type())
+  {
+    static_cast<DataStream::Serializer&>(vis.visitor).read(s);
+    return;
+  }
+  else if (vis.identifier == JSONObject::type())
+  {
+    static_cast<JSONObject::Serializer&>(vis.visitor).read(s);
+    return;
+  }
 
-    ISCORE_ABORT;
+  ISCORE_ABORT;
 }
 
-template<typename TheClass>
+template <typename TheClass>
 TheClass& deserialize_dyn(const VisitorVariant& vis, TheClass& s)
 {
-    switch(vis.identifier)
+  switch (vis.identifier)
+  {
+    case DataStream::type():
     {
-        case DataStream::type():
-        {
-            static_cast<DataStream::Deserializer&>(vis.visitor).writeTo(s);
-            break;
-        }
-        case JSONObject::type():
-        {
-            static_cast<JSONObject::Deserializer&>(vis.visitor).writeTo(s);
-            break;
-        }
-        default:
-            ISCORE_ABORT;
+      static_cast<DataStream::Deserializer&>(vis.visitor).writeTo(s);
+      break;
     }
+    case JSONObject::type():
+    {
+      static_cast<JSONObject::Deserializer&>(vis.visitor).writeTo(s);
+      break;
+    }
+    default:
+      ISCORE_ABORT;
+  }
 
-    return s;
+  return s;
 }
 
-template<typename TheClass>
+template <typename TheClass>
 TheClass deserialize_dyn(const VisitorVariant& vis)
 {
-    TheClass s;
+  TheClass s;
 
-    switch(vis.identifier)
+  switch (vis.identifier)
+  {
+    case DataStream::type():
     {
-        case DataStream::type():
-        {
-            static_cast<DataStream::Deserializer&>(vis.visitor).writeTo(s);
-            break;
-        }
-        case JSONObject::type():
-        {
-            static_cast<JSONObject::Deserializer&>(vis.visitor).writeTo(s);
-            break;
-        }
-        default:
-            ISCORE_ABORT;
+      static_cast<DataStream::Deserializer&>(vis.visitor).writeTo(s);
+      break;
     }
-    return s;
+    case JSONObject::type():
+    {
+      static_cast<JSONObject::Deserializer&>(vis.visitor).writeTo(s);
+      break;
+    }
+    default:
+      ISCORE_ABORT;
+  }
+  return s;
 }
 
-template<typename Functor>
+template <typename Functor>
 auto deserialize_dyn(const VisitorVariant& vis, Functor&& fun)
 {
-    switch(vis.identifier)
+  switch (vis.identifier)
+  {
+    case DataStream::type():
     {
-        case DataStream::type():
-        {
-            return fun(static_cast<DataStream::Deserializer&>(vis.visitor));
-            break;
-        }
-        case JSONObject::type():
-        {
-            return fun(static_cast<JSONObject::Deserializer&>(vis.visitor));
-            break;
-        }
-        default:
-            ISCORE_ABORT;
-            throw;
+      return fun(static_cast<DataStream::Deserializer&>(vis.visitor));
+      break;
     }
+    case JSONObject::type():
+    {
+      return fun(static_cast<JSONObject::Deserializer&>(vis.visitor));
+      break;
+    }
+    default:
+      ISCORE_ABORT;
+      throw;
+  }
 }
 
 /**
@@ -98,18 +97,18 @@ auto deserialize_dyn(const VisitorVariant& vis, Functor&& fun)
  * For instance, a QByteArray if it is DataStream
  * and a QJSonObject if it is JSONObject
  */
-template<typename Type, typename Object>
+template <typename Type, typename Object>
 auto marshall(const Object& obj)
 {
-    return Visitor<Reader<Type>>::marshall(obj);
+  return Type::Serializer::marshall(obj);
 }
-template<typename Object>
+template <typename Object>
 auto unmarshall(const QJsonObject& obj)
 {
-    return Visitor<Writer<JSONObject>>::unmarshall<Object>(obj);
+  return JSONObjectWriter::unmarshall<Object>(obj);
 }
-template<typename Object>
+template <typename Object>
 auto unmarshall(const QByteArray& arr)
 {
-    return Visitor<Writer<DataStream>>::unmarshall<Object>(arr);
+  return DataStreamWriter::unmarshall<Object>(arr);
 }

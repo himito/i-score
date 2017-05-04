@@ -2,194 +2,128 @@
 #include <Process/ExpandMode.hpp>
 
 #include <Process/TimeValue.hpp>
-#include <iscore/selection/Selection.hpp>
-#include <iscore/serialization/VisitorCommon.hpp>
-#include <iscore/tools/IdentifiedObject.hpp>
 #include <QByteArray>
 #include <QString>
+#include <iscore/model/Entity.hpp>
+#include <iscore/selection/Selection.hpp>
+#include <iscore/serialization/VisitorCommon.hpp>
 #include <vector>
 
-#include <iscore/component/Component.hpp>
-#include <iscore/tools/Metadata.hpp>
-#include "ModelMetadata.hpp"
-#include <iscore/serialization/VisitorInterface.hpp>
+#include <iscore/model/Component.hpp>
+#include <iscore/model/ModelMetadata.hpp>
+#include <iscore/plugins/customfactory/SerializableInterface.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
-#include <iscore/plugins/customfactory/SerializableInterface.hpp>
+#include <iscore/serialization/VisitorInterface.hpp>
+#include <iscore/tools/Metadata.hpp>
+#include <iscore/model/Identifier.hpp>
+#include <iscore_lib_process_export.h>
 
-namespace Process { class LayerModel; }
 class ProcessStateDataInterface;
-class QObject;
-
-namespace iscore {
-class ElementPluginModelList;
-}  // namespace iscore
-#include <iscore/tools/SettableIdentifier.hpp>
 
 namespace Process
 {
-class ProcessFactory;
+class ProcessModelFactory;
+class LayerFactory;
 class ProcessModel;
-class LayerModelFactory;
+class LayerFactory;
 
 /**
  * @brief The Process class
  *
  * Interface to implement to make a process.
  */
-class ISCORE_LIB_PROCESS_EXPORT ProcessModel:
-        public IdentifiedObject<ProcessModel>,
-        public iscore::SerializableInterface<ProcessFactory>
+class ISCORE_LIB_PROCESS_EXPORT ProcessModel
+    : public iscore::Entity<ProcessModel>,
+    public iscore::SerializableInterface<ProcessModel>
 {
-        Q_OBJECT
+  Q_OBJECT
 
-        ISCORE_SERIALIZE_FRIENDS(Process::ProcessModel, DataStream)
-        ISCORE_SERIALIZE_FRIENDS(Process::ProcessModel, JSONObject)
-        friend class Process::LayerModelFactory; // to register layers
+  ISCORE_SERIALIZE_FRIENDS
 
-    public:
-        iscore::Components components;
-        iscore::ElementPluginModelList* pluginModelList{}; // Note: has to be initialized by the sub-classes.
-        ModelMetadata metadata;
+public:
+  ProcessModel(
+      TimeVal duration,
+      const Id<ProcessModel>& id,
+      const QString& name,
+      QObject* parent);
 
-        ProcessModel(
-                TimeValue duration,
-                const Id<ProcessModel>& id,
-                const QString& name,
-                QObject* parent);
+  ProcessModel(DataStream::Deserializer& vis, QObject* parent);
+  ProcessModel(JSONObject::Deserializer& vis, QObject* parent);
 
-        ProcessModel(Deserializer<DataStream>& vis, QObject* parent);
-        ProcessModel(Deserializer<JSONObject>& vis, QObject* parent);
+  virtual ~ProcessModel();
 
-        virtual ~ProcessModel();
+  virtual ProcessModel*
+  clone(const Id<Process::ProcessModel>& newId, QObject* newParent) const = 0;
 
-        virtual ProcessModel* clone(
-                const Id<Process::ProcessModel>& newId,
-                QObject* newParent) const = 0;
+  // A user-friendly text to show to the users
+  virtual QString prettyName() const;
+  virtual QString prettyShortName() const = 0;
 
-        // A user-friendly text to show to the users
-        virtual QString prettyName() const
-        { return metadata.name(); }
+  //// Features of a process
+  /// Duration
+  void setParentDuration(ExpandMode mode, const TimeVal& t);
 
+  // TODO might not be useful... put in protected ?
+  // Constructor needs it, too.
+  void setDuration(const TimeVal& other);
+  const TimeVal& duration() const;
 
-        // Do a copy.
-        std::vector<LayerModel*> layers() const;
+  /// Execution
+  virtual void startExecution();
+  virtual void stopExecution();
+  virtual void reset();
 
-        //// Features of a process
-        /// Duration
-        void setParentDuration(ExpandMode mode, const TimeValue& t);
+  /// States. The process has ownership.
+  virtual ProcessStateDataInterface* startStateData() const;
+  virtual ProcessStateDataInterface* endStateData() const;
 
-        void setUseParentDuration(bool b)
-        {
-            if(m_useParentDuration != b)
-            {
-                m_useParentDuration = b;
-                emit useParentDurationChanged(b);
-            }
-        }
+  /// Selection
+  virtual Selection selectableChildren() const;
+  virtual Selection selectedChildren() const;
+  virtual void setSelection(const Selection& s) const;
 
-        bool useParentDuration() const
-        {
-            return m_useParentDuration;
-        }
+  double getSlotHeight() const;
+  void setSlotHeight(double);
 
-        // TODO might not be useful... put in protected ?
-        // Constructor needs it, too.
-        void setDuration(const TimeValue& other);
-        const TimeValue& duration() const;
+signals:
+  // True if the execution is running.
+  void execution(bool);
+  void durationChanged(const TimeVal&);
+  void useParentDurationChanged(bool);
 
-        /// Execution
-        virtual void startExecution() { }
-        virtual void stopExecution() { }
-        virtual void reset() { }
+  void slotHeightChanged(double);
 
-        /// States. The process has ownership.
-        virtual ProcessStateDataInterface* startStateData() const { return nullptr; }
-        virtual ProcessStateDataInterface* endStateData() const { return nullptr; }
+protected:
+  // Clone
+  ProcessModel(
+      const ProcessModel& other,
+      const Id<ProcessModel>& id,
+      const QString& name,
+      QObject* parent);
 
-        /// Selection
-        virtual Selection selectableChildren() const { return {}; }
-        virtual Selection selectedChildren() const { return {}; }
-        virtual void setSelection(const Selection& s) const { }
+  // Used to scale the process.
+  // This should be commutative :
+  //   setDurationWithScale(2); setDurationWithScale(3);
+  // yields the same result as :
+  //   setDurationWithScale(3); setDurationWithScale(2);
+  virtual void setDurationAndScale(const TimeVal& newDuration);
 
-    signals:
-        // True if the execution is running.
-        void execution(bool);
-        void durationChanged(const TimeValue&);
-        void useParentDurationChanged(bool);
+  // Does nothing if newDuration < currentDuration
+  virtual void setDurationAndGrow(const TimeVal& newDuration);
 
-    protected:
-        // Clone
-        ProcessModel(
-                const ProcessModel& other,
-                const Id<ProcessModel>& id,
-                const QString& name,
-                QObject* parent);
+  // Does nothing if newDuration > currentDuration
+  virtual void setDurationAndShrink(const TimeVal& newDuration);
 
-        // Used to scale the process.
-        // This should be commutative :
-        //   setDurationWithScale(2); setDurationWithScale(3);
-        // yields the same result as :
-        //   setDurationWithScale(3); setDurationWithScale(2);
-        virtual void setDurationAndScale(const TimeValue& newDuration)
-        { setDuration(newDuration); }
-
-        // Does nothing if newDuration < currentDuration
-        virtual void setDurationAndGrow(const TimeValue& newDuration)
-        { setDuration(newDuration); }
-
-        // Does nothing if newDuration > currentDuration
-        virtual void setDurationAndShrink(const TimeValue& newDuration)
-        { setDuration(newDuration); }
-
-    private:
-        void addLayer(LayerModel* m);
-        void removeLayer(LayerModel* m);
-
-        // Ownership : the parent is the Slot or another widget, not the process.
-        // A process view is never displayed alone, it is always in a view, which is in a rack.
-        std::vector<LayerModel*> m_layers;
-        TimeValue m_duration;
-        bool m_useParentDuration{true};
+private:
+  TimeVal m_duration;
+  double m_slotHeight{}; //! Height in full view
 };
 
 ISCORE_LIB_PROCESS_EXPORT ProcessModel* parentProcess(QObject* obj);
-ISCORE_LIB_PROCESS_EXPORT const ProcessModel* parentProcess(const QObject* obj);
-
+ISCORE_LIB_PROCESS_EXPORT const ProcessModel*
+parentProcess(const QObject* obj);
 }
-template<typename T>
-std::vector<typename T::layer_type*> layers(const T& processModel)
-{
-    std::vector<typename T::layer_type*> v;
-
-    for(auto& elt : processModel.layers())
-    {
-        v.push_back(safe_cast<typename T::layer_type*>(elt));
-    }
-
-    return v;
-}
-
 DEFAULT_MODEL_METADATA(Process::ProcessModel, "Process")
 
 Q_DECLARE_METATYPE(Id<Process::ProcessModel>)
-
-
-#define PROCESS_METADATA_IMPL(Process_T) \
-UuidKey<Process::ProcessFactory> concreteFactoryKey() const final override \
-{ \
-    return Metadata<ConcreteFactoryKey_k, Process_T>::get(); \
-} \
- \
-void serialize_impl(const VisitorVariant& vis) const final override \
-{ \
-    serialize_dyn(vis, *this); \
-} \
-\
-Process_T* clone( \
-    const Id<Process::ProcessModel>& newId, \
-    QObject* newParent) const final override\
-{ \
-   return new Process_T{*this, newId, newParent}; \
-}
-

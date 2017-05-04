@@ -1,28 +1,26 @@
 #pragma once
-#include <iscore/plugins/application/GUIApplicationContextPlugin.hpp>
 #include <QString>
+#include <iscore/plugins/application/GUIApplicationPlugin.hpp>
 
-#include <iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.hpp>
+#include <iscore/plugins/documentdelegate/plugin/DocumentPlugin.hpp>
 
-namespace iscore {
+namespace iscore
+{
 
 class Document;
-}  // namespace iscore
+} // namespace iscore
 struct VisitorVariant;
 
 namespace Explorer
 {
-class DeviceExplorerApplicationPlugin final :
-        public iscore::GUIApplicationContextPlugin
+class ApplicationPlugin final : public iscore::GUIApplicationPlugin
 {
-    public:
-        DeviceExplorerApplicationPlugin(
-                const iscore::GUIApplicationContext& app);
+public:
+  ApplicationPlugin(const iscore::GUIApplicationContext& app);
 
-    protected:
-        void on_newDocument(iscore::Document* doc) override;
-        void on_documentChanged(
-                iscore::Document* olddoc,
-                iscore::Document* newdoc) override;
+protected:
+  void on_newDocument(iscore::Document& doc) override;
+  void on_documentChanged(
+      iscore::Document* olddoc, iscore::Document* newdoc) override;
 };
 }

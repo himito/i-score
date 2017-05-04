@@ -3,202 +3,296 @@
 #include <QFont>
 #include <qnamespace.h>
 
+#include "NodeDisplayMethods.hpp"
+#include <ossia/editor/value/value_conversion.hpp>
+#include <ossia/network/domain/domain.hpp>
 #include <Device/Address/AddressSettings.hpp>
 #include <Device/Address/Domain.hpp>
 #include <Device/Address/IOType.hpp>
 #include <Device/Node/DeviceNode.hpp>
 #include <Device/Protocol/DeviceSettings.hpp>
-#include "NodeDisplayMethods.hpp"
 #include <State/Value.hpp>
 #include <State/ValueConversion.hpp>
 
+namespace ossia
+{
+
+// TODO MOVEME
+template <>
+QVariant convert(const ossia::value& val)
+{
+  struct vis
+  {
+  public:
+    using return_type = QVariant;
+    return_type operator()(const ossia::impulse& v) const
+    {
+      return QVariant::fromValue(v);
+    }
+    return_type operator()(int i) const
+    {
+      return QVariant::fromValue(i);
+    }
+    return_type operator()(float f) const
+    {
+      return QVariant::fromValue(f);
+    }
+    return_type operator()(bool b) const
+    {
+      return QVariant::fromValue(b);
+    }
+    return_type operator()(const std::string& s) const
+    {
+      return QString::fromStdString(s);
+    }
+    return_type operator()(char c) const
+    {
+      return QVariant::fromValue(QChar(c));
+    }
+
+    return_type operator()(ossia::vec2f t) const
+    {
+      return QVector2D{t[0], t[1]};
+    }
+    return_type operator()(ossia::vec3f t) const
+    {
+      return QVector3D{t[0], t[1], t[2]};
+    }
+    return_type operator()(ossia::vec4f t) const
+    {
+      return QVector4D{t[0], t[1], t[2], t[3]};
+    }
+    return_type operator()(const std::vector<ossia::value>& t) const
+    {
+      QVariantList arr;
+      arr.reserve(t.size());
+
+      for (const auto& elt : t)
+      {
+        arr.push_back(ossia::apply_nonnull(*this, elt.v));
+      }
+
+      return arr;
+    }
+    return_type operator()() const
+    {
+      return {};
+    }
+  };
+
+  return val.apply(vis{});
+}
+}
 namespace Device
 {
 // TODO boost::visitor ?
 
 QVariant nameColumnData(const Device::Node& node, int role)
 {
-    static const QFont italicFont{[] () { QFont f; f.setItalic(true); return f; }()};
+  static const QFont italicFont{[]() {
+    QFont f;
+    f.setItalic(true);
+    return f;
+  }()};
 
-    using namespace iscore;
+  using namespace iscore;
 
-    const Device::IOType ioType = node.get<Device::AddressSettings>().ioType;
-    switch(role)
+  const auto ioType = node.get<Device::AddressSettings>().ioType;
+  switch (role)
+  {
+    case Qt::DisplayRole:
+    case Qt::EditRole:
+      return node.displayName();
+    case Qt::FontRole:
     {
-        case Qt::DisplayRole:
-        case Qt::EditRole:
-            return node.displayName();
-        case Qt::FontRole:
-        {
-            if(ioType == IOType::In || ioType == IOType::Out)
-            {
-                return italicFont;
-            }
-        }
-        case Qt::ForegroundRole:
-        {
-            if(ioType == IOType::In || ioType == IOType::Out)
-            {
-                return QBrush(Qt::lightGray);
-            }
-        }
-        default:
-            return {};
+      if (ioType == ossia::access_mode::GET || ioType == ossia::access_mode::SET)
+      {
+        return italicFont;
+      }
     }
+    case Qt::ForegroundRole:
+    {
+      if (ioType == ossia::access_mode::GET || ioType == ossia::access_mode::SET)
+      {
+        return QBrush(Qt::lightGray);
+      }
+    }
+    default:
+      return {};
+  }
 }
 
-QVariant deviceNameColumnData(const Device::Node& node, DeviceInterface& dev, int role)
+QVariant
+deviceNameColumnData(const Device::Node& node, bool connected, int role)
 {
-    static const QFont italicFont{[] () { QFont f; f.setItalic(true); return f; }()};
+  static const QFont italicFont{[]() {
+    QFont f;
+    f.setItalic(true);
+    return f;
+  }()};
 
-    using namespace iscore;
+  using namespace iscore;
 
-    switch(role)
+  switch (role)
+  {
+    case Qt::DisplayRole:
+    case Qt::EditRole:
+      return node.get<DeviceSettings>().name;
+    case Qt::FontRole:
     {
-        case Qt::DisplayRole:
-        case Qt::EditRole:
-            return node.get<DeviceSettings>().name;
-        case Qt::FontRole:
-        {
-            if(!dev.connected())
-                return italicFont;
-        }
-        default:
-            return {};
+      if (!connected)
+        return italicFont;
     }
+    default:
+      return {};
+  }
 }
 
 QVariant valueColumnData(const Device::Node& node, int role)
 {
-    using namespace iscore;
-    if(node.is<DeviceSettings>())
-        return {};
-
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-    {
-        const auto& val = node.get<AddressSettings>().value;
-        if(val.val.is<State::tuple_t>())
-        {
-            // TODO a nice editor for tuples.
-            return State::convert::toPrettyString(val);
-        }
-        else
-        {
-            return State::convert::value<QVariant>(val);
-        }
-
-    }
-    else if(role == Qt::ForegroundRole)
-    {
-        const IOType ioType = node.get<AddressSettings>().ioType;
-
-        switch(ioType)
-        {
-            case IOType::In:
-                return QBrush(Qt::darkGray);
-            case IOType::Out:
-                return QBrush(Qt::lightGray);
-            default:
-                return {};
-        }
-    }
-
+  using namespace iscore;
+  if (node.is<DeviceSettings>())
     return {};
+
+  if (role == Qt::DisplayRole || role == Qt::EditRole)
+  {
+    const State::Value& val = node.get<AddressSettings>().value;
+    if (val.val.isArray())
+    {
+      // TODO a nice editor for tuples.
+      return State::convert::toPrettyString(val);
+    }
+    else
+    {
+      return State::convert::value<QVariant>(val);
+    }
+  }
+  else if (role == Qt::ForegroundRole)
+  {
+    const auto ioType = node.get<AddressSettings>().ioType;
+
+    if(ioType)
+    {
+      switch (*ioType)
+      {
+        case ossia::access_mode::GET:
+          return QBrush(Qt::darkGray);
+        case ossia::access_mode::SET:
+          return QBrush(Qt::lightGray);
+        default:
+          return {};
+      }
+    }
+  }
+
+  return {};
 }
 
 QVariant GetColumnData(const Device::Node& node, int role)
 {
-    using namespace iscore;
-    if(node.is<DeviceSettings>())
-        return {};
-
-    /*
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-    {
-        switch(node.get<AddressSettings>().ioType)
-        {
-            case IOType::In:    return true;
-            case IOType::Out:   return false;
-            case IOType::InOut: return true;
-            case IOType::Invalid: return QVariant{};
-            default:            return QVariant{};
-        }
-    }
-    */
-
-    if(role == Qt::CheckStateRole)
-    {
-        switch(node.get<AddressSettings>().ioType)
-        {
-            case IOType::In:    return Qt::Checked;
-            case IOType::Out:   return Qt::Unchecked;
-            case IOType::InOut: return Qt::Checked;
-            case IOType::Invalid: return Qt::Unchecked;
-            default:            return Qt::Unchecked;
-        }
-    }
-
+  using namespace iscore;
+  if (node.is<DeviceSettings>())
     return {};
+
+  /*
+  if(role == Qt::DisplayRole || role == Qt::EditRole)
+  {
+      switch(node.get<AddressSettings>().ioType)
+      {
+          case ossia::access_mode::GET:    return true;
+          case ossia::access_mode::SET:   return false;
+          case ossia::access_mode::BI: return true;
+          case IOType::Invalid: return QVariant{};
+          default:            return QVariant{};
+      }
+  }
+  */
+
+  if (role == Qt::CheckStateRole)
+  {
+    const auto ioType = node.get<AddressSettings>().ioType;
+    if(ioType)
+    {
+      switch (*ioType)
+      {
+        case ossia::access_mode::GET:
+          return Qt::Checked;
+        case ossia::access_mode::SET:
+          return Qt::Unchecked;
+        case ossia::access_mode::BI:
+          return Qt::Checked;
+      }
+    }
+    return Qt::Unchecked;
+  }
+
+  return {};
 }
 QVariant SetColumnData(const Device::Node& node, int role)
 {
-    using namespace iscore;
-    if(node.is<DeviceSettings>())
-        return {};
-
-    /*
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-    {
-        switch(node.get<AddressSettings>().ioType)
-        {
-            case IOType::In:    return false;
-            case IOType::Out:   return true;
-            case IOType::InOut: return true;
-            case IOType::Invalid: return true;
-            default:            return QVariant{};
-        }
-    }
-    */
-
-    if(role == Qt::CheckStateRole)
-    {
-        switch(node.get<AddressSettings>().ioType)
-        {
-            case IOType::In:    return Qt::Unchecked;
-            case IOType::Out:   return Qt::Checked;
-            case IOType::InOut: return Qt::Checked;
-            case IOType::Invalid: return Qt::Unchecked;
-            default:            return Qt::Unchecked;
-        }
-    }
+  using namespace iscore;
+  if (node.is<DeviceSettings>())
     return {};
+
+  /*
+  if(role == Qt::DisplayRole || role == Qt::EditRole)
+  {
+      switch(node.get<AddressSettings>().ioType)
+      {
+          case ossia::access_mode::GET:    return false;
+          case ossia::access_mode::SET:   return true;
+          case ossia::access_mode::BI: return true;
+          case IOType::Invalid: return true;
+          default:            return QVariant{};
+      }
+  }
+  */
+
+  if (role == Qt::CheckStateRole)
+  {
+    const auto ioType = node.get<AddressSettings>().ioType;
+    if(ioType)
+    {
+      switch (*ioType)
+      {
+        case ossia::access_mode::GET:
+          return Qt::Unchecked;
+        case ossia::access_mode::SET:
+          return Qt::Checked;
+        case ossia::access_mode::BI:
+          return Qt::Checked;
+      }
+    }
+    return Qt::Unchecked;
+  }
+  return {};
 }
 
 QVariant minColumnData(const Device::Node& node, int role)
 {
-    using namespace iscore;
-    if(node.is<DeviceSettings>())
-        return {};
-
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-    {
-        return State::convert::value<QVariant>(node.get<AddressSettings>().domain.min);
-    }
-
+  using namespace iscore;
+  if (node.is<DeviceSettings>())
     return {};
+
+  if (role == Qt::DisplayRole || role == Qt::EditRole)
+  {
+    return node.get<AddressSettings>().domain.get().convert_min<QVariant>();
+  }
+
+  return {};
 }
 
 QVariant maxColumnData(const Device::Node& node, int role)
 {
-    using namespace iscore;
-    if(node.is<DeviceSettings>())
-        return {};
-
-    if(role == Qt::DisplayRole || role == Qt::EditRole)
-    {
-        return State::convert::value<QVariant>(node.get<AddressSettings>().domain.max);
-    }
-
+  using namespace iscore;
+  if (node.is<DeviceSettings>())
     return {};
+
+  if (role == Qt::DisplayRole || role == Qt::EditRole)
+  {
+    return node.get<AddressSettings>().domain.get().convert_max<QVariant>();
+  }
+
+  return {};
 }
 }

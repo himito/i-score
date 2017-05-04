@@ -1,16 +1,19 @@
 #pragma once
+#include <Curve/CurvePresenter.hpp>
+#include <Curve/CurveView.hpp>
 #include <Curve/Palette/CurveEditionSettings.hpp>
 #include <Curve/Palette/CurvePoint.hpp>
 #include <Curve/Palette/Tools/MoveTool.hpp>
 #include <Curve/Palette/Tools/SmartTool.hpp>
 #include <Process/Tools/ToolPalette.hpp>
-#include <iscore/statemachine/GraphicsSceneToolPalette.hpp>
 #include <QPoint>
+#include <iscore/statemachine/GraphicsSceneToolPalette.hpp>
 #include <iscore_plugin_curve_export.h>
-namespace iscore {
+namespace iscore
+{
 class CommandStackFacade;
 class ObjectLocker;
-}  // namespace iscore
+} // namespace iscore
 namespace Process
 {
 struct LayerContext;
@@ -21,43 +24,51 @@ namespace Curve
 class Model;
 class Presenter;
 class View;
-class ISCORE_PLUGIN_CURVE_EXPORT ToolPalette final : public GraphicsSceneToolPalette
+
+class ISCORE_PLUGIN_CURVE_EXPORT ToolPalette : public GraphicsSceneToolPalette
 {
-        Q_OBJECT
-    public:
-        ToolPalette(Process::LayerContext& f, Presenter& pres);
+public:
+  ToolPalette(const iscore::DocumentContext& ctx, Presenter& pres);
+  Presenter& presenter() const;
 
-        Presenter& presenter() const;
-        Curve::EditionSettings& editionSettings() const;
+  Curve::EditionSettings& editionSettings() const;
 
-        const Model& model() const;
+  const Model& model() const;
+  void on_pressed(QPointF point);
+  void on_moved(QPointF point);
+  void on_released(QPointF point);
 
-        const Process::LayerContext& context() const
-        { return m_context; }
+  void on_cancel();
 
-        void on_pressed(QPointF);
-        void on_moved(QPointF);
-        void on_released(QPointF);
-        void on_cancel();
+  void activate(Curve::Tool);
+  void desactivate(Curve::Tool);
 
-        void activate(Curve::Tool);
-        void desactivate(Curve::Tool);
+  // From double-click :
+  void createPoint(QPointF);
+private:
+  Curve::Point ScenePointToCurvePoint(const QPointF& point)
+  {
+    const auto rect = m_presenter.rect();
+    return {point.x() / rect.width(), 1. - point.y() / rect.height()};
+  }
 
-    private:
-        Curve::Point ScenePointToCurvePoint(const QPointF& point);
+  Presenter& m_presenter;
 
-        Presenter& m_presenter;
+  SmartTool m_selectTool;
+  CreateTool m_createTool;
+  SetSegmentTool m_setSegmentTool;
+  CreatePenTool m_createPenTool;
+};
 
-        const Process::LayerContext& m_context;
+template <typename Context_T>
+struct ToolPalette_T final : public ToolPalette
+{
+  ToolPalette_T(Context_T& ctx, Presenter& pres)
+      : ToolPalette{ctx.context, pres}, m_inputDisp{pres.view(), *this, ctx}
+  {
+  }
 
-        SmartTool m_selectTool;
-        CreateTool m_createTool;
-        SetSegmentTool m_setSegmentTool;
-
-        ToolPaletteInputDispatcher<
-            Curve::Tool,
-            ToolPalette,
-            Process::LayerContext,
-            View> m_inputDisp;
+  ToolPaletteInputDispatcher<Curve::Tool, ToolPalette, Context_T, View>
+      m_inputDisp;
 };
 }

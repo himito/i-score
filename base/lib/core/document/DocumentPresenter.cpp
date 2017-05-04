@@ -1,24 +1,30 @@
 #include <core/document/DocumentModel.hpp>
 #include <core/document/DocumentView.hpp>
-#include <iscore/plugins/documentdelegate/DocumentDelegateFactoryInterface.hpp>
+#include <core/document/DocumentPresenter.hpp>
+#include <iscore/plugins/documentdelegate/DocumentDelegateFactory.hpp>
+#include <iscore/plugins/documentdelegate/DocumentDelegatePresenter.hpp>
 
-#include "DocumentPresenter.hpp"
-#include <iscore/tools/NamedObject.hpp>
 
 class QObject;
 
 namespace iscore
 {
-DocumentPresenter::DocumentPresenter(DocumentDelegateFactory& fact,
-                                     const DocumentModel& m,
-                                     DocumentView& v,
-                                     QObject* parent) :
-    NamedObject {"DocumentPresenter", parent},
-            m_view{v},
-            m_model{m},
-            m_presenter{fact.makePresenter(this,
-                                            m_model.modelDelegate(),
-                                            m_view.viewDelegate())}
+DocumentPresenter::DocumentPresenter(
+    const iscore::DocumentContext& ctx,
+    DocumentDelegateFactory& fact,
+    const DocumentModel& m,
+    DocumentView& v,
+    QObject* parent)
+    : QObject{parent}
+    , m_view{v}
+    , m_model{m}
+    , m_presenter{fact.makePresenter(ctx,
+          this, m_model.modelDelegate(), m_view.viewDelegate())}
 {
+}
+
+void DocumentPresenter::setNewSelection(const Selection& s)
+{
+  m_presenter->setNewSelection(s);
 }
 }

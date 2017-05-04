@@ -1,13 +1,14 @@
 
-#include <Explorer/Widgets/AddressEditWidget.hpp>
+#include <Explorer/Widgets/AddressAccessorEditWidget.hpp>
 #include <Mapping/Commands/ChangeAddresses.hpp>
 #include <Mapping/Commands/MinMaxCommands.hpp>
-#include <iscore/document/DocumentInterface.hpp>
-#include <iscore/widgets/SpinBoxes.hpp>
 #include <QAbstractSpinBox>
 #include <QBoxLayout>
 #include <QFormLayout>
 #include <QLabel>
+#include <iscore/document/DocumentInterface.hpp>
+#include <iscore/widgets/SpinBoxes.hpp>
+#include <iscore/widgets/TextLabel.hpp>
 
 #include <QPushButton>
 #include <QSpinBox>
@@ -17,204 +18,206 @@
 #include <list>
 #include <vector>
 
+#include "MappingInspectorWidget.hpp"
+#include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
 #include <Inspector/InspectorWidgetBase.hpp>
 #include <Mapping/MappingModel.hpp>
-#include "MappingInspectorWidget.hpp"
 #include <State/Address.hpp>
-#include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
-#include <iscore/tools/ModelPath.hpp>
+#include <iscore/model/path/Path.hpp>
 #include <iscore/tools/Todo.hpp>
 
 namespace Mapping
 {
-MappingInspectorWidget::MappingInspectorWidget(
-        const ProcessModel& mappingModel,
-        const iscore::DocumentContext& doc,
-        QWidget* parent) :
-    InspectorWidgetDelegate_T {mappingModel, parent},
-    m_dispatcher{doc.commandStack}
+InspectorWidget::InspectorWidget(
+    const ProcessModel& mappingModel,
+    const iscore::DocumentContext& doc,
+    QWidget* parent)
+    : InspectorWidgetDelegate_T{mappingModel, parent}
+    , m_dispatcher{doc.commandStack}
 {
-    using namespace Explorer;
-    setObjectName("MappingInspectorWidget");
-    setParent(parent);
+  using namespace Explorer;
+  setObjectName("MappingInspectorWidget");
+  setParent(parent);
 
-    auto lay = new QVBoxLayout;
-    // LineEdit
-    // If there is a DeviceExplorer in the current document, use it
-    // to make a widget.
-    auto plug = doc.findPlugin<DeviceDocumentPlugin>();
-    DeviceExplorerModel* explorer{};
-    if(plug)
-        explorer = &plug->explorer;
-    {
-        // Source
-        auto widg = new QWidget;
-        auto vlay = new QVBoxLayout{widg};
-        vlay->setSpacing(0);
-        vlay->setContentsMargins(0,0,0,0);
+  auto lay = new QVBoxLayout;
 
-        vlay->addWidget(new QLabel{tr("Source")});
+  auto& explorer = doc.plugin<DeviceDocumentPlugin>().explorer();
 
-        m_sourceLineEdit = new AddressEditWidget{explorer, this};
+  {
+    // Source
+    auto widg = new QWidget;
+    auto vlay = new QVBoxLayout{widg};
+    vlay->setSpacing(0);
+    vlay->setContentsMargins(0, 0, 0, 0);
 
-        m_sourceLineEdit->setAddress(process().sourceAddress());
-        con(process(), &ProcessModel::sourceAddressChanged,
-            m_sourceLineEdit, &AddressEditWidget::setAddress);
+    vlay->addWidget(new TextLabel{tr("Source")});
 
-        connect(m_sourceLineEdit, &AddressEditWidget::addressChanged,
-                this, &MappingInspectorWidget::on_sourceAddressChange);
+    m_sourceLineEdit = new AddressAccessorEditWidget{explorer, this};
 
-        vlay->addWidget(m_sourceLineEdit);
+    m_sourceLineEdit->setAddress(process().sourceAddress());
+    con(process(), &ProcessModel::sourceAddressChanged, m_sourceLineEdit,
+        &AddressAccessorEditWidget::setAddress);
 
-        // Min / max
-        auto minmaxwid = new QWidget;
-        auto minmaxlay = new QFormLayout{minmaxwid};
-        vlay->addWidget(minmaxwid);
-        minmaxlay->setSpacing(0);
-        minmaxlay->setContentsMargins(0, 0, 0, 0);
+    connect(
+        m_sourceLineEdit, &AddressAccessorEditWidget::addressChanged, this,
+        &InspectorWidget::on_sourceAddressChange);
 
-        m_sourceMin = new iscore::SpinBox<float>;
-        m_sourceMax = new iscore::SpinBox<float>;
-        m_sourceMin->setValue(process().sourceMin());
-        m_sourceMax->setValue(process().sourceMax());
-        minmaxlay->addRow(tr("Min"), m_sourceMin);
-        minmaxlay->addRow(tr("Max"), m_sourceMax);
+    vlay->addWidget(m_sourceLineEdit);
 
-        con(process(), &ProcessModel::sourceMinChanged,
-            m_sourceMin, &QDoubleSpinBox::setValue);
-        con(process(), &ProcessModel::sourceMaxChanged,
-            m_sourceMax, &QDoubleSpinBox::setValue);
+    // Min / max
+    auto minmaxwid = new QWidget;
+    auto minmaxlay = new QFormLayout{minmaxwid};
+    vlay->addWidget(minmaxwid);
+    minmaxlay->setSpacing(0);
+    minmaxlay->setContentsMargins(0, 0, 0, 0);
 
-        connect(m_sourceMin, &QAbstractSpinBox::editingFinished,
-                this, &MappingInspectorWidget::on_sourceMinValueChanged);
-        connect(m_sourceMax, &QAbstractSpinBox::editingFinished,
-                this, &MappingInspectorWidget::on_sourceMaxValueChanged);
+    m_sourceMin = new iscore::SpinBox<float>;
+    m_sourceMax = new iscore::SpinBox<float>;
+    m_sourceMin->setValue(process().sourceMin());
+    m_sourceMax->setValue(process().sourceMax());
+    minmaxlay->addRow(tr("Min"), m_sourceMin);
+    minmaxlay->addRow(tr("Max"), m_sourceMax);
 
-        // TODO in AutomationInspectorWidget, remove all Qt4-style connects.
-        lay->addWidget(widg);
-    }
+    con(process(), &ProcessModel::sourceMinChanged, m_sourceMin,
+        &QDoubleSpinBox::setValue);
+    con(process(), &ProcessModel::sourceMaxChanged, m_sourceMax,
+        &QDoubleSpinBox::setValue);
 
-    {
-        // target
-        auto widg = new QWidget;
-        auto vlay = new QVBoxLayout{widg};
-        vlay->setSpacing(0);
-        vlay->setContentsMargins(0,0,0,0);
+    connect(
+        m_sourceMin, &QAbstractSpinBox::editingFinished, this,
+        &InspectorWidget::on_sourceMinValueChanged);
+    connect(
+        m_sourceMax, &QAbstractSpinBox::editingFinished, this,
+        &InspectorWidget::on_sourceMaxValueChanged);
 
-        vlay->addWidget(new QLabel{tr("Target")});
+    // TODO in AutomationInspectorWidget, remove all Qt4-style connects.
+    lay->addWidget(widg);
+  }
 
-        m_targetLineEdit = new AddressEditWidget{explorer, this};
+  {
+    // target
+    auto widg = new QWidget;
+    auto vlay = new QVBoxLayout{widg};
+    vlay->setSpacing(0);
+    vlay->setContentsMargins(0, 0, 0, 0);
 
-        m_targetLineEdit->setAddress(process().targetAddress());
-        con(process(), &ProcessModel::targetAddressChanged,
-            m_targetLineEdit, &AddressEditWidget::setAddress);
+    vlay->addWidget(new TextLabel{tr("Target")});
 
-        connect(m_targetLineEdit, &AddressEditWidget::addressChanged,
-                this, &MappingInspectorWidget::on_targetAddressChange);
+    m_targetLineEdit = new AddressAccessorEditWidget{explorer, this};
 
-        vlay->addWidget(m_targetLineEdit);
+    m_targetLineEdit->setAddress(process().targetAddress());
+    con(process(), &ProcessModel::targetAddressChanged, m_targetLineEdit,
+        &AddressAccessorEditWidget::setAddress);
 
-        // Min / max
-        auto minmaxwid = new QWidget;
-        auto minmaxlay = new QFormLayout{minmaxwid};
-        vlay->addWidget(minmaxwid);
-        minmaxlay->setSpacing(0);
-        minmaxlay->setContentsMargins(0, 0, 0, 0);
+    connect(
+        m_targetLineEdit, &AddressAccessorEditWidget::addressChanged, this,
+        &InspectorWidget::on_targetAddressChange);
 
-        m_targetMin = new iscore::SpinBox<float>;
-        m_targetMax = new iscore::SpinBox<float>;
-        m_targetMin->setValue(process().targetMin());
-        m_targetMax->setValue(process().targetMax());
-        minmaxlay->addRow(tr("Min"), m_targetMin);
-        minmaxlay->addRow(tr("Max"), m_targetMax);
+    vlay->addWidget(m_targetLineEdit);
 
-        con(process(), &ProcessModel::targetMinChanged,
-            m_targetMin, &QDoubleSpinBox::setValue);
-        con(process(), &ProcessModel::targetMaxChanged,
-            m_targetMax, &QDoubleSpinBox::setValue);
+    // Min / max
+    auto minmaxwid = new QWidget;
+    auto minmaxlay = new QFormLayout{minmaxwid};
+    vlay->addWidget(minmaxwid);
+    minmaxlay->setSpacing(0);
+    minmaxlay->setContentsMargins(0, 0, 0, 0);
 
-        connect(m_targetMin, &QAbstractSpinBox::editingFinished,
-                this, &MappingInspectorWidget::on_targetMinValueChanged);
-        connect(m_targetMax, &QAbstractSpinBox::editingFinished,
-                this, &MappingInspectorWidget::on_targetMaxValueChanged);
-        lay->addWidget(widg);
-    }
+    m_targetMin = new iscore::SpinBox<float>;
+    m_targetMax = new iscore::SpinBox<float>;
+    m_targetMin->setValue(process().targetMin());
+    m_targetMax->setValue(process().targetMax());
+    minmaxlay->addRow(tr("Min"), m_targetMin);
+    minmaxlay->addRow(tr("Max"), m_targetMax);
 
+    con(process(), &ProcessModel::targetMinChanged, m_targetMin,
+        &QDoubleSpinBox::setValue);
+    con(process(), &ProcessModel::targetMaxChanged, m_targetMax,
+        &QDoubleSpinBox::setValue);
 
-    this->setLayout(lay);
+    connect(
+        m_targetMin, &QAbstractSpinBox::editingFinished, this,
+        &InspectorWidget::on_targetMinValueChanged);
+    connect(
+        m_targetMax, &QAbstractSpinBox::editingFinished, this,
+        &InspectorWidget::on_targetMaxValueChanged);
+    lay->addWidget(widg);
+  }
+
+  this->setLayout(lay);
 }
 
-void MappingInspectorWidget::on_sourceAddressChange(const State::Address& newAddr)
+void InspectorWidget::on_sourceAddressChange(
+    const Device::FullAddressAccessorSettings& newAddr)
 {
-    // Various checks
-    if(newAddr == process().sourceAddress())
-        return;
+  // Various checks
+  if (newAddr.address == process().sourceAddress())
+    return;
 
-    if(newAddr.path.isEmpty())
-        return;
+  if (newAddr.address.address.path.isEmpty())
+    return;
 
-    auto cmd = new ChangeSourceAddress{process(), newAddr};
+  auto cmd = new ChangeSourceAddress{process(), newAddr};
+
+  m_dispatcher.submitCommand(cmd);
+}
+
+void InspectorWidget::on_sourceMinValueChanged()
+{
+  auto newVal = m_sourceMin->value();
+  if (newVal != process().sourceMin())
+  {
+    auto cmd = new SetMappingSourceMin{process(), newVal};
 
     m_dispatcher.submitCommand(cmd);
+  }
 }
 
-void MappingInspectorWidget::on_sourceMinValueChanged()
+void InspectorWidget::on_sourceMaxValueChanged()
 {
-    auto newVal = m_sourceMin->value();
-    if(newVal != process().sourceMin())
-    {
-        auto cmd = new SetMappingSourceMin{process(), newVal};
-
-        m_dispatcher.submitCommand(cmd);
-    }
-}
-
-void MappingInspectorWidget::on_sourceMaxValueChanged()
-{
-    auto newVal = m_sourceMax->value();
-    if(newVal != process().sourceMax())
-    {
-        auto cmd = new SetMappingSourceMax{process(), newVal};
-
-        m_dispatcher.submitCommand(cmd);
-    }
-}
-
-
-void MappingInspectorWidget::on_targetAddressChange(const State::Address& newAddr)
-{
-    // Various checks
-    if(newAddr == process().targetAddress())
-        return;
-
-    if(newAddr.path.isEmpty())
-        return;
-
-    auto cmd = new ChangeTargetAddress{process(), newAddr};
+  auto newVal = m_sourceMax->value();
+  if (newVal != process().sourceMax())
+  {
+    auto cmd = new SetMappingSourceMax{process(), newVal};
 
     m_dispatcher.submitCommand(cmd);
+  }
 }
 
-void MappingInspectorWidget::on_targetMinValueChanged()
+void InspectorWidget::on_targetAddressChange(
+    const Device::FullAddressAccessorSettings& newAddr)
 {
-    auto newVal = m_targetMin->value();
-    if(newVal != process().targetMin())
-    {
-        auto cmd = new SetMappingTargetMin{process(), newVal};
+  // Various checks
+  if (newAddr.address == process().targetAddress())
+    return;
 
-        m_dispatcher.submitCommand(cmd);
-    }
+  if (newAddr.address.address.path.isEmpty())
+    return;
+
+  auto cmd = new ChangeTargetAddress{process(), newAddr};
+
+  m_dispatcher.submitCommand(cmd);
 }
 
-void MappingInspectorWidget::on_targetMaxValueChanged()
+void InspectorWidget::on_targetMinValueChanged()
 {
-    auto newVal = m_targetMax->value();
-    if(newVal != process().targetMax())
-    {
-        auto cmd = new SetMappingTargetMax{process(), newVal};
+  auto newVal = m_targetMin->value();
+  if (newVal != process().targetMin())
+  {
+    auto cmd = new SetMappingTargetMin{process(), newVal};
 
-        m_dispatcher.submitCommand(cmd);
-    }
+    m_dispatcher.submitCommand(cmd);
+  }
+}
+
+void InspectorWidget::on_targetMaxValueChanged()
+{
+  auto newVal = m_targetMax->value();
+  if (newVal != process().targetMax())
+  {
+    auto cmd = new SetMappingTargetMax{process(), newVal};
+
+    m_dispatcher.submitCommand(cmd);
+  }
 }
 }

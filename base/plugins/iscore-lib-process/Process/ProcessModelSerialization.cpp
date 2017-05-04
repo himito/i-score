@@ -3,57 +3,48 @@
 #include <QJsonObject>
 #include <QJsonValue>
 
-#include <Process/ModelMetadata.hpp>
 #include <Process/ProcessFactory.hpp>
+#include <iscore/model/ModelMetadata.hpp>
 
 #include <Process/ProcessList.hpp>
 #include <Process/TimeValue.hpp>
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
 
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
+#include <iscore/plugins/customfactory/StringFactoryKeySerialization.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/serialization/JSONValueVisitor.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
-#include <iscore/plugins/customfactory/StringFactoryKeySerialization.hpp>
 
-template<>
-ISCORE_LIB_PROCESS_EXPORT void Visitor<Reader<DataStream>>::readFrom_impl(const Process::ProcessModel& process)
+template <>
+ISCORE_LIB_PROCESS_EXPORT void DataStreamReader::read(
+    const Process::ProcessModel& process)
 {
-    // To allow recration using createProcess
-    readFrom(static_cast<const IdentifiedObject<Process::ProcessModel>&>(process));
-
-    readFrom(process.duration());
-    //m_stream << process.useParentDuration();
-
-    readFrom(process.metadata);
+  m_stream << process.m_duration
+          << process.m_slotHeight;
 }
 
 // We only load the members of the process here.
-template<>
-ISCORE_LIB_PROCESS_EXPORT void Visitor<Writer<DataStream>>::writeTo(Process::ProcessModel& process)
+template <>
+ISCORE_LIB_PROCESS_EXPORT void
+DataStreamWriter::write(Process::ProcessModel& process)
 {
-    writeTo(process.m_duration);
-    //m_stream >> process.m_useParentDuration;
-    writeTo(process.metadata);
-
-    // Delimiter checked on createProcess
+  m_stream >> process.m_duration
+           >> process.m_slotHeight;
 }
 
-
-template<>
-ISCORE_LIB_PROCESS_EXPORT void Visitor<Reader<JSONObject>>::readFrom_impl(const Process::ProcessModel& process)
+template <>
+ISCORE_LIB_PROCESS_EXPORT void JSONObjectReader::read(
+    const Process::ProcessModel& process)
 {
-    readFrom(static_cast<const IdentifiedObject<Process::ProcessModel>&>(process));
-
-    m_obj[iscore::StringConstant().Duration] = toJsonValue(process.duration());
-    //m_obj["UseParentDuration"] = process.useParentDuration();
-    m_obj[iscore::StringConstant().Metadata] = toJsonObject(process.metadata);
+  obj[strings.Duration] = toJsonValue(process.duration());
+  obj[strings.Height] = process.getSlotHeight();
 }
 
-template<>
-ISCORE_LIB_PROCESS_EXPORT void Visitor<Writer<JSONObject>>::writeTo(Process::ProcessModel& process)
+template <>
+ISCORE_LIB_PROCESS_EXPORT void
+JSONObjectWriter::write(Process::ProcessModel& process)
 {
-    process.m_duration = fromJsonValue<TimeValue>(m_obj[iscore::StringConstant().Duration]);
-    //process.m_useParentDuration = m_obj["UseParentDuration"].toBool();
-    process.metadata = fromJsonObject<ModelMetadata>(m_obj[iscore::StringConstant().Metadata]);
+  process.m_duration = fromJsonValue<TimeVal>(obj[strings.Duration]);
+  process.m_slotHeight = obj[strings.Height].toDouble();
 }

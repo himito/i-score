@@ -8,8 +8,56 @@ find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets Test Xml)
 
 # Files & main target
 ### Plugin ###
-file(GLOB_RECURSE HDRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/*.hpp")
+set(HDRS
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Add/AddAddress.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Add/AddDevice.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Add/LoadDevice.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/DeviceExplorerCommandFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Remove.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/RemoveNodes.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Remove/RemoveAddress.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/ReplaceDevice.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/UpdateAddresses.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Update/UpdateAddressSettings.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Commands/Update/UpdateDeviceSettings.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/AddressSettingsFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressBoolSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressCharSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressImpulseSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressNoneSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressNumericSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressStringSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Common/AddressSettings/Widgets/AddressTupleSettingsWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/DeviceDocumentPluginFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/NodeUpdateProxy.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/Column.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerFilterProxyModel.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerMimeTypes.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerModel.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerView.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/ExplorationWorker.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/ExplorationWorkerWrapper.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/ListeningManager.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/Widgets/AddressEditDialog.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/Widgets/DeviceEditDialog.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Listening/DefaultListeningHandlerFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Listening/DefaultListeningHandler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Listening/ListeningHandlerFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Listening/ListeningHandlerFactoryList.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Listening/ListeningHandler.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Panel/DeviceExplorerPanelDelegate.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Panel/DeviceExplorerPanelFactory.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/AddressAccessorEditWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/AddressEditWidget.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/DeviceCompleter.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/MessageEditDialog.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/MessageListEditor.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/MessageWidget.hpp"
+)
+
 
 set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/DeviceDocumentPluginSerialization.cpp"
@@ -38,7 +86,6 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Panel/DeviceExplorerPanelDelegate.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Panel/DeviceExplorerPanelFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/DeviceDocumentPlugin.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/DeviceDocumentPluginFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/DocumentPlugin/NodeUpdateProxy.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerFilterProxyModel.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Explorer/DeviceExplorerView.cpp"
@@ -83,6 +130,16 @@ target_link_libraries(iscore_plugin_deviceexplorer
         PRIVATE
                 QProgressIndicator)
 
+if(OSSIA_DNSSD)
+target_sources(${PROJECT_NAME} PRIVATE
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/ZeroConf/ZeroconfBrowser.hpp"
+    "${CMAKE_CURRENT_SOURCE_DIR}/Explorer/Widgets/ZeroConf/ZeroconfBrowser.cpp")
+
+target_compile_definitions(${PROJECT_NAME} PUBLIC ISCORE_ZEROCONF)
+target_sources(${PROJECT_NAME} PRIVATE $<TARGET_OBJECTS:ServusQt>)
+target_include_directories(${PROJECT_NAME} PRIVATE ${OSSIA_3RDPARTY_FOLDER}/Servus)
+endif()
+target_link_libraries(${PROJECT_NAME} PRIVATE Qt5::Core)
 setup_iscore_plugin(iscore_plugin_deviceexplorer)
 setup_iscore_tests(Tests)
 

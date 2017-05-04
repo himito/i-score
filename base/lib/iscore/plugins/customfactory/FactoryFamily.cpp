@@ -1,3 +1,6 @@
 #include "FactoryFamily.hpp"
-iscore::FactoryListInterface::~FactoryListInterface() = default;
 
+namespace iscore
+{
+InterfaceListBase::~InterfaceListBase() = default;
+}

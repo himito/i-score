@@ -1,39 +1,35 @@
 #pragma once
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
 #include <iscore/tools/std/Optional.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
 
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 
 struct DataStreamInput;
 struct DataStreamOutput;
 
 namespace Scenario
 {
-class RackModel;
-class SlotModel;
+class ConstraintModel;
 namespace Command
 {
-class SwapSlots final : public iscore::SerializableCommand
+class SwapSlots final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), SwapSlots, "Swap slots")
-        public:
-            SwapSlots(
-                Path<RackModel>&& rack,
-                Id<SlotModel> first,
-                Id<SlotModel> second);
+  ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), SwapSlots, "Swap slots")
+public:
+  SwapSlots(Path<ConstraintModel>&& rack, int pos1, int pos2);
 
-        void undo() const override;
-        void redo() const override;
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<RackModel> m_rackPath;
-        Id<SlotModel> m_first, m_second;
+private:
+  Path<ConstraintModel> m_path;
+  int m_first{}, m_second{};
 };
 }
 }

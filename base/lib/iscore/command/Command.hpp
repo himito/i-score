@@ -1,64 +1,106 @@
 #pragma once
-#include <iscore/application/ApplicationContext.hpp>
-#include <QtGlobal>
 #include <chrono>
+#include <QByteArray>
+#include <QString>
+#include <iscore/command/CommandFactoryKey.hpp>
 
 namespace iscore
 {
-    /**
-     * @brief The Command class
-     *
-     * The base of the command system in i-score
-     * It is timestamped, because we can then compare between clients.
-     *
-     * Maybe the iscore_plugin_network should replace the Command by a TimestampedCommand instead ?
-     * What if other plug-ins also want to add functionality ?
-     *
-     * Note: for mergeWith put two timestamps, one for the initial command (5 sec) and one for each
-     * new command merged.
-     */
-    class ISCORE_LIB_BASE_EXPORT Command
-    {
-        public:
-            Command();
-            virtual ~Command();
+struct ApplicationContext;
+/**
+ * @brief The Command class
+ *
+ * The base of the command system in i-score
+ * It is timestamped, because we can then compare between clients.
+ *
+ * Maybe the iscore_plugin_network should replace the Command by a
+ * TimestampedCommand instead ?
+ * What if other plug-ins also want to add functionality ?
+ *
+ * Note: for mergeWith put two timestamps, one for the initial command (5 sec)
+ * and one for each
+ * new command merged.
+ *
+ * Commands are serializable / deserializable.
+ */
+class ISCORE_LIB_BASE_EXPORT Command
+{
+public:
+  Command();
+  virtual ~Command();
 
-            virtual void undo() const = 0;
-            virtual void redo() const = 0;
+  virtual void undo() const = 0;
+  virtual void redo() const = 0;
 
-            virtual const CommandFactoryKey& key() const = 0;
+  virtual const CommandGroupKey& parentKey() const noexcept = 0;
+  virtual const CommandKey& key() const noexcept = 0;
 
-        protected:
-            quint32 timestamp() const;
-            void setTimestamp(quint32 stmp);
+  QByteArray serialize() const;
+  void deserialize(const QByteArray&);
 
-            const iscore::ApplicationContext& context;
+  virtual QString description() const = 0;
 
-        private:
-            //TODO check if this is UTC
-            std::chrono::milliseconds m_timestamp
-            {  std::chrono::duration_cast<std::chrono::milliseconds>( std::chrono::high_resolution_clock::now().time_since_epoch()) };
-    };
+protected:
+  virtual void serializeImpl(DataStreamInput&) const = 0;
+  virtual void deserializeImpl(DataStreamOutput&) = 0;
+
+  quint32 timestamp() const;
+  void setTimestamp(quint32 stmp);
+
+  const iscore::ApplicationContext& context;
+
+private:
+  // TODO check if this is UTC
+  std::chrono::milliseconds m_timestamp;
+};
 }
 
 /**
- * This macro is used to specify the common metadata of commands :
- *  - factory name (e.g. "ScenarioApplicationPlugin")
- *  - command name
- *  - command description
+ * \macro ISCORE_COMMAND_DECL
+ * \brief Used to specify the common metadata of commands :
+ *
+ *  * parentNameFun : An unique identifier for a family of commands,
+ *                    for instance all the commands of a given plug-in.
+ *  * command name : The name of this command. It must be unique across
+ *                   all the commands registered for the previous identifier.
+ *  * command description : the text description that will be shown in the UI.
+ *
+ * It is **mandatory** to use this macro with command classes.
+ * This is because the build system scans the source file for these,
+ * and produces a file that includes them all and registers them.
+ *
+ * The CMake code used to achieve this is in the file
+ * IScoreFunctions.cmake. See iscore_generate_command_list_file.
+ *
  */
-#define ISCORE_COMMAND_DECL(parentNameFun, name, desc) \
-    public: \
-        name() = default; \
-        virtual const CommandParentFactoryKey& parentKey() const override { return parentNameFun; } \
-        virtual const CommandFactoryKey& key() const override { return static_key(); } \
-        virtual QString description() const override { return QObject::tr(desc); }  \
-    static const CommandFactoryKey& static_key() \
-    { \
-        static const CommandFactoryKey var{#name}; \
-        return var; \
-    } \
-    private:
+#define ISCORE_COMMAND_DECL(parentNameFun, name, desc)              \
+public:                                                             \
+  name() noexcept { }                                               \
+  const CommandGroupKey& parentKey() const noexcept override\
+  {                                                                 \
+    return parentNameFun;                                           \
+  }                                                                 \
+  const CommandKey& key() const noexcept override            \
+  {                                                                 \
+    return static_key();                                            \
+  }                                                                 \
+  QString description() const override                              \
+  {                                                                 \
+    return QObject::tr(desc);                                       \
+  }                                                                 \
+  static const CommandKey& static_key() noexcept                    \
+  {                                                                 \
+    static const CommandKey var{#name};                      \
+    return var;                                                     \
+  }                                                                 \
+                                                                    \
+private:
 
-// A helper to allow cmake to parse commands.
+/**
+ * \macro ISCORE_COMMAND_DECL_T
+ * \brief Helper to declare template commands
+ *
+ * These commands generally have a specific description or key for each instantiation
+ * so we just declare the name here.
+ */
 #define ISCORE_COMMAND_DECL_T(name)

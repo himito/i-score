@@ -1,10 +1,11 @@
 #include "CurveCommandFactory.hpp"
-#include <iscore/command/SerializableCommand.hpp>
+#include <iscore/command/Command.hpp>
 
 namespace Curve
 {
-const CommandParentFactoryKey& CommandFactoryName() {
-    static const CommandParentFactoryKey key{"Curve"};
-    return key;
+const CommandGroupKey& CommandFactoryName()
+{
+  static const CommandGroupKey key{"Curve"};
+  return key;
 }
 }

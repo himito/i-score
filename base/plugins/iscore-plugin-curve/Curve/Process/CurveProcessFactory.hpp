@@ -1,111 +1,64 @@
 #pragma once
-#include <Process/ProcessFactory.hpp>
+#include <Curve/CurveStyle.hpp>
+#include <Curve/Panel/CurvePanel.hpp>
 #include <Process/Process.hpp>
-#include <Process/LayerModel.hpp>
+#include <Process/ProcessFactory.hpp>
 #include <iscore/serialization/VisitorCommon.hpp>
 #include <iscore_plugin_curve_export.h>
 
 namespace Curve
 {
 class EditionSettings;
-template<
-        typename Model_T,
-        typename LayerModel_T,
-        typename LayerPresenter_T,
-        typename LayerView_T,
-        typename CurveColors_T>
-class CurveProcessFactory_T :
-        public Process::ProcessFactory
+template <
+    typename Model_T, typename LayerPresenter_T,
+    typename LayerView_T, typename CurveColors_T>
+class CurveLayerFactory_T final : public Process::LayerFactory,
+                                  public StyleInterface
 {
-    public:
-        virtual ~CurveProcessFactory_T() = default;
+public:
+  virtual ~CurveLayerFactory_T() = default;
 
-        Model_T* makeModel(
-                const TimeValue& duration,
-                const Id<Process::ProcessModel>& id,
-                QObject* parent) final override
-        {
-            return new Model_T{duration, id, parent};
-        }
+  LayerView_T* makeLayerView(
+      const Process::ProcessModel& viewmodel,
+      QGraphicsItem* parent) final override
+  {
+    return new LayerView_T{parent};
+  }
 
-        Model_T* load(
-                const VisitorVariant& vis,
-                QObject* parent) final override
-        {
-            return deserialize_dyn(vis, [&] (auto&& deserializer)
-            { return new Model_T{deserializer, parent}; });
-        }
+  LayerPresenter_T* makeLayerPresenter(
+      const Process::ProcessModel& lm,
+      Process::LayerView* v,
+      const Process::ProcessPresenterContext& context,
+      QObject* parent) final override
+  {
+    return new LayerPresenter_T{m_colors.style(),
+                                safe_cast<const Model_T&>(lm),
+                                safe_cast<LayerView_T*>(v), context, parent};
+  }
 
-        Process::LayerModel* makeLayer_impl(
-                Process::ProcessModel& proc,
-                const Id<Process::LayerModel>& viewModelId,
-                const QByteArray& constructionData,
-                QObject* parent) final override
-        {
-            auto layer = new LayerModel_T{
-                         static_cast<Model_T&>(proc),
-                         viewModelId, parent};
-            return layer;
-        }
+  Process::LayerPanelProxy*
+  makePanel(const Process::ProcessModel& layer, QObject* parent) override
+  {
+    return new CurvePanelProxy<Model_T>{
+        safe_cast<const Model_T&>(layer), parent};
+  }
 
-        Process::LayerModel* cloneLayer_impl(
-                Process::ProcessModel& proc,
-                const Id<Process::LayerModel>& newId,
-                const Process::LayerModel& source,
-                QObject* parent) final override
-        {
-            auto layer = new LayerModel_T {
-                      static_cast<const LayerModel_T&>(source),
-                      static_cast<Model_T&>(proc),
-                      newId, parent};
-            return layer;
-        }
+  UuidKey<Process::ProcessModel> concreteKey() const noexcept override
+  {
+    return Metadata<ConcreteKey_k, Model_T>::get();
+  }
 
-        Process::LayerModel* loadLayer_impl(
-                Process::ProcessModel& proc,
-                const VisitorVariant& vis,
-                QObject* parent) final override
-        {
-            return deserialize_dyn(vis, [&] (auto&& deserializer)
-            {
-                auto layer = new LayerModel_T{
-                                deserializer,
-                                static_cast<Model_T&>(proc),
-                                parent};
+  bool matches(const UuidKey<Process::ProcessModel>& p) const override
+  {
+    return p == Metadata<ConcreteKey_k, Model_T>::get();
+  }
 
-                return layer;
-            });
-        }
+  const Curve::Style& style() const override
+  {
+    return m_colors.style();
+  }
 
-        LayerView_T* makeLayerView(
-                const Process::LayerModel& viewmodel,
-                QGraphicsItem* parent) final override
-        {
-            return new LayerView_T{parent};
-        }
-
-        LayerPresenter_T* makeLayerPresenter(
-                const Process::LayerModel& lm,
-                Process::LayerView* v,
-                const Process::ProcessPresenterContext& context,
-                QObject* parent) final override
-        {
-            return new LayerPresenter_T {
-                m_colors.style(),
-                safe_cast<const LayerModel_T&>(lm),
-                safe_cast<LayerView_T*>(v),
-                context,
-                parent};
-        }
-
-        const UuidKey<Process::ProcessFactory>& concreteFactoryKey() const override \
-        { return Metadata<ConcreteFactoryKey_k, Model_T>::get(); } \
-        \
-        QString prettyName() const override \
-        { return Metadata<PrettyName_k, Model_T>::get(); } \
-
-    private:
-        CurveColors_T m_colors;
+private:
+  CurveColors_T m_colors{iscore::Skin::instance()};
 };
-
 }

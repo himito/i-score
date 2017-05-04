@@ -4,101 +4,96 @@
 #include <QStringList>
 #include <algorithm>
 
-#include <Automation/AutomationModel.hpp>
 #include "ChangeAddress.hpp"
+#include <ossia/editor/value/value_conversion.hpp>
+#include <Automation/AutomationModel.hpp>
+#include <Curve/Point/CurvePointModel.hpp>
 #include <Device/Address/AddressSettings.hpp>
 #include <Device/Address/Domain.hpp>
 #include <State/Address.hpp>
 #include <State/Value.hpp>
 #include <State/ValueConversion.hpp>
-#include <Curve/Point/CurvePointModel.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
-#include <iscore/tools/TreeNode.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
+#include <iscore/model/tree/TreeNode.hpp>
+
+#include <ossia/editor/state/destination_qualifiers.hpp>
+#include <ossia/network/domain/domain.hpp>
 
 namespace Automation
 {
 ChangeAddress::ChangeAddress(
-        Path<ProcessModel> &&path,
-        const ::State::Address &newval):
-    m_path{path}
+    const ProcessModel& autom, const State::AddressAccessor& newval)
+    : m_path{autom}
+    , m_old{autom.address(), autom.min(), autom.max()}
+    , m_new(Explorer::makeFullAddressAccessorSettings(
+          newval, iscore::IDocument::documentContext(autom), 0., 1.))
 {
-    auto& autom = m_path.find();
-
-    // Get the current data.
-    m_old.address = autom.address();
-    m_old.domain.min.val = autom.min();
-    m_old.domain.max.val = autom.max();
-
-    // First and last point may change to keep the start / end state happy.
-    auto& pts = autom.curve().points();
-    auto first_it = find_if(pts, [] (Curve::PointModel* pt) { return pt->pos().x() == 0; } );
-    auto last_it = find_if(pts, [] (Curve::PointModel* pt) { return pt->pos().x() == 1; } );
-    m_oldFirst = first_it != pts.end() ? (*first_it)->pos() : Curve::Point{0, 0};
-    m_oldLast = last_it != pts.end() ? (*last_it)->pos() : Curve::Point{1, 1};
-
-
-    if(auto deviceexplorer = Explorer::try_deviceExplorerFromObject(autom))
-    {
-        // Note : since we change the address, we also have to update the min / max if possible.
-        // To do this, we must go and check into the device explorer.
-        // If the node isn't found, we fallback on common values.
-
-        // Get the new data.
-        auto newpath = newval.path;
-        newpath.prepend(newval.device);
-        auto new_n = Device::try_getNodeFromString(deviceexplorer->rootNode(), std::move(newpath));
-        if(new_n)
-        {
-            ISCORE_ASSERT(!new_n->is<Device::DeviceSettings>());
-            m_new = Device::FullAddressSettings::make<Device::FullAddressSettings::as_child>(new_n->get<Device::AddressSettings>(), newval);
-        }
-        else
-        {
-            m_new.address = newval;
-            m_new.domain.min.val = 0.;
-            m_new.domain.max.val = 1.;
-        }
-    }
+  Curve::CurveDomain c(m_new.domain.get(), m_new.value);
+  m_new.domain.get() = ossia::make_domain(c.min, c.max);
 }
 
+ChangeAddress::ChangeAddress(
+    const ProcessModel& autom, Device::FullAddressAccessorSettings newval)
+    : m_path{autom}
+    , m_old{autom.address(), autom.min(), autom.max()}
+    , m_new{std::move(newval)}
+{
+  Curve::CurveDomain c(m_new.domain.get(), m_new.value);
+  m_new.domain.get() = ossia::make_domain(c.min, c.max);
+}
+
+ChangeAddress::ChangeAddress(
+    const ProcessModel& autom, const Device::FullAddressSettings& newval)
+    : m_path{autom}
+{
+  m_new.address = newval.address;
+  m_new.domain = newval.domain;
+  Curve::CurveDomain c(m_new.domain.get(), m_new.value);
+  m_new.domain.get() = ossia::make_domain(c.min, c.max);
+  m_new.address.qualifiers.get().unit = newval.unit;
+
+  m_old.address = autom.address();
+  m_old.domain = ossia::make_domain(autom.min(), autom.max());
+}
 
 void ChangeAddress::undo() const
 {
-    auto& autom = m_path.find();
+  auto& autom = m_path.find();
 
-    {
-        QSignalBlocker blck{autom.curve()};
-        autom.setMin(::State::convert::value<double>(m_old.domain.min));
-        autom.setMax(::State::convert::value<double>(m_old.domain.max));
+  {
+    // QSignalBlocker blck{autom.curve()};
+    auto& dom = m_old.domain.get();
+    autom.setMin(dom.convert_min<double>());
+    autom.setMax(dom.convert_max<double>());
 
-        autom.setAddress(m_old.address);
-    }
-    autom.curve().changed();
+    autom.setAddress(m_old.address);
+  }
+  // autom.curve().changed();
 }
 
 void ChangeAddress::redo() const
 {
-    auto& autom = m_path.find();
+  auto& autom = m_path.find();
 
-    {
-        QSignalBlocker blck{autom.curve()};
-        autom.setMin(::State::convert::value<double>(m_new.domain.min));
-        autom.setMax(::State::convert::value<double>(m_new.domain.max));
-
-        autom.setAddress(m_new.address);
-    }
-    autom.curve().changed();
+  {
+    // QSignalBlocker blck{autom.curve()};
+    auto& dom = m_new.domain.get();
+    autom.setMin(dom.convert_min<double>());
+    autom.setMax(dom.convert_max<double>());
+    autom.setAddress(m_new.address);
+  }
+  // autom.curve().changed();
 }
 
-void ChangeAddress::serializeImpl(DataStreamInput & s) const
+void ChangeAddress::serializeImpl(DataStreamInput& s) const
 {
-    s << m_path << m_old << m_new << m_oldFirst << m_oldLast << m_newFirst << m_newLast;
+  s << m_path << m_old << m_new;
 }
 
-void ChangeAddress::deserializeImpl(DataStreamOutput & s)
+void ChangeAddress::deserializeImpl(DataStreamOutput& s)
 {
-    s >> m_path >> m_old >> m_new >> m_oldFirst >> m_oldLast >> m_newFirst >> m_newLast;
+  s >> m_path >> m_old >> m_new;
 }
 }

@@ -2,21 +2,23 @@
 #include <core/command/CommandStack.hpp>
 #include <iscore/document/DocumentContext.hpp>
 #include <iscore/locking/ObjectLocker.hpp>
-#include <iscore/selection/SelectionStack.hpp>
 #include <iscore/selection/FocusManager.hpp>
-#include <iscore/tools/NamedObject.hpp>
-#include <core/document/DocumentMetadata.hpp>
+#include <iscore/selection/SelectionStack.hpp>
+
 #include <QByteArray>
 #include <QJsonObject>
 #include <QString>
+#include <QTimer>
 #include <QVariant>
+#include <core/document/DocumentMetadata.hpp>
 
 class QObject;
 class QWidget;
-namespace iscore {
+namespace iscore
+{
 class DocumentBackupManager;
-}  // namespace iscore
-#include <iscore/tools/SettableIdentifier.hpp>
+} // namespace iscore
+#include <iscore/model/Identifier.hpp>
 #include <iscore_lib_base_export.h>
 
 namespace iscore
@@ -27,100 +29,136 @@ class DocumentPresenter;
 class DocumentView;
 
 /**
-     * @brief The Document class is the central part of the software.
-     *
-     * It is similar to the opened file in Word for instance, this is the
-     * data on which i-score operates, further defined by the plugins.
-     */
-class ISCORE_LIB_BASE_EXPORT Document final : public NamedObject
+ * @brief The Document class is the central part of the software.
+ *
+ * It is similar to the opened file in Word for instance, this is the
+ * data on which i-score operates, further defined by the plugins.
+ *
+ * It has ownership on the useful classes for document edition and display :
+ * * Selection handling
+ * * Command stack
+ * * etc...
+ */
+class ISCORE_LIB_BASE_EXPORT Document final : public QObject
 {
-        Q_OBJECT
-        friend class DocumentBuilder;
-        friend struct DocumentContext;
-    public:
-        DocumentMetadata metadata;
+  Q_OBJECT
+  friend class DocumentBuilder;
+  friend struct DocumentContext;
 
-        ~Document();
+public:
+  ~Document();
 
-        const Id<DocumentModel>& id() const;
+  const DocumentMetadata& metadata() const
+  {
+    return m_metadata;
+  }
+  DocumentMetadata& metadata()
+  {
+    return m_metadata;
+  }
 
-        CommandStack& commandStack()
-        { return m_commandStack; }
+  const Id<DocumentModel>& id() const;
 
-        SelectionStack& selectionStack()
-        { return m_selectionStack; }
+  CommandStack& commandStack()
+  {
+    return m_commandStack;
+  }
 
-        FocusManager& focusManager()
-        { return m_focus; }
+  SelectionStack& selectionStack()
+  {
+    return m_selectionStack;
+  }
 
+  FocusManager& focusManager()
+  {
+    return m_focus;
+  }
 
-        ObjectLocker& locker()
-        { return m_objectLocker; }
+  ObjectLocker& locker()
+  {
+    return m_objectLocker;
+  }
 
-        const DocumentContext& context() const
-        { return m_context; }
+  const DocumentContext& context() const
+  {
+    return m_context;
+  }
 
-        DocumentModel& model() const
-        { return *m_model; }
+  DocumentModel& model() const
+  {
+    return *m_model;
+  }
 
-        DocumentPresenter& presenter() const
-        { return *m_presenter; }
+  DocumentPresenter& presenter() const
+  {
+    return *m_presenter;
+  }
 
-        DocumentView& view() const
-        { return *m_view; }
+  DocumentView& view() const
+  {
+    return *m_view;
+  }
 
-        QJsonObject saveDocumentModelAsJson();
-        QByteArray saveDocumentModelAsByteArray();
+  QJsonObject saveDocumentModelAsJson();
+  QByteArray saveDocumentModelAsByteArray();
 
-        QJsonObject saveAsJson();
-        QByteArray saveAsByteArray();
+  QJsonObject saveAsJson();
+  QByteArray saveAsByteArray();
 
-        DocumentBackupManager* backupManager() const
-        { return m_backupMgr; }
+  DocumentBackupManager* backupManager() const
+  {
+    return m_backupMgr;
+  }
 
-        void setBackupMgr(DocumentBackupManager* backupMgr);
+  void setBackupMgr(DocumentBackupManager* backupMgr);
 
-        bool virgin() const
-        { return m_virgin && !m_commandStack.canUndo() && !m_commandStack.canRedo(); }
+  //! Indicates if the document has just been created and can be safely
+  //! discarded.
+  bool virgin() const
+  {
+    return m_virgin && !m_commandStack.canUndo() && !m_commandStack.canRedo();
+  }
 
-    signals:
-        void aboutToClose();
+  // Load without creating presenter and view
+  Document(
+      const QVariant& data,
+      DocumentDelegateFactory& type,
+      QObject* parent);
 
-    private:
-        // These are to be constructed by DocumentBuilder.
-        Document(
-                const QString& name,
-                const Id<DocumentModel>& id,
-                DocumentDelegateFactory& type,
-                QWidget* parentview,
-                QObject* parent);
+private:
+  // These are to be constructed by DocumentBuilder.
+  Document(
+      const QString& name,
+      const Id<DocumentModel>& id,
+      DocumentDelegateFactory& type,
+      QWidget* parentview,
+      QObject* parent);
 
-        Document(
-                const QVariant& data,
-                DocumentDelegateFactory& type,
-                QWidget* parentview,
-                QObject* parent);
+  Document(
+      const QVariant& data,
+      DocumentDelegateFactory& type,
+      QWidget* parentview,
+      QObject* parent);
 
-        void init();
+  void init();
 
-        CommandStack m_commandStack;
+  DocumentMetadata m_metadata;
+  CommandStack m_commandStack;
 
-        SelectionStack m_selectionStack;
-        ObjectLocker m_objectLocker;
-        FocusManager m_focus;
+  SelectionStack m_selectionStack;
+  ObjectLocker m_objectLocker;
+  FocusManager m_focus;
+  QTimer m_documentUpdateTimer;
 
-        DocumentModel* m_model{};
-        DocumentView* m_view{};
-        DocumentPresenter* m_presenter{};
+  DocumentModel* m_model{};
+  DocumentView* m_view{};
+  DocumentPresenter* m_presenter{};
 
-        DocumentBackupManager* m_backupMgr{};
+  DocumentBackupManager* m_backupMgr{};
 
-        DocumentContext m_context;
+  DocumentContext m_context;
 
-        bool m_virgin{false}; // Used to check if we can safely close it
-        // if we want to load a document instead upon opening i-score.
+  bool m_virgin{false}; // Used to check if we can safely close it
+  // if we want to load a document instead upon opening i-score.
 };
-
-
-
 }

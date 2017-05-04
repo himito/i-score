@@ -1,27 +1,57 @@
 #include <Process/Process.hpp>
 
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
-#include <Scenario/Document/Constraint/LayerModelLoader.hpp>
-#include <Scenario/Document/Constraint/Rack/RackModel.hpp>
-#include <Scenario/Document/Constraint/Rack/Slot/SlotModel.hpp>
 #include <Scenario/Process/Algorithms/ProcessPolicy.hpp>
-
-
+#include <iscore/model/path/RelativePath.hpp>
 
 #include <QDataStream>
 #include <QtGlobal>
 #include <algorithm>
 #include <vector>
 
-#include <Process/ProcessList.hpp>
 #include "RemoveProcessFromConstraint.hpp"
+#include <Process/ProcessList.hpp>
 #include <iscore/application/ApplicationContext.hpp>
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
-#include <iscore/tools/NotifyingMap.hpp>
-#include <iscore/tools/ObjectPath.hpp>
+#include <iscore/model/EntityMap.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
+#include <iscore/model/path/ObjectPath.hpp>
+
+// MOVEME
+template<>
+struct is_custom_serialized<std::vector<bool>> : std::true_type {};
+template <>
+struct TSerializer<DataStream, std::vector<bool>>
+{
+  static void
+  readFrom(DataStream::Serializer& s, const std::vector<bool>& vec)
+  {
+    s.stream() << (int32_t)vec.size();
+    for (bool elt : vec)
+      s.stream() << elt;
+
+    ISCORE_DEBUG_INSERT_DELIMITER2(s);
+  }
+
+  static void writeTo(DataStream::Deserializer& s, std::vector<bool>& vec)
+  {
+    int32_t n;
+    s.stream() >> n;
+
+    vec.clear();
+    vec.resize(n);
+    for (int i = 0; i < n; i++)
+    { 
+      bool b;
+      s.stream() >> b;
+      vec[i] = b;
+    }
+
+    ISCORE_DEBUG_CHECK_DELIMITER2(s);
+  }
+};
 
 namespace Scenario
 {
@@ -29,71 +59,58 @@ namespace Command
 {
 
 RemoveProcessFromConstraint::RemoveProcessFromConstraint(
-        Path<ConstraintModel>&& constraintPath,
-        Id<Process::ProcessModel> processId) :
-    m_path {std::move(constraintPath) },
-    m_processId {std::move(processId)}
+    Path<ConstraintModel>&& constraintPath,
+    Id<Process::ProcessModel>
+        processId)
+    : m_path{std::move(constraintPath)}, m_processId{std::move(processId)}
 {
-    auto& constraint = m_path.find();
+  auto& constraint = m_path.find();
 
-    // Save the process
-    Serializer<DataStream> s1{&m_serializedProcessData};
-    auto& proc = constraint.processes.at(m_processId);
-    s1.readFrom(proc);
+  // Save the process
+  DataStream::Serializer s1{&m_serializedProcessData};
+  auto& proc = constraint.processes.at(m_processId);
+  s1.readFrom(proc);
 
-    // Save ALL the view models!
-    for(const auto& layer : proc.layers())
-    {
-        QByteArray vm_arr;
-        Serializer<DataStream> s{&vm_arr};
-        s.readFrom(*layer);
-
-        m_serializedViewModels.append({*layer, vm_arr});
-    }
+  m_smallView = constraint.smallView();
 }
 
 void RemoveProcessFromConstraint::undo() const
 {
-    auto& constraint = m_path.find();
-    Deserializer<DataStream> s {m_serializedProcessData};
-    auto& fact = context.components.factory<Process::ProcessList>();
-    AddProcess(constraint, deserialize_interface(fact, s, &constraint));
+  auto& constraint = m_path.find();
+  DataStream::Deserializer s{m_serializedProcessData};
+  auto& fact = context.interfaces<Process::ProcessFactoryList>();
+  auto proc = deserialize_interface(fact, s, &constraint);
+  if (proc)
+  {
+    AddProcess(constraint, proc);
+  }
+  else
+  {
+    ISCORE_TODO;
+    return;
+  }
 
-    // Restore the view models
-    auto& processes = context.components.factory<Process::ProcessList>();
-    for(const auto& it : m_serializedViewModels)
-    {
-        const auto& path = it.first.unsafePath().vec();
-
-        auto& slot = constraint
-                .racks.at(Id<RackModel>(path.at(path.size() - 3).id()))
-                .slotmodels.at(Id<SlotModel>(path.at(path.size() - 2).id()));
-
-        Deserializer<DataStream> stream {it.second};
-        auto lm = Process::createLayerModel(
-                                   processes, stream,
-                                   slot.parentConstraint(),
-                                   &slot);
-        slot.layers.add(lm);
-    }
+  constraint.replaceSmallView(m_smallView);
 }
 
 void RemoveProcessFromConstraint::redo() const
 {
-    auto& constraint = m_path.find();
-    RemoveProcess(constraint, m_processId);
+  auto& constraint = m_path.find();
+  RemoveProcess(constraint, m_processId);
 
-    // The view models will be deleted accordingly.
+  // The view models will be deleted accordingly.
+  // TODO maybe delete them here actually ?
 }
+
 
 void RemoveProcessFromConstraint::serializeImpl(DataStreamInput& s) const
 {
-    s << m_path << m_processId << m_serializedProcessData << m_serializedViewModels;
+  s << m_path << m_processId << m_serializedProcessData << m_smallView;
 }
 
 void RemoveProcessFromConstraint::deserializeImpl(DataStreamOutput& s)
 {
-    s >> m_path >> m_processId >> m_serializedProcessData >> m_serializedViewModels;
+  s >> m_path >> m_processId >> m_serializedProcessData >> m_smallView;
 }
 }
 }

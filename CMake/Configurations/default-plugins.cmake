@@ -10,16 +10,13 @@ iscore-plugin-inspector
 iscore-plugin-deviceexplorer
 iscore-plugin-curve
 iscore-plugin-automation
+iscore-plugin-interpolation
 iscore-plugin-scenario
 iscore-plugin-loop
 
-iscore-plugin-ossia
-iscore-plugin-js
-iscore-plugin-recordedmessages
-iscore-plugin-cohesion
 iscore-plugin-mapping
-
-iscore-component-executor-mapping
-iscore-component-executor-automation
-iscore-component-executor-loop
+iscore-plugin-engine
+iscore-plugin-js
+iscore-plugin-midi
+iscore-plugin-recording
 )

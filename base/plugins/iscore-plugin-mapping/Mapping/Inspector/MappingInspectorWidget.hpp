@@ -1,20 +1,24 @@
 #pragma once
+#include <Mapping/MappingModel.hpp>
 #include <Process/Inspector/ProcessInspectorWidgetDelegate.hpp>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 class QWidget;
 
-namespace iscore{
-class Document;
+namespace iscore
+{
 struct DocumentContext;
 }
 namespace State
 {
-struct Address;
+struct AddressAccessor;
 }
-
+namespace Device
+{
+struct FullAddressAccessorSettings;
+}
 namespace Explorer
 {
-class AddressEditWidget;
+class AddressAccessorEditWidget;
 class DeviceExplorerModel;
 }
 class QDoubleSpinBox;
@@ -22,30 +26,30 @@ class QDoubleSpinBox;
 namespace Mapping
 {
 class ProcessModel;
-class MappingInspectorWidget :
-        public Process::InspectorWidgetDelegate_T<ProcessModel>
+class InspectorWidget : public Process::InspectorWidgetDelegate_T<ProcessModel>
 {
-    public:
-        explicit MappingInspectorWidget(
-                const ProcessModel& object,
-                const iscore::DocumentContext& context,
-                QWidget* parent);
+public:
+  explicit InspectorWidget(
+      const ProcessModel& object,
+      const iscore::DocumentContext& context,
+      QWidget* parent);
 
-    public slots:
-        void on_sourceAddressChange(const State::Address& newText);
-        void on_sourceMinValueChanged();
-        void on_sourceMaxValueChanged();
+private:
+  void on_sourceAddressChange(const Device::FullAddressAccessorSettings& newText);
+  void on_sourceMinValueChanged();
+  void on_sourceMaxValueChanged();
 
-        void on_targetAddressChange(const State::Address& newText);
-        void on_targetMinValueChanged();
-        void on_targetMaxValueChanged();
-    private:
-        Explorer::AddressEditWidget* m_sourceLineEdit{};
-        QDoubleSpinBox* m_sourceMin{}, *m_sourceMax{};
+  void on_targetAddressChange(const Device::FullAddressAccessorSettings& newText);
+  void on_targetMinValueChanged();
+  void on_targetMaxValueChanged();
 
-        Explorer::AddressEditWidget* m_targetLineEdit{};
-        QDoubleSpinBox* m_targetMin{}, *m_targetMax{};
 
-        CommandDispatcher<> m_dispatcher;
+  Explorer::AddressAccessorEditWidget* m_sourceLineEdit{};
+  QDoubleSpinBox *m_sourceMin{}, *m_sourceMax{};
+
+  Explorer::AddressAccessorEditWidget* m_targetLineEdit{};
+  QDoubleSpinBox *m_targetMin{}, *m_targetMax{};
+
+  CommandDispatcher<> m_dispatcher;
 };
 }

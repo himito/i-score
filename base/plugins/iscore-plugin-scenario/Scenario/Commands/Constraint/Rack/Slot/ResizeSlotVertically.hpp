@@ -1,14 +1,14 @@
 #pragma once
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
+#include <Scenario/Document/Constraint/Slot.hpp>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
 #include <iscore_plugin_scenario_export.h>
 struct DataStreamInput;
 struct DataStreamOutput;
 
 namespace Scenario
 {
-class SlotModel;
 namespace Command
 {
 /**
@@ -16,31 +16,32 @@ namespace Command
          *
          * Changes a slot's vertical size
          */
-class ISCORE_PLUGIN_SCENARIO_EXPORT ResizeSlotVertically final : public iscore::SerializableCommand
+class ISCORE_PLUGIN_SCENARIO_EXPORT ResizeSlotVertically final
+    : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), ResizeSlotVertically, "Resize a slot")
-        public:
-            ResizeSlotVertically(
-                Path<SlotModel>&& slotPath,
-                double newSize);
+  ISCORE_COMMAND_DECL(
+      ScenarioCommandFactoryName(), ResizeSlotVertically, "Resize a slot")
+public:
+    ResizeSlotVertically(const SlotPath& slotPath, double newSize);
+  ResizeSlotVertically(SlotPath&& slotPath, double newSize);
 
-        void undo() const override;
-        void redo() const override;
+  void undo() const override;
+  void redo() const override;
 
-        void update(unused_t, double size)
-        {
-            m_newSize = size;
-        }
+  void update(unused_t, double size)
+  {
+    m_newSize = size;
+  }
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<SlotModel> m_path;
+private:
+  SlotPath m_path;
 
-        double m_originalSize {};
-        double m_newSize {};
+  double m_originalSize{};
+  double m_newSize{};
 };
 }
 }

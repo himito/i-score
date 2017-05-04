@@ -2,11 +2,11 @@
 
 #include <Scenario/Commands/ScenarioCommandFactory.hpp>
 
+#include <iscore/command/Command.hpp>
 #include <iscore/tools/std/Optional.hpp>
-#include <iscore/command/SerializableCommand.hpp>
 
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/Identifier.hpp>
 
 #include <Process/TimeValue.hpp>
 
@@ -16,29 +16,29 @@ class CommentBlockModel;
 
 namespace Command
 {
-class CreateCommentBlock final : public iscore::SerializableCommand
+class CreateCommentBlock final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), CreateCommentBlock, "Create a comment block")
-        public:
-            CreateCommentBlock(
-                Path<ProcessModel>&& scenarioPath,
-                TimeValue date,
-                double yPosition);
+  ISCORE_COMMAND_DECL(
+      ScenarioCommandFactoryName(),
+      CreateCommentBlock,
+      "Create a comment block")
+public:
+  CreateCommentBlock(
+      Path<ProcessModel>&& scenarioPath, TimeVal date, double yPosition);
 
-        void undo() const override;
-        void redo() const override;
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<ProcessModel> m_path;
-        TimeValue m_date;
-        double m_y;
+private:
+  Path<ProcessModel> m_path;
+  TimeVal m_date;
+  double m_y;
 
-        Id<CommentBlockModel> m_id;
+  Id<CommentBlockModel> m_id;
 };
-
 }
 }

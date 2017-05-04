@@ -4,9 +4,6 @@
 #include <core/application/ApplicationRegistrar.hpp>
 #include <core/document/DocumentBackups.hpp>
 #include <core/presenter/Presenter.hpp>
-#include <core/undo/Panel/UndoPanelFactory.hpp>
-#include <core/presenter/CoreApplicationPlugin.hpp>
-#include <core/undo/UndoApplicationPlugin.hpp>
 #include <core/view/View.hpp>
 #include <QByteArray>
 #include <QCoreApplication>
@@ -22,27 +19,28 @@
 #include <QStringList>
 #include <QStyleFactory>
 #include <QFileInfo>
+#include <QStyle>
 #include <QDir>
-#include <iscore/tools/SettableIdentifierGeneration.hpp>
+#include <QQuickStyle>
+#include <iscore/tools/IdentifierGeneration.hpp>
 #include <algorithm>
 #include <vector>
 
+#include <iscore/application/GUIApplicationContext.hpp>
+#include <iscore/plugins/application/GUIApplicationPlugin.hpp>
 #include <core/application/SafeQApplication.hpp>
 #include <iscore/application/ApplicationComponents.hpp>
 #include <core/application/ApplicationSettings.hpp>
-#include <core/plugin/PluginManager.hpp>
 #include <core/presenter/DocumentManager.hpp>
 #include <iscore/selection/Selection.hpp>
-#include <iscore/tools/NamedObject.hpp>
-#include <iscore/tools/ObjectIdentifier.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/plugins/settingsdelegate/SettingsDelegateFactory.hpp>
-#include <iscore/plugins/documentdelegate/DocumentDelegateFactoryInterface.hpp>
-#include <iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.hpp>
+
+#include <iscore/model/path/ObjectIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 #include <iscore/plugins/panel/PanelDelegate.hpp>
-#include <iscore/widgets/OrderedToolbar.hpp>
+#include <iscore/command/Validity/ValidityChecker.hpp>
+
 #include <core/document/DocumentModel.hpp>
-#include <core/undo/Panel/UndoPanelFactory.hpp>
+#include <iscore/plugins/documentdelegate/DocumentDelegateFactory.hpp>
 
 #include "iscore_git_info.hpp"
 
@@ -65,9 +63,6 @@ static void setQApplicationSettings(QApplication &m_app)
                 .arg(ISCORE_VERSION_EXTRA)
                 );
 
-    qRegisterMetaType<ObjectIdentifierVector> ("ObjectIdentifierVector");
-    qRegisterMetaType<Selection>("Selection");
-    qRegisterMetaType<Id<iscore::DocumentModel>>("Id<DocumentModel>");
 
     QFile stylesheet_file{":/qdarkstyle/qdarkstyle.qss"};
     stylesheet_file.open(QFile::ReadOnly);
@@ -75,12 +70,34 @@ static void setQApplicationSettings(QApplication &m_app)
 
     qApp->setStyle(QStyleFactory::create("Fusion"));
     qApp->setStyleSheet(stylesheet);
+
+    auto pal = qApp->palette();
+    pal.setBrush(QPalette::Background, QColor("#001A2024"));
+    pal.setBrush(QPalette::Base, QColor("#12171A")); // lineedit bg
+    pal.setBrush(QPalette::Button, QColor("#12171A")); // lineedit bg
+    pal.setBrush(QPalette::AlternateBase, QColor("#1f2a30")); // alternate bg
+    pal.setBrush(QPalette::Highlight, QColor("#3d8ec9")); // tableview bg
+    pal.setBrush(QPalette::WindowText, QColor("silver")); // color
+    pal.setBrush(QPalette::Text, QColor("silver")); // color
+    pal.setBrush(QPalette::ButtonText, QColor("silver")); // color
+    pal.setBrush(QPalette::Light, QColor("#666666"));
+    pal.setBrush(QPalette::Midlight, QColor("#666666"));
+    pal.setBrush(QPalette::Mid, QColor("#666666"));
+    pal.setBrush(QPalette::Dark, QColor("#666666"));
+    pal.setBrush(QPalette::Shadow, QColor("#666666"));
+
+    QFont f("Ubuntu-R", 9);
+    qApp->setFont(f);
+
+    qApp->setPalette(pal);
+
+    QQuickStyle::setStyle(":/desktopqqc2style/Desktop");
 }
 
 }  // namespace iscore
 
 Application::Application(int& argc, char** argv) :
-    NamedObject {"Application", nullptr},
+    QObject {nullptr},
     m_app{new SafeQApplication{argc, argv}}
 {
     m_instance = this;
@@ -92,7 +109,7 @@ Application::Application(
         const iscore::ApplicationSettings& appSettings,
         int& argc,
         char** argv) :
-    NamedObject {"Application", nullptr},
+    QObject {nullptr},
     m_app{new SafeQApplication{argc, argv}},
     m_applicationSettings(appSettings)
 {
@@ -111,9 +128,14 @@ Application::~Application()
     delete m_app;
 }
 
-const iscore::ApplicationContext& Application::context() const
+const iscore::GUIApplicationContext& Application::context() const
 {
-    return m_presenter->applicationContext();
+  return m_presenter->applicationContext();
+}
+
+const iscore::ApplicationComponents&Application::components() const
+{
+  return m_presenter->applicationComponents();
 }
 
 
@@ -151,6 +173,11 @@ void Application::init()
     }
 
     initDocuments();
+
+    if(m_applicationSettings.gui)
+    {
+        m_view->sizeChanged(m_view->size());
+    }
 }
 
 void Application::initDocuments()
@@ -163,7 +190,7 @@ void Application::initDocuments()
     }
 
     // The plug-ins have the ability to override the boot process.
-    for(auto plug : ctx.components.applicationPlugins())
+    for(auto plug : ctx.guiApplicationPlugins())
     {
         if(plug->handleStartup())
         {
@@ -178,13 +205,13 @@ void Application::initDocuments()
     }
     else
     {
-        auto& documentKinds = m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>();
+        auto& documentKinds = m_presenter->applicationComponents().interfaces<iscore::DocumentDelegateList>();
         if(!documentKinds.empty() && m_presenter->documentManager().documents().empty())
         {
             m_presenter->documentManager().newDocument(
                         ctx,
                         Id<iscore::DocumentModel>{iscore::random_id_generator::getRandomId()},
-                        *m_presenter->applicationComponents().factory<iscore::DocumentDelegateList>().begin()); 
+                        *m_presenter->applicationComponents().interfaces<iscore::DocumentDelegateList>().begin());
         }
     }
 
@@ -198,45 +225,15 @@ void Application::initDocuments()
 void Application::loadPluginData()
 {
     auto& ctx = m_presenter->applicationContext();
-    iscore::ApplicationRegistrar registrar{
+    iscore::GUIApplicationRegistrar registrar{
         m_presenter->components(),
                 ctx,
-                *m_view,
                 m_presenter->menuManager(),
                 m_presenter->toolbarManager(),
                 m_presenter->actionManager()};
 
-    registrar.registerFactory(std::make_unique<iscore::DocumentDelegateList>());
-    auto panels = std::make_unique<iscore::PanelDelegateFactoryList>();
-    panels->insert(std::make_unique<iscore::UndoPanelDelegateFactory>());
-    registrar.registerFactory(std::move(panels));
-    registrar.registerFactory(std::make_unique<iscore::DocumentPluginFactoryList>());
-    registrar.registerFactory(std::make_unique<iscore::SettingsDelegateFactoryList>());
-
-    registrar.registerApplicationContextPlugin(new iscore::CoreApplicationPlugin{ctx, *m_presenter});
-    registrar.registerApplicationContextPlugin(new iscore::UndoApplicationPlugin{ctx});
-
-    iscore::PluginLoader::loadPlugins(registrar, ctx);
-    // Load the settings
-    QSettings s;
-    for(auto& elt : ctx.components.factory<iscore::SettingsDelegateFactoryList>())
-    {
-        m_settings.setupSettingsPlugin(s, ctx, elt);
-    }
-
-    m_presenter->setupGUI();
-
-    for(iscore::GUIApplicationContextPlugin* app_plug : ctx.components.applicationPlugins())
-    {
-        app_plug->initialize();
-    }
-
-    for(auto& panel_fac : context().components.factory<iscore::PanelDelegateFactoryList>())
-    {
-        registrar.registerPanel(panel_fac);
-    }
+    GUIApplicationInterface::loadPluginData(ctx, registrar, m_settings, *m_presenter);
 }
-
 
 int Application::exec()
 { return m_app->exec(); }

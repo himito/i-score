@@ -1,22 +1,28 @@
 #pragma once
-#include <Process/Inspector/ProcessInspectorWidgetDelegate.hpp>
 #include <Automation/AutomationModel.hpp>
+#include <Process/Inspector/ProcessInspectorWidgetDelegate.hpp>
 #include <QString>
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 
 class QWidget;
+class QCheckBox;
 
-namespace iscore{
-class Document;
+namespace iscore
+{
 struct DocumentContext;
 }
 namespace State
 {
 struct Address;
+class UnitWidget;
+}
+namespace Device
+{
+struct FullAddressAccessorSettings;
 }
 namespace Explorer
 {
-class AddressEditWidget;
+class AddressAccessorEditWidget;
 class DeviceExplorerModel;
 }
 class QDoubleSpinBox;
@@ -24,24 +30,27 @@ class QDoubleSpinBox;
 namespace Automation
 {
 class ProcessModel;
-class InspectorWidget final :
-        public Process::InspectorWidgetDelegate_T<Automation::ProcessModel>
+class InspectorWidget final
+    : public Process::InspectorWidgetDelegate_T<Automation::ProcessModel>
 {
-    public:
-        explicit InspectorWidget(
-                const ProcessModel& object,
-                const iscore::DocumentContext& context,
-                QWidget* parent);
+public:
+  explicit InspectorWidget(
+      const ProcessModel& object,
+      const iscore::DocumentContext& context,
+      QWidget* parent);
 
-    public slots:
-        void on_addressChange(const ::State::Address& newText);
-        void on_minValueChanged();
-        void on_maxValueChanged();
+private:
+  void on_addressChange(const Device::FullAddressAccessorSettings& newText);
+  void on_minValueChanged();
+  void on_maxValueChanged();
+  void on_tweenChanged();
+  void on_unitChanged();
 
-    private:
-        Explorer::AddressEditWidget* m_lineEdit{};
-        QDoubleSpinBox* m_minsb{}, *m_maxsb{};
+  Explorer::AddressAccessorEditWidget* m_lineEdit{};
+  QCheckBox* m_tween{};
+  QDoubleSpinBox *m_minsb{}, *m_maxsb{};
+  State::UnitWidget* m_uw{};
 
-        CommandDispatcher<> m_dispatcher;
+  CommandDispatcher<> m_dispatcher;
 };
 }

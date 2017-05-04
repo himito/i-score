@@ -1,8 +1,8 @@
 #pragma once
-#include <Scenario/Commands/ScenarioCommandFactory.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
 #include <QList>
+#include <Scenario/Commands/ScenarioCommandFactory.hpp>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
 
 #include <Process/State/MessageNode.hpp>
 
@@ -11,30 +11,30 @@ struct DataStreamOutput;
 
 namespace Scenario
 {
-class MessageItemModel;
+class StateModel;
 
 namespace Command
 {
-class RemoveMessageNodes final : public iscore::SerializableCommand
+class RemoveMessageNodes final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(ScenarioCommandFactoryName(), RemoveMessageNodes, "Remove user messages")
+  ISCORE_COMMAND_DECL(
+      ScenarioCommandFactoryName(), RemoveMessageNodes, "Remove user messages")
 
-        public:
-          RemoveMessageNodes(
-            Path<MessageItemModel>&& ,
-            const QList<const Process::MessageNode*>&);
+public:
+  RemoveMessageNodes(
+      Path<StateModel>&&, const std::vector<const Process::MessageNode*>&);
 
-        void undo() const override;
-        void redo() const override;
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<MessageItemModel> m_path;
-        Process::MessageNode m_oldState;
-        Process::MessageNode m_newState;
+private:
+  Path<StateModel> m_path;
+  Process::MessageNode m_oldState;
+  Process::MessageNode m_newState;
 };
 }
 }

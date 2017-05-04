@@ -1,13 +1,13 @@
 #pragma once
+#include <QState>
 #include <iscore/selection/SelectionDispatcher.hpp>
 #include <iscore/statemachine/StateMachineTools.hpp>
-#include <QState>
 
-class QGraphicsObject;
+class QGraphicsItem;
 
 namespace iscore
 {
-    class SelectionStack;
+class SelectionStack;
 }
 
 /**
@@ -16,36 +16,31 @@ namespace iscore
  * A generic state to handle traditional rectangular selection in a
  * QGraphicsScene.
  *
- * NOTE : the posted events must have the same id as Press / Move / Release event,
+ * NOTE : the posted events must have the same id as Press / Move / Release
+ * event,
  * e.g. PressOnNothing_Event, etc.
  */
 class ISCORE_LIB_BASE_EXPORT CommonSelectionState : public QState
 {
-    public:
-        iscore::SelectionDispatcher dispatcher;
+  Q_OBJECT
+public:
+  iscore::SelectionDispatcher dispatcher;
 
-        virtual ~CommonSelectionState();
+  virtual ~CommonSelectionState();
 
-        virtual void on_pressAreaSelection() = 0;
-        virtual void on_moveAreaSelection() = 0;
-        virtual void on_releaseAreaSelection() = 0;
-        virtual void on_deselect() = 0;
-        virtual void on_delete() = 0;
-        virtual void on_deleteContent() = 0;
+  virtual void on_pressAreaSelection() = 0;
+  virtual void on_moveAreaSelection() = 0;
+  virtual void on_releaseAreaSelection() = 0;
+  virtual void on_deselect() = 0;
+  virtual void on_delete() = 0;
+  virtual void on_deleteContent() = 0;
 
-        bool multiSelection() const
-        {
-            return isStateActive(m_multiSelection);
-        }
+  bool multiSelection() const;
 
-    protected:
-        CommonSelectionState(
-                iscore::SelectionStack& stack,
-                QGraphicsObject* process_view,
-                QState* parent);
+protected:
+  CommonSelectionState(
+      iscore::SelectionStack& stack, QObject* process_view, QState* parent);
 
-    private:
-        QState* m_singleSelection{};
-        QState* m_multiSelection{};
-        QState* m_waitState{};
+private:
+  QState* m_waitState{};
 };

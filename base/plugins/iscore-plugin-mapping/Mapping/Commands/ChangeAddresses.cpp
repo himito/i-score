@@ -6,152 +6,100 @@
 #include <algorithm>
 
 #include "ChangeAddresses.hpp"
+#include <ossia/editor/value/value_conversion.hpp>
+#include <ossia/network/domain/domain.hpp>
 #include <Device/Address/AddressSettings.hpp>
 #include <Device/Address/Domain.hpp>
 #include <State/Address.hpp>
 #include <State/Value.hpp>
 #include <State/ValueConversion.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
-#include <iscore/tools/TreeNode.hpp>
-
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
+#include <iscore/model/tree/TreeNode.hpp>
 namespace Mapping
 {
-// TODO try to template this to reuse it with ChangeAddress / ChangeTargetAddress
-// TODO why not use AddressSettings directly on Automations / Mapping ? It would simplify...
 ChangeSourceAddress::ChangeSourceAddress(
-        Path<ProcessModel> &&path,
-        const State::Address &newval):
-    m_path{path}
+    const ProcessModel& mapping, Device::FullAddressAccessorSettings newval)
+    : m_path{mapping}
+    , m_old{mapping.sourceAddress(), mapping.sourceMin(), mapping.sourceMax()}
+    , m_new{std::move(newval)}
 {
-    auto& mapping = m_path.find();
-    auto& deviceexplorer = Explorer::deviceExplorerFromObject(mapping);
-
-    // Note : since we change the address, we also have to update the min / max if possible.
-    // To do this, we must go and check into the device explorer.
-    // If the node isn't found, we fallback on common values.
-
-    // Get the current data.
-    m_old.address = mapping.sourceAddress();
-    m_old.domain.min.val = mapping.sourceMin();
-    m_old.domain.max.val = mapping.sourceMax();
-
-    // Get the new data.
-    auto newpath = newval.path;
-    newpath.prepend(newval.device);
-    auto new_n = Device::try_getNodeFromString(deviceexplorer.rootNode(), std::move(newpath));
-    if(new_n)
-    {
-        ISCORE_ASSERT(!new_n->is<Device::DeviceSettings>());
-        m_new = Device::FullAddressSettings::make<Device::FullAddressSettings::as_child>(new_n->get<Device::AddressSettings>(), newval);
-    }
-    else
-    {
-        m_new.address = newval;
-        m_new.domain.min.val = 0.;
-        m_new.domain.max.val = 1.;
-    }
+  Curve::CurveDomain c(m_new.domain.get(), m_new.value);
+  m_new.domain.get() = ossia::make_domain(c.min, c.max);
 }
-
 
 void ChangeSourceAddress::undo() const
 {
-    auto& mapping = m_path.find();
+  auto& mapping = m_path.find();
 
-    mapping.setSourceMin(State::convert::value<double>(m_old.domain.min));
-    mapping.setSourceMax(State::convert::value<double>(m_old.domain.max));
+  auto& dom = m_old.domain.get();
+  mapping.setSourceMin(dom.convert_min<double>());
+  mapping.setSourceMax(dom.convert_max<double>());
 
-    mapping.setSourceAddress(m_old.address);
+  mapping.setSourceAddress(m_old.address);
 }
 
 void ChangeSourceAddress::redo() const
 {
-    auto& mapping = m_path.find();
+  auto& mapping = m_path.find();
 
-    mapping.setSourceMin(State::convert::value<double>(m_new.domain.min));
-    mapping.setSourceMax(State::convert::value<double>(m_new.domain.max));
+  auto& dom = m_new.domain.get();
+  mapping.setSourceMin(dom.convert_min<double>());
+  mapping.setSourceMax(dom.convert_max<double>());
 
-    mapping.setSourceAddress(m_new.address);
+  mapping.setSourceAddress(m_new.address);
 }
 
-void ChangeSourceAddress::serializeImpl(DataStreamInput & s) const
+void ChangeSourceAddress::serializeImpl(DataStreamInput& s) const
 {
-    s << m_path << m_old << m_new;
+  s << m_path << m_old << m_new;
 }
 
-void ChangeSourceAddress::deserializeImpl(DataStreamOutput & s)
+void ChangeSourceAddress::deserializeImpl(DataStreamOutput& s)
 {
-    s >> m_path >> m_old >> m_new;
+  s >> m_path >> m_old >> m_new;
 }
-
-
-
-
-
 
 ChangeTargetAddress::ChangeTargetAddress(
-        Path<ProcessModel> &&path,
-        const State::Address &newval):
-    m_path{path}
+    const ProcessModel& mapping, Device::FullAddressAccessorSettings newval)
+    : m_path{mapping}
+    , m_old{mapping.targetAddress(), mapping.targetMin(), mapping.targetMax()}
+    , m_new{std::move(newval)}
 {
-    auto& mapping = m_path.find();
-    auto& deviceexplorer = Explorer::deviceExplorerFromObject(mapping);
-
-    // Note : since we change the address, we also have to update the min / max if possible.
-    // To do this, we must go and check into the device explorer.
-    // If the node isn't found, we fallback on common values.
-
-    // Get the current data.
-    m_old.address = mapping.targetAddress();
-    m_old.domain.min.val = mapping.targetMin();
-    m_old.domain.max.val = mapping.targetMax();
-
-    // Get the new data.
-    auto newpath = newval.path;
-    newpath.prepend(newval.device);
-    auto new_n = Device::try_getNodeFromString(deviceexplorer.rootNode(), std::move(newpath));
-    if(new_n)
-    {
-        ISCORE_ASSERT(!new_n->is<Device::DeviceSettings>());
-        m_new = Device::FullAddressSettings::make<Device::FullAddressSettings::as_child>(new_n->get<Device::AddressSettings>(), newval);
-    }
-    else
-    {
-        m_new.address = newval;
-        m_new.domain.min.val = 0.;
-        m_new.domain.max.val = 1.;
-    }
+  Curve::CurveDomain c(m_new.domain.get(), m_new.value);
+  m_new.domain.get() = ossia::make_domain(c.min, c.max);
 }
-
 
 void ChangeTargetAddress::undo() const
 {
-    auto& mapping = m_path.find();
+  auto& mapping = m_path.find();
 
-    mapping.setTargetMin(State::convert::value<double>(m_old.domain.min));
-    mapping.setTargetMax(State::convert::value<double>(m_old.domain.max));
+  auto& dom = m_old.domain.get();
+  mapping.setTargetMin(dom.convert_min<double>());
+  mapping.setTargetMax(dom.convert_max<double>());
 
-    mapping.setTargetAddress(m_old.address);
+  mapping.setTargetAddress(m_old.address);
 }
 
 void ChangeTargetAddress::redo() const
 {
-    auto& mapping = m_path.find();
+  auto& mapping = m_path.find();
 
-    mapping.setTargetMin(State::convert::value<double>(m_new.domain.min));
-    mapping.setTargetMax(State::convert::value<double>(m_new.domain.max));
+  auto& dom = m_new.domain.get();
+  mapping.setTargetMin(dom.convert_min<double>());
+  mapping.setTargetMax(dom.convert_max<double>());
 
-    mapping.setTargetAddress(m_new.address);
+  mapping.setTargetAddress(m_new.address);
 }
 
-void ChangeTargetAddress::serializeImpl(DataStreamInput & s) const
+void ChangeTargetAddress::serializeImpl(DataStreamInput& s) const
 {
-    s << m_path << m_old << m_new;
+  s << m_path << m_old << m_new;
 }
 
-void ChangeTargetAddress::deserializeImpl(DataStreamOutput & s)
+void ChangeTargetAddress::deserializeImpl(DataStreamOutput& s)
 {
-    s >> m_path >> m_old >> m_new;
+  s >> m_path >> m_old >> m_new;
 }
 }

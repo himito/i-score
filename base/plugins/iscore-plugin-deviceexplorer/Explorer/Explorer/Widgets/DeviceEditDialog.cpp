@@ -7,181 +7,194 @@
 #include <QLayoutItem>
 #include <qnamespace.h>
 
+#include <QFormLayout>
 #include <QVariant>
 #include <QWidget>
 #include <utility>
 
+#include "DeviceEditDialog.hpp"
 #include <Device/Protocol/ProtocolList.hpp>
 #include <Device/Protocol/ProtocolSettingsWidget.hpp>
-#include "DeviceEditDialog.hpp"
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
 
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
 #include <iscore/widgets/SignalUtils.hpp>
+#include <iscore/widgets/TextLabel.hpp>
 
 namespace Explorer
 {
 DeviceEditDialog::DeviceEditDialog(
-        const Device::DynamicProtocolList& pl,
-        QWidget* parent)
-    : QDialog(parent),
-      m_protocolList{pl},
-      m_protocolWidget{nullptr},
-      m_index(-1)
+    const Device::ProtocolFactoryList& pl, QWidget* parent)
+    : QDialog(parent)
+    , m_protocolList{pl}
+    , m_protocolWidget{nullptr}
+    , m_index(-1)
 {
-    setModal(true);
-    buildGUI();
+  setModal(true);
+  buildGUI();
+  setMinimumWidth(400);
 }
 
 DeviceEditDialog::~DeviceEditDialog()
 {
-
 }
 
-void
-DeviceEditDialog::buildGUI()
+void DeviceEditDialog::buildGUI()
 {
-    QLabel* protocolLabel = new QLabel(tr("Protocol"), this);
-    m_protocolCBox = new QComboBox(this);
+  QDialogButtonBox* buttonBox = new QDialogButtonBox(
+      QDialogButtonBox::Ok | QDialogButtonBox::Cancel, Qt::Horizontal, this);
+  connect(buttonBox, &QDialogButtonBox::accepted, this, &QDialog::accept);
+  connect(buttonBox, &QDialogButtonBox::rejected, this, &QDialog::reject);
 
-    QDialogButtonBox* buttonBox = new QDialogButtonBox(QDialogButtonBox::Ok
-            | QDialogButtonBox::Cancel, Qt::Horizontal, this);
-    connect(buttonBox, &QDialogButtonBox::accepted,
-            this, &QDialog::accept);
-    connect(buttonBox, &QDialogButtonBox::rejected,
-            this, &QDialog::reject);
+  m_layout = new QFormLayout;
+  setLayout(m_layout);
+  m_layout->setFieldGrowthPolicy(QFormLayout::ExpandingFieldsGrow);
 
+  // QLabel for the warning text
+  m_layout->addWidget(new TextLabel);
 
-    m_gLayout = new QGridLayout;
+  m_protocolCBox = new QComboBox(this);
+  m_layout->addRow(tr("Protocol"), m_protocolCBox);
+  m_layout->addWidget(buttonBox);
 
-    // QLabel for the warning text
-    m_gLayout->addWidget(new QLabel, 0, 0, 1, 2);
+  initAvailableProtocols(); // populate m_protocolCBox
 
-    m_gLayout->addWidget(protocolLabel, 1, 0, 1, 1);
-    m_gLayout->addWidget(m_protocolCBox, 1, 1, 1, 1);
-    //keep one row for m_protocolWidget
-    m_gLayout->addWidget(buttonBox, 3, 0, 1, 2);
+  connect(
+      m_protocolCBox, SignalUtils::QComboBox_currentIndexChanged_int(), this,
+      &DeviceEditDialog::updateProtocolWidget);
 
-    setLayout(m_gLayout);
-
-    initAvailableProtocols(); //populate m_protocolCBox
-
-    connect(m_protocolCBox,  SignalUtils::QComboBox_currentIndexChanged_int(),
-            this, &DeviceEditDialog::updateProtocolWidget);
-
-    if(m_protocolCBox->count() > 0)
-    {
-        ISCORE_ASSERT(m_protocolCBox->currentIndex() == 0);
-        updateProtocolWidget();
-    }
+  if (m_protocolCBox->count() > 0)
+  {
+    ISCORE_ASSERT(m_protocolCBox->currentIndex() == 0);
+    updateProtocolWidget();
+  }
 }
 
-void
-DeviceEditDialog::initAvailableProtocols()
+void DeviceEditDialog::initAvailableProtocols()
 {
-    ISCORE_ASSERT(m_protocolCBox);
+  ISCORE_ASSERT(m_protocolCBox);
 
-    //initialize previous settings
-    m_previousSettings.clear();
+  // initialize previous settings
+  m_previousSettings.clear();
 
-    for(const auto& prot : m_protocolList)
-    {
-        m_protocolCBox->addItem(
-                    prot.prettyName(),
-                    QVariant::fromValue(prot.concreteFactoryKey()));
+  std::vector<Device::ProtocolFactory*> sorted;
+  for (auto& elt : m_protocolList)
+  {
+    sorted.push_back(&elt);
+  }
 
-        m_previousSettings.append(prot.defaultSettings());
-    }
+  ossia::sort(
+      sorted, [](Device::ProtocolFactory* lhs, Device::ProtocolFactory* rhs) {
+        return lhs->visualPriority() > rhs->visualPriority();
+      });
 
-    m_index = m_protocolCBox->currentIndex();
+  for (const auto& prot_pair : sorted)
+  {
+    auto& prot = *prot_pair;
+    m_protocolCBox->addItem(
+        prot.prettyName(), QVariant::fromValue(prot.concreteKey()));
+
+    m_previousSettings.append(prot.defaultSettings());
+  }
+
+  m_protocolCBox->setCurrentIndex(0);
+  m_index = m_protocolCBox->currentIndex();
 }
 
-
-
-void
-DeviceEditDialog::updateProtocolWidget()
+void DeviceEditDialog::updateProtocolWidget()
 {
-    ISCORE_ASSERT(m_protocolCBox);
+  ISCORE_ASSERT(m_protocolCBox);
 
-    if(m_protocolWidget)
-    {
-        ISCORE_ASSERT(m_index < m_protocolCBox->count());
-        ISCORE_ASSERT(m_index < m_previousSettings.count());
+  if (m_protocolWidget)
+  {
+    ISCORE_ASSERT(m_index < m_protocolCBox->count());
+    ISCORE_ASSERT(m_index < m_previousSettings.count());
 
-        m_previousSettings[m_index] = m_protocolWidget->getSettings();
-        delete m_protocolWidget;
-    }
+    m_previousSettings[m_index] = m_protocolWidget->getSettings();
+    delete m_protocolWidget;
+  }
 
-    m_index = m_protocolCBox->currentIndex();
+  m_index = m_protocolCBox->currentIndex();
 
-    auto protocol = m_protocolCBox->currentData().value<UuidKey<Device::ProtocolFactory>>();
-    m_protocolWidget = m_protocolList.get(protocol)->makeSettingsWidget();
+  auto protocol = m_protocolCBox->currentData()
+                      .value<UuidKey<Device::ProtocolFactory>>();
+  m_protocolWidget = m_protocolList.get(protocol)->makeSettingsWidget();
 
-    if(m_protocolWidget)
-    {
-        m_gLayout->addWidget(m_protocolWidget, 2, 0, 1, 2);
-        updateGeometry();
-    }
-
+  if (m_protocolWidget)
+  {
+    m_layout->insertRow(2, m_protocolWidget);
+    QSizePolicy pol{QSizePolicy::MinimumExpanding,
+                    QSizePolicy::MinimumExpanding};
+    pol.setVerticalStretch(1);
+    m_protocolWidget->setSizePolicy(pol);
+    m_protocolWidget->setMinimumHeight(200);
+    this->setSizePolicy(
+        QSizePolicy::MinimumExpanding, QSizePolicy::MinimumExpanding);
+    updateGeometry();
+  }
 }
 
 Device::DeviceSettings DeviceEditDialog::getSettings() const
 {
-    Device::DeviceSettings settings;
+  Device::DeviceSettings settings;
 
-    if(m_protocolWidget)
-    {
-        settings = m_protocolWidget->getSettings();
-    }
+  if (m_protocolWidget)
+  {
+    settings = m_protocolWidget->getSettings();
+  }
 
-    // TODO after set the protocol in getSettings instead.
-    settings.protocol = m_protocolCBox->currentData().value<UuidKey<Device::ProtocolFactory>>();
+  // TODO after set the protocol in getSettings instead.
+  settings.protocol = m_protocolCBox->currentData()
+                          .value<UuidKey<Device::ProtocolFactory>>();
 
-    return settings;
+  return settings;
 }
 
 QString DeviceEditDialog::getPath() const
 {
-    return m_protocolWidget->getPath();
+  // TODO do this properly please
+  return m_protocolWidget->getPath();
 }
 
-void
-DeviceEditDialog::setSettings(const Device::DeviceSettings &settings)
+void DeviceEditDialog::setSettings(const Device::DeviceSettings& settings)
 {
-    //auto proto = SingletonProtocolList::instance().get(settings.protocol);
-    //if(proto)
-    {
-        const int index = m_protocolCBox->findData(QVariant::fromValue(settings.protocol));
-        ISCORE_ASSERT(index != -1);
-        ISCORE_ASSERT(index < m_protocolCBox->count());
+  // auto proto = SingletonProtocolList::instance().get(settings.protocol);
+  // if(proto)
+  {
+    const int index
+        = m_protocolCBox->findData(QVariant::fromValue(settings.protocol));
+    ISCORE_ASSERT(index != -1);
+    ISCORE_ASSERT(index < m_protocolCBox->count());
 
-        m_protocolCBox->setCurrentIndex(index);  //will emit currentIndexChanged(int) & call slot
+    m_protocolCBox->setCurrentIndex(
+        index); // will emit currentIndexChanged(int) & call slot
 
-        m_protocolWidget->setSettings(settings);
-    }
-    //else
-    {
+    m_protocolWidget->setSettings(settings);
+  }
+  // else
+  {
     //    ISCORE_TODO; // Make a default widget.
-    }
+  }
 }
 
 void DeviceEditDialog::setEditingInvalidState(bool st)
 {
-    if(st != m_invalidState)
+  if (st != m_invalidState)
+  {
+    if (st)
     {
-        if(st)
-        {
-            auto item = m_gLayout->itemAtPosition(0, 0);
-            static_cast<QLabel*>(item->widget())->setText(tr("Warning : device requires editing."));
-        }
-        else
-        {
-            auto item = m_gLayout->takeAt(0);
-            delete item->widget();
-            delete item;
-        }
-
-        m_invalidState = st;
+      auto item = m_layout->itemAt(0);
+      static_cast<QLabel*>(item->widget())
+          ->setText(tr("Warning : device requires editing."));
     }
+    else
+    {
+      auto item = m_layout->takeAt(0);
+      delete item->widget();
+      delete item;
+    }
+
+    m_invalidState = st;
+  }
 }
 }

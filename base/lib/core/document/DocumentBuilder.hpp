@@ -1,7 +1,7 @@
 #pragma once
 class QByteArray;
 class QVariant;
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 #include <iscore_lib_base_export.h>
 namespace iscore
 {
@@ -9,12 +9,12 @@ class Document;
 class DocumentBackupManager;
 class DocumentDelegateFactory;
 class DocumentModel;
-struct ApplicationContext;
+struct GUIApplicationContext;
 
 /**
- * @brief The DocumentBuilder class
+ * @brief Methods to set-up documents.
  *
- * Facility to construct a document according to different cases :
+ * Facility to construct a Document according to different cases :
  * - Creating a blank, new document.
  * - Loading a document.
  * - Restoring a document after a crash.
@@ -22,42 +22,29 @@ struct ApplicationContext;
  */
 class ISCORE_LIB_BASE_EXPORT DocumentBuilder
 {
-    public:
-        explicit DocumentBuilder(
-            QObject* parentPresenter,
-            QWidget* parentView);
+public:
+  explicit DocumentBuilder(QObject* parentPresenter, QWidget* parentView);
 
-        Document* newDocument(
-                const iscore::ApplicationContext& ctx,
-                const Id<DocumentModel>& id,
-                iscore::DocumentDelegateFactory& doctype);
-        Document* loadDocument(
-                const iscore::ApplicationContext& ctx,
-                const QVariant &data,
-                iscore::DocumentDelegateFactory& doctype);
-        Document* restoreDocument(
-                const iscore::ApplicationContext& ctx,
-                const QByteArray &docData,
-                const QByteArray &cmdData,
-                iscore::DocumentDelegateFactory& doctype);
+  Document* newDocument(
+      const iscore::GUIApplicationContext& ctx,
+      const Id<DocumentModel>& id,
+      iscore::DocumentDelegateFactory& doctype);
+  Document* loadDocument(
+      const iscore::GUIApplicationContext& ctx,
+      const QVariant& data,
+      iscore::DocumentDelegateFactory& doctype);
+  Document* restoreDocument(
+      const iscore::GUIApplicationContext& ctx,
+      const QByteArray& docData,
+      const QByteArray& cmdData,
+      iscore::DocumentDelegateFactory& doctype);
 
-    private:
-        void setBackupManager(Document* doc);
-        template<
-                typename InitFun, // for setup of m_backupManager
-                typename BackupFun // the model data to save
-        >
-        Document* loadDocument_impl(
-                const iscore::ApplicationContext& ctx,
-                const QVariant &data,
-                iscore::DocumentDelegateFactory& doctype,
-                InitFun&& initfun,
-                BackupFun&& backupfun);
+private:
+  void setBackupManager(Document* doc);
 
-        QObject* m_parentPresenter{};
-        QWidget* m_parentView{};
+  QObject* m_parentPresenter{};
+  QWidget* m_parentView{};
 
-        DocumentBackupManager* m_backupManager{};
+  DocumentBackupManager* m_backupManager{};
 };
-
 }

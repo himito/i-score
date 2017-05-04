@@ -1,9 +1,10 @@
 #pragma once
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
-class CommandTag{};
-using CommandFactoryKey = StringKey<CommandTag>;
-class CommandParentTag{};
-using CommandParentFactoryKey = StringKey<CommandParentTag>;
+class CommandTag {};
+class CommandParentTag {};
 
-template<typename T>
-const CommandParentFactoryKey& CommandFactoryName();
+using CommandKey = StringKey<CommandTag>;
+using CommandGroupKey = StringKey<CommandParentTag>;
+
+template <typename T>
+const CommandGroupKey& CommandFactoryName();

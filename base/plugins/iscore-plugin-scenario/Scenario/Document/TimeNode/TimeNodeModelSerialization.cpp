@@ -1,103 +1,96 @@
 
-#include <iscore/tools/std/Optional.hpp>
 #include <QDataStream>
-#include <QtGlobal>
 #include <QJsonArray>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <QtGlobal>
 #include <algorithm>
+#include <iscore/tools/std/Optional.hpp>
 
-#include <Process/ModelMetadata.hpp>
+#include "TimeNodeModel.hpp"
+#include "Trigger/TriggerModel.hpp"
 #include <Process/TimeValue.hpp>
 #include <Scenario/Document/VerticalExtent.hpp>
 #include <State/Expression.hpp>
-#include "TimeNodeModel.hpp"
-#include "Trigger/TriggerModel.hpp"
-#include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
+#include <iscore/model/ModelMetadata.hpp>
 #include <iscore/serialization/DataStreamVisitor.hpp>
 #include <iscore/serialization/JSONValueVisitor.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/tools/TreeNode.hpp>
+#include <iscore/model/Identifier.hpp>
+#include <iscore/model/tree/TreeNode.hpp>
 
-template <typename T> class Reader;
-template <typename T> class Writer;
-template <typename model> class IdentifiedObject;
+template <typename T>
+class Reader;
+template <typename T>
+class Writer;
+template <typename model>
+class IdentifiedObject;
 
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Reader<DataStream>>::readFrom(const Scenario::TimeNodeModel& timenode)
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+DataStreamReader::read(const Scenario::TimeNodeModel& timenode)
 {
-    readFrom(static_cast<const IdentifiedObject<Scenario::TimeNodeModel>&>(timenode));
+  m_stream << timenode.m_date << timenode.m_events << timenode.m_extent;
 
-    readFrom(timenode.metadata);
-    readFrom(timenode.pluginModelList);
+  m_stream << timenode.trigger()->active() << timenode.trigger()->expression();
 
-    m_stream << timenode.m_date
-             << timenode.m_events
-             << timenode.m_extent;
-
-    m_stream << timenode.trigger()->active()
-             << timenode.trigger()->expression();
-
-    insertDelimiter();
+  insertDelimiter();
 }
 
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Writer<DataStream>>::writeTo(Scenario::TimeNodeModel& timenode)
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+DataStreamWriter::write(Scenario::TimeNodeModel& timenode)
 {
-    writeTo(timenode.metadata);
-    timenode.pluginModelList = iscore::ElementPluginModelList{*this, &timenode};
+  bool a;
+  State::Expression t;
+  m_stream >> timenode.m_date >> timenode.m_events >> timenode.m_extent >> a
+      >> t;
 
-    bool a;
-    State::Trigger t;
-    m_stream >> timenode.m_date
-             >> timenode.m_events
-             >> timenode.m_extent
-             >> a
-             >> t;
+  timenode.m_trigger
+      = new Scenario::TriggerModel{Id<Scenario::TriggerModel>(0), &timenode};
+  timenode.trigger()->setExpression(t);
+  timenode.trigger()->setActive(a);
 
-    timenode.m_trigger = new Scenario::TriggerModel{Id<Scenario::TriggerModel>(0), &timenode};
-    timenode.trigger()->setExpression(t);
-    timenode.trigger()->setActive(a);
-
-    checkDelimiter();
+  checkDelimiter();
 }
 
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Reader<JSONObject>>::readFrom(const Scenario::TimeNodeModel& timenode)
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+JSONObjectReader::read(const Scenario::TimeNodeModel& timenode)
 {
-    readFrom(static_cast<const IdentifiedObject<Scenario::TimeNodeModel>&>(timenode));
-    m_obj["Metadata"] = toJsonObject(timenode.metadata);
+  obj[strings.Date] = toJsonValue(timenode.date());
+  obj[strings.Events] = toJsonArray(timenode.m_events);
+  obj[strings.Extent] = toJsonValue(timenode.m_extent);
 
-    m_obj["Date"] = toJsonValue(timenode.date());
-    m_obj["Events"] = toJsonArray(timenode.m_events);
-    m_obj["Extent"] = toJsonValue(timenode.m_extent);
-
-    m_obj["PluginsMetadata"] = toJsonValue(timenode.pluginModelList);
-
-    QJsonObject trig;
-    trig["Active"] = timenode.m_trigger->active();
-    trig["Expression"] = toJsonObject(timenode.m_trigger->expression());
-    m_obj["Trigger"] = trig;
+  QJsonObject trig;
+  trig[strings.Active] = timenode.m_trigger->active();
+  trig[strings.Expression] = toJsonObject(timenode.m_trigger->expression());
+  obj[strings.Trigger] = trig;
 }
 
-template<>
-ISCORE_PLUGIN_SCENARIO_EXPORT void Visitor<Writer<JSONObject>>::writeTo(Scenario::TimeNodeModel& timenode)
+
+template <>
+ISCORE_PLUGIN_SCENARIO_EXPORT void
+JSONObjectWriter::write(Scenario::TimeNodeModel& timenode)
 {
-    timenode.metadata = fromJsonObject<ModelMetadata>(m_obj["Metadata"]);
+  if (timenode.metadata().getLabel() == QStringLiteral("TimeNode"))
+    timenode.metadata().setLabel("");
 
-    timenode.m_date = fromJsonValue<TimeValue> (m_obj["Date"]);
-    timenode.m_extent = fromJsonValue<Scenario::VerticalExtent>(m_obj["Extent"]);
+  timenode.m_date = fromJsonValue<TimeVal>(obj[strings.Date]);
+  timenode.m_extent = fromJsonValue<Scenario::VerticalExtent>(obj[strings.Extent]);
 
-    fromJsonValueArray(m_obj["Events"].toArray(), timenode.m_events);
+  fromJsonValueArray(obj[strings.Events].toArray(), timenode.m_events);
 
-    timenode.m_trigger =  new Scenario::TriggerModel{Id<Scenario::TriggerModel>(0), &timenode};
+  timenode.m_trigger
+      = new Scenario::TriggerModel{Id<Scenario::TriggerModel>(0), &timenode};
 
-    State::Trigger t;
-    fromJsonObject(m_obj["Trigger"].toObject()["Expression"], t);
-    timenode.m_trigger->setExpression(t);
-    timenode.m_trigger->setActive(m_obj["Trigger"].toObject()["Active"].toBool());
-
-    Deserializer<JSONValue> elementPluginDeserializer(m_obj["PluginsMetadata"]);
-    timenode.pluginModelList = iscore::ElementPluginModelList{elementPluginDeserializer, &timenode};
+  State::Expression t;
+  const auto& trig_obj = obj[strings.Trigger].toObject();
+  fromJsonObject(trig_obj[strings.Expression], t);
+  timenode.m_trigger->setExpression(t);
+  timenode.m_trigger->setActive(
+      trig_obj[strings.Active].toBool());
 }

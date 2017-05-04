@@ -4,111 +4,139 @@
 #include <Curve/Point/CurvePointView.hpp>
 #include <Curve/Segment/CurveSegmentModel.hpp>
 #include <Curve/Segment/CurveSegmentView.hpp>
-#include <iscore/command/Dispatchers/CommandDispatcher.hpp>
-#include <iscore/selection/SelectionDispatcher.hpp>
-#include <iscore/tools/IdentifiedObjectMap.hpp>
 #include <QObject>
 #include <QPoint>
 #include <QRect>
-
+#include <iscore/command/Dispatchers/CommandDispatcher.hpp>
+#include <iscore/selection/SelectionDispatcher.hpp>
+#include <iscore/model/IdentifiedObjectMap.hpp>
+#include <iscore/widgets/GraphicsItem.hpp>
 
 #include <iscore/document/DocumentContext.hpp>
 #include <iscore_plugin_curve_export.h>
 
 class QActionGroup;
 class QMenu;
-namespace Curve {
+namespace Curve
+{
 class SegmentList;
 struct Style;
 class View;
 class Model;
 
-class ISCORE_PLUGIN_CURVE_EXPORT Presenter : public QObject
+class ISCORE_PLUGIN_CURVE_EXPORT Presenter final : public QObject
 {
-        Q_OBJECT
-    public:
-        Presenter(
-                const iscore::DocumentContext& lst,
-                const Curve::Style&,
-                const Model&,
-                View*,
-                QObject* parent);
-        virtual ~Presenter();
+  Q_OBJECT
+public:
+  Presenter(
+      const iscore::DocumentContext& lst,
+      const Curve::Style&,
+      const Model&,
+      View*,
+      QObject* parent);
+  virtual ~Presenter();
 
-        const auto& points() const
-        { return m_points; }
-        const auto& segments() const
-        { return m_segments; }
+  const auto& points() const
+  {
+    return m_points;
+  }
+  const auto& segments() const
+  {
+    return m_segments;
+  }
 
-        // Removes all the points & segments
-        void clear();
+  // Removes all the points & segments
+  void clear();
 
-        const Model& model() const
-        { return m_model; }
-        View& view() const
-        { return *m_view; }
+  const Model& model() const
+  {
+    return m_model;
+  }
+  View& view() const
+  {
+    return *m_view;
+  }
 
-        void setRect(const QRectF& rect);
+  void setRect(const QRectF& rect);
 
-        void enableActions(bool);
+  void enableActions(bool);
 
-        // Changes the colors
-        void enable();
-        void disable();
+  // Changes the colors
+  void enable();
+  void disable();
 
-        Curve::EditionSettings& editionSettings()
-        { return m_editionSettings; }
+  Curve::EditionSettings& editionSettings()
+  {
+    return m_editionSettings;
+  }
 
-        void fillContextMenu(
-                QMenu&,
-                const QPoint&,
-                const QPointF&);
+  void fillContextMenu(QMenu&, const QPoint&, const QPointF&);
 
-        void removeSelection();
+  void removeSelection();
+  QActionGroup& actions() const
+  {
+    return *m_actions;
+  }
 
-    signals:
-        void contextMenuRequested(const QPoint&, const QPointF&);
+  // Used to allow moving outside [0; 1] when in the panel view.
+  bool boundedMove() const
+  {
+    return m_boundedMove;
+  }
+  void setBoundedMove(bool b)
+  {
+    m_boundedMove = b;
+  }
 
-    private:
-        // Context menu actions
-        void updateSegmentsType(const UuidKey<Curve::SegmentFactory>& segment);
+  QRectF rect() const
+  {
+    return m_localRect;
+  }
 
-        // Setup utilities
-        void setPos(PointView&);
-        void setPos(SegmentView&);
-        void setupSignals();
-        void setupView();
-        void setupStateMachine();
+signals:
+  void contextMenuRequested(const QPoint&, const QPointF&);
 
-        // Adding
-        void addPoint(PointView*);
-        void addSegment(SegmentView*);
+private:
+  // Context menu actions
+  void updateSegmentsType(const UuidKey<Curve::SegmentFactory>& segment);
 
-        void addPoint_impl(PointView*);
-        void addSegment_impl(SegmentView*);
+  // Setup utilities
+  void setPos(PointView&);
+  void setPos(SegmentView&);
+  void setupSignals();
+  void setupView();
+  void setupStateMachine();
 
-        void setupPointConnections(PointView*);
-        void setupSegmentConnections(SegmentView*);
+  // Adding
+  void addPoint(PointView*);
+  void addSegment(SegmentView*);
 
-        void modelReset();
+  void addPoint_impl(PointView*);
+  void addSegment_impl(SegmentView*);
 
-        const SegmentList& m_curveSegments;
-        Curve::EditionSettings m_editionSettings;
+  void setupPointConnections(PointView*);
+  void setupSegmentConnections(SegmentView*);
+  void modelReset();
 
-        const Model& m_model;
-        View* m_view{};
+  const SegmentList& m_curveSegments;
+  Curve::EditionSettings m_editionSettings;
+  QRectF m_localRect;
 
-        IdContainer<PointView, PointModel> m_points;
-        IdContainer<SegmentView, SegmentModel> m_segments;
+  const Model& m_model;
+  graphics_item_ptr<View> m_view;
 
-        // Required dispatchers
-        CommandDispatcher<> m_commandDispatcher;
+  IdContainer<PointView, PointModel> m_points;
+  IdContainer<SegmentView, SegmentModel> m_segments;
 
-        const Curve::Style& m_style;
+  // Required dispatchers
+  CommandDispatcher<> m_commandDispatcher;
 
-        QMenu* m_contextMenu{};
-        QActionGroup* m_actions{};
+  const Curve::Style& m_style;
 
-        bool m_enabled = true;
+  QMenu* m_contextMenu{};
+  QActionGroup* m_actions{};
+
+  bool m_enabled = true;
+  bool m_boundedMove = true;
 };
 }

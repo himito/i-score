@@ -1,26 +1,14 @@
-#include <QByteArray>
-#include <QColor>
-#include <QFile>
-#include <QIODevice>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-
-#include <Curve/CurveStyle.hpp>
 #include "MappingColors.hpp"
-#include <Process/Style/Skin.hpp>
-class QString;
+#include <iscore/model/Skin.hpp>
 
 namespace Mapping
 {
-MappingColors::MappingColors():
-    m_style{
-        Skin::instance().Tender3,
-        Skin::instance().Emphasis2,
-        Skin::instance().Emphasis3,
-        Skin::instance().Tender2,
-        Skin::instance().Gray}
+Colors::Colors(const iscore::Skin& s)
+    : m_style{s.Tender3,
+              s.Emphasis2,
+              s.Emphasis3,
+              s.Tender2, s.Gray}
 {
+  m_style.init(s);
 }
 }

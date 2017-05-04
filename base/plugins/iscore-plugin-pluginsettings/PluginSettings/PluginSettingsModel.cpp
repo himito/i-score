@@ -1,22 +1,24 @@
 #include <QApplication>
 #include <QDebug>
-#include <qnamespace.h>
 #include <QSet>
 #include <QSettings>
 #include <QStandardItemModel>
 #include <QStringList>
 #include <QVariant>
+#include <qnamespace.h>
 
-#include <iscore/tools/std/Algorithms.hpp>
 #include "PluginSettingsModel.hpp"
 #include "commands/BlacklistCommand.hpp"
+#include <ossia/detail/algorithms.hpp>
 #include <iscore/plugins/settingsdelegate/SettingsDelegateModel.hpp>
+#include <iscore/application/ApplicationContext.hpp>
 namespace PluginSettings
 {
-PluginSettingsModel::PluginSettingsModel(QSettings& set, const iscore::ApplicationContext& ctx) :
-    iscore::SettingsDelegateModel {},
-    localPlugins{ctx.components.addons()},
-    remoteSelection{&remotePlugins}
+PluginSettingsModel::PluginSettingsModel(
+    QSettings& set, const iscore::ApplicationContext& ctx)
+    : iscore::SettingsDelegateModel{}
+    , localPlugins{ctx.addons()}
+    , remoteSelection{&remotePlugins}
 {
 }
 }

@@ -7,16 +7,31 @@ iscore_common_setup()
 find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets)
 
 # Files & main target
-file(GLOB_RECURSE HDRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/Automation/*.hpp"
+set(HDRS
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationColors.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationModel.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationPresenter.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationProcessMetadata.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationView.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/AutomationCommandFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/ChangeAddress.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/InitAutomation.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/SetAutomationMax.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/SetAutomationMin.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationInspectorFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationInspectorWidget.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationStateInspectorFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationStateInspector.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/CurvePointInspectorFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/CurvePointInspectorWidget.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/Automation/State/AutomationState.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/iscore_plugin_automation.hpp"
 )
 set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationLayerSerialization.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationView.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationModel.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationLayerModel.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/InitAutomation.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Commands/ChangeAddress.cpp"
@@ -24,40 +39,22 @@ set(SRCS
 
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/State/AutomationState.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationColors.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore_plugin_automation.cpp"
-)
-
-if(TARGET iscore_lib_inspector)
-    set(INSPECTOR_SRCS
-"${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationInspectorFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationStateInspector.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationStateInspectorFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/AutomationInspectorWidget.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/CurvePointInspectorWidget.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/CurvePointInspectorFactory.cpp"
-    )
 
-    set(SRCS ${SRCS} ${INSPECTOR_SRCS})
+"${CMAKE_CURRENT_SOURCE_DIR}/Automation/AutomationColors.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore_plugin_automation.cpp"
+)
 
-    file(GLOB_RECURSE INSPECTOR_HDRS
-        "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Inspector/*.hpp")
-
-    set(HDRS ${HDRS} ${INSPECTOR_HDRS})
-endif()
-
-qt5_add_resources(QRCS "${CMAKE_CURRENT_SOURCE_DIR}/Automation/Resources/AutomationResources.qrc")
-
-add_library(${PROJECT_NAME} ${SRCS} ${HDRS} ${QRCS})
+add_library(${PROJECT_NAME} ${SRCS} ${HDRS})
 
 iscore_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 target_link_libraries(${PROJECT_NAME}
   PUBLIC Qt5::Core Qt5::Widgets
-            iscore_lib_base iscore_lib_device iscore_plugin_deviceexplorer iscore_lib_process iscore_lib_state iscore_plugin_curve)
-
-if(TARGET iscore_lib_inspector)
-  target_link_libraries(${PROJECT_NAME} PUBLIC iscore_lib_inspector)
-endif()
+            iscore_lib_base iscore_lib_device iscore_plugin_deviceexplorer iscore_lib_process iscore_lib_state iscore_plugin_curve iscore_lib_inspector)
 
 setup_iscore_plugin(${PROJECT_NAME})

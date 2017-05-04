@@ -5,41 +5,39 @@
 #include <vector>
 
 #include "DeviceExplorerApplicationPlugin.hpp"
-#include <iscore/plugins/application/GUIApplicationContextPlugin.hpp>
+#include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
 #include <core/document/DocumentModel.hpp>
+#include <iscore/plugins/application/GUIApplicationPlugin.hpp>
+#include <iscore/tools/IdentifierGeneration.hpp>
 
 struct VisitorVariant;
 
 namespace Explorer
 {
-DeviceExplorerApplicationPlugin::DeviceExplorerApplicationPlugin(
-        const iscore::GUIApplicationContext& app) :
-    GUIApplicationContextPlugin {app}
+ApplicationPlugin::ApplicationPlugin(const iscore::GUIApplicationContext& app)
+    : GUIApplicationPlugin{app}
 {
-
 }
 
-void DeviceExplorerApplicationPlugin::on_newDocument(iscore::Document* doc)
+void ApplicationPlugin::on_newDocument(iscore::Document& doc)
 {
-    doc->model().addPluginModel(
-                new DeviceDocumentPlugin{doc->context(), &doc->model()});
+  doc.model().addPluginModel(new DeviceDocumentPlugin{
+      doc.context(), getStrongId(doc.model().pluginModels()), &doc.model()});
 }
 
-void DeviceExplorerApplicationPlugin::on_documentChanged(
-        iscore::Document* olddoc,
-        iscore::Document* newdoc)
+void ApplicationPlugin::on_documentChanged(
+    iscore::Document* olddoc, iscore::Document* newdoc)
 {
-    if(olddoc)
-    {
-        auto& doc_plugin = olddoc->context().plugin<DeviceDocumentPlugin>();
-        doc_plugin.setConnection(false);
-    }
+  if (olddoc)
+  {
+    auto& doc_plugin = olddoc->context().plugin<DeviceDocumentPlugin>();
+    doc_plugin.setConnection(false);
+  }
 
-    if(newdoc)
-    {
-        auto& doc_plugin = newdoc->context().plugin<DeviceDocumentPlugin>();
-        doc_plugin.setConnection(true);
-    }
+  if (newdoc)
+  {
+    auto& doc_plugin = newdoc->context().plugin<DeviceDocumentPlugin>();
+    doc_plugin.setConnection(true);
+  }
 }
 }
-

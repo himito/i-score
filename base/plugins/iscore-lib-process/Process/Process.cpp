@@ -2,154 +2,193 @@
 #include <algorithm>
 #include <stdexcept>
 
-#include "LayerModel.hpp"
 #include "Process.hpp"
+#include <ossia/detail/algorithms.hpp>
 #include <Process/ExpandMode.hpp>
-#include <Process/ModelMetadata.hpp>
 #include <Process/TimeValue.hpp>
-#include <iscore/tools/IdentifiedObject.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/tools/std/StdlibWrapper.hpp>
-#include <iscore/tools/std/Algorithms.hpp>
+#include <iscore/model/ModelMetadata.hpp>
+#include <iscore/model/IdentifiedObject.hpp>
+#include <iscore/model/Identifier.hpp>
 
 template class IdentifiedObject<Process::ProcessModel>;
-template class iscore::SerializableInterface<Process::ProcessFactory>;
+template class iscore::SerializableInterface<Process::ProcessModelFactory>;
 namespace Process
 {
 ProcessModel::ProcessModel(
-        TimeValue duration,
-        const Id<ProcessModel>& id,
-        const QString& name,
-        QObject* parent):
-    IdentifiedObject<ProcessModel>{id, name, parent},
-    m_duration{std::move(duration)}
+    TimeVal duration,
+    const Id<ProcessModel>& id,
+    const QString& name,
+    QObject* parent)
+    : Entity{id, name, parent}
+    , m_duration{std::move(duration)}
+    , m_slotHeight{300}
 {
-    metadata.setName(QString("Process.%1").arg(*this->id().val()));
 }
 
-ProcessModel::~ProcessModel() = default;
-
+ProcessModel::~ProcessModel()
+{
+  emit identified_object_destroying(this);
+}
 
 ProcessModel::ProcessModel(
-        const ProcessModel& source,
-        const Id<ProcessModel>& id,
-        const QString& name,
-        QObject* parent):
-    IdentifiedObject<ProcessModel>{id, name, parent},
-    m_duration{source.duration()}
+    const ProcessModel& source,
+    const Id<ProcessModel>& id,
+    const QString& name,
+    QObject* parent)
+    : Entity{source, id, name, parent}
+    , m_duration{source.duration()}
+    , m_slotHeight{source.m_slotHeight}
 {
-    metadata.setName(QString("Process.%1").arg(*this->id().val()));
 }
 
-ProcessModel::ProcessModel(Deserializer<DataStream>& vis, QObject* parent) :
-    IdentifiedObject(vis, parent)
+void ProcessModel::setDurationAndScale(const TimeVal& newDuration)
 {
-    vis.writeTo(*this);
+  setDuration(newDuration);
 }
 
-ProcessModel::ProcessModel(Deserializer<JSONObject>& vis, QObject* parent) :
-    IdentifiedObject(vis, parent)
+void ProcessModel::setDurationAndGrow(const TimeVal& newDuration)
 {
-    vis.writeTo(*this);
+  setDuration(newDuration);
 }
 
-std::vector<LayerModel*> ProcessModel::layers() const
+void ProcessModel::setDurationAndShrink(const TimeVal& newDuration)
 {
-    return m_layers;
+  setDuration(newDuration);
 }
 
-
-void ProcessModel::setParentDuration(ExpandMode mode, const TimeValue& t)
+ProcessModel::ProcessModel(DataStream::Deserializer& vis, QObject* parent)
+  : Entity(vis, parent)
 {
-    switch(mode)
+  vis.writeTo(*this);
+}
+
+ProcessModel::ProcessModel(JSONObject::Deserializer& vis, QObject* parent)
+    : Entity(vis, parent)
+{
+  vis.writeTo(*this);
+}
+
+QString ProcessModel::prettyName() const
+{
+  return metadata().getName();
+}
+
+void ProcessModel::setParentDuration(ExpandMode mode, const TimeVal& t)
+{
+  switch (mode)
+  {
+    case ExpandMode::Scale:
+      setDurationAndScale(t);
+      break;
+    case ExpandMode::GrowShrink:
     {
-        case ExpandMode::Scale:
-            setDurationAndScale(t);
-            break;
-        case ExpandMode::GrowShrink:
-        {
-            if(duration() < t)
-                setDurationAndGrow(t);
-            else
-                setDurationAndShrink(t);
-            break;
-        }
-        case ExpandMode::ForceGrow:
-        {
-            if(duration() < t)
-                setDurationAndGrow(t);
-            break;
-        }
-        case ExpandMode::Fixed:
-        default:
-            break;
+      if (duration() < t)
+        setDurationAndGrow(t);
+      else
+        setDurationAndShrink(t);
+      break;
     }
-}
-
-
-void ProcessModel::setDuration(const TimeValue& other)
-{
-    m_duration = other;
-    emit durationChanged(m_duration);
-}
-
-
-const TimeValue& ProcessModel::duration() const
-{
-    return m_duration;
-}
-
-
-void ProcessModel::addLayer(LayerModel* m)
-{
-    connect(m, &LayerModel::destroyed,
-            this, [=] () { removeLayer(m); });
-    m_layers.push_back(m);
-}
-
-
-void ProcessModel::removeLayer(LayerModel* m)
-{
-    auto it = find(m_layers, m);
-    if(it != m_layers.end())
+    case ExpandMode::ForceGrow:
     {
-        m_layers.erase(it);
+      if (duration() < t)
+        setDurationAndGrow(t);
+      break;
     }
+    case ExpandMode::CannotExpand:
+    default:
+      break;
+  }
 }
 
+void ProcessModel::setDuration(const TimeVal& other)
+{
+  m_duration = other;
+  emit durationChanged(m_duration);
+}
+
+const TimeVal& ProcessModel::duration() const
+{
+  return m_duration;
+}
+
+void ProcessModel::startExecution()
+{
+}
+
+void ProcessModel::stopExecution()
+{
+}
+
+void ProcessModel::reset()
+{
+}
+
+ProcessStateDataInterface*ProcessModel::startStateData() const
+{
+  return nullptr;
+}
+
+ProcessStateDataInterface*ProcessModel::endStateData() const
+{
+  return nullptr;
+}
+
+Selection ProcessModel::selectableChildren() const
+{
+  return {};
+}
+
+Selection ProcessModel::selectedChildren() const
+{
+  return {};
+}
+
+void ProcessModel::setSelection(const Selection& s) const
+{
+}
+
+double ProcessModel::getSlotHeight() const
+{
+  return m_slotHeight;
+}
+
+void ProcessModel::setSlotHeight(double v)
+{
+  m_slotHeight = v;
+  emit slotHeightChanged(v);
+}
 
 ProcessModel* parentProcess(QObject* obj)
 {
-    QString objName (obj ? obj->objectName() : "INVALID");
-    while(obj && !dynamic_cast<ProcessModel*>(obj))
-    {
-        obj = obj->parent();
-    }
+  QString objName(obj ? obj->objectName() : "INVALID");
+  while (obj && !dynamic_cast<ProcessModel*>(obj))
+  {
+    obj = obj->parent();
+  }
 
-    if(!obj)
-        throw std::runtime_error(
-                QString("Object (name: %1) is not child of a Process!")
-                .arg(objName)
-                .toStdString());
+  if (!obj)
+    throw std::runtime_error(
+        QString("Object (name: %1) is not child of a Process!")
+            .arg(objName)
+            .toStdString());
 
-    return static_cast<ProcessModel*>(obj);
+  return static_cast<ProcessModel*>(obj);
 }
-
 
 const ProcessModel* parentProcess(const QObject* obj)
 {
-    QString objName (obj ? obj->objectName() : "INVALID");
-    while(obj && !dynamic_cast<const ProcessModel*>(obj))
-    {
-        obj = obj->parent();
-    }
+  QString objName(obj ? obj->objectName() : "INVALID");
+  while (obj && !dynamic_cast<const ProcessModel*>(obj))
+  {
+    obj = obj->parent();
+  }
 
-    if(!obj)
-        throw std::runtime_error(
-                QString("Object (name: %1) is not child of a Process!")
-                .arg(objName)
-                .toStdString());
+  if (!obj)
+    throw std::runtime_error(
+        QString("Object (name: %1) is not child of a Process!")
+            .arg(objName)
+            .toStdString());
 
-    return static_cast<const ProcessModel*>(obj);
+  return static_cast<const ProcessModel*>(obj);
 }
 }

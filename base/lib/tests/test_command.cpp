@@ -1,8 +1,8 @@
 /*
 #include <QtTest/QtTest>
-#include <iscore/command/Command.hpp>
-#include <core/command/CommandStack.hpp>
 #include <core/QNamedObject>
+#include <core/command/CommandStack.hpp>
+#include <iscore/command/Command.hpp>
 using namespace iscore;
 
 
@@ -21,11 +21,11 @@ struct FakeModel : public QNamedObject
     int value {};
 };
 
-class FakeCommand : public SerializableCommand
+class FakeCommand : public Command
 {
     public:
         FakeCommand(int modelId) :
-            SerializableCommand {"", "FakeCommand", "" },
+            Command {"", "FakeCommand", "" },
         m_modelId {modelId}
         {
 
@@ -33,7 +33,8 @@ class FakeCommand : public SerializableCommand
 
         virtual void undo()
         {
-            auto children = m_globalParent.findChildren<FakeModel*> ("FakeModel");
+            auto children = m_globalParent.findChildren<FakeModel*>
+("FakeModel");
 
             for(auto& model : children)
             {
@@ -46,7 +47,8 @@ class FakeCommand : public SerializableCommand
 
         virtual void redo()
         {
-            auto children = m_globalParent.findChildren<FakeModel*> ("FakeModel");
+            auto children = m_globalParent.findChildren<FakeModel*>
+("FakeModel");
 
             for(auto& model : children)
             {
@@ -65,7 +67,7 @@ class FakeCommand : public SerializableCommand
     private:
         int m_modelId {};
 
-        // SerializableCommand interface
+        // Command interface
     protected:
         void serializeImpl(DataStreamInput&) override
         {

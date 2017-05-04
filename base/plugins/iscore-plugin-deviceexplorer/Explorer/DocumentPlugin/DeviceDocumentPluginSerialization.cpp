@@ -1,57 +1,81 @@
 #include "DeviceDocumentPlugin.hpp"
 #include <Device/Protocol/DeviceInterface.hpp>
-#include <iscore/tools/VariantSerialization.hpp>
-template<>
-void Visitor<Reader<DataStream>>::readFrom_impl(
-        const Explorer::DeviceDocumentPlugin& dev)
+#include <Explorer/Explorer/DeviceExplorerModel.hpp>
+#include <iscore/serialization/VariantSerialization.hpp>
+
+template <>
+void DataStreamReader::read(
+    const Explorer::DeviceDocumentPlugin& dev)
 {
-    readFrom(dev.rootNode());
+  readFrom(dev.rootNode());
+  insertDelimiter();
 }
 
 
-template<>
-void Visitor<Reader<JSONObject>>::readFrom_impl(
-        const Explorer::DeviceDocumentPlugin& plug)
+template <>
+void JSONObjectReader::read(
+    const Explorer::DeviceDocumentPlugin& plug)
 {
-    // Childrens of the root node are the devices
-    // We don't save their children if they don't have canSerialize().
+  // Childrens of the root node are the devices
+  // We don't save their children if they don't have canSerialize().
 
-    m_obj["RootNode"] = QJsonObject{};
-    QJsonArray children;
-    for(auto& node : plug.rootNode().children())
+  obj["RootNode"] = QJsonObject{};
+  QJsonArray children;
+  for (const Device::Node& node : plug.rootNode().children())
+  {
+    QJsonObject this_node;
+
+    ISCORE_ASSERT(node.is<Device::DeviceSettings>());
+    const Device::DeviceSettings& dev = node.get<Device::DeviceSettings>();
+    auto actual = plug.list().findDevice(dev.name);
+    ISCORE_ASSERT(actual);
+    if (actual->capabilities().canSerialize)
     {
-        QJsonObject this_node;
-
-        ISCORE_ASSERT(node.is<Device::DeviceSettings>());
-        const Device::DeviceSettings& dev = node.get<Device::DeviceSettings>();
-        auto actual = plug.list().find(dev.name);
-        ISCORE_ASSERT(actual != plug.list().devices().cend());
-        if((*actual)->capabilities().canSerialize)
-        {
-            this_node = toJsonObject(node);
-        }
-        else
-        {
-            this_node = toJsonObject(node.impl());
-        }
-
-
-        children.push_back(std::move(this_node));
+      this_node = toJsonObject(node);
     }
-    m_obj["Children"] = children;
+    else
+    {
+      this_node = toJsonObject(node.impl());
+    }
+
+    children.push_back(std::move(this_node));
+  }
+  obj["Children"] = children;
 }
 
-template<>
-void Visitor<Writer<DataStream>>::writeTo(
-        Explorer::DeviceDocumentPlugin& plug)
+
+template <>
+void DataStreamWriter::write(Explorer::DeviceDocumentPlugin& plug)
 {
-    writeTo(plug.m_loadingNode);
+  Device::Node n;
+  writeTo(n);
+  checkDelimiter();
+
+  plug.m_explorer = new Explorer::DeviceExplorerModel{plug, &plug};
+  // Here everything is loaded in m_loadingNode
+
+  // Here we recreate the correct structures in term of devices,
+  // given what's present in the node hierarchy
+  for (const auto& node : n)
+  {
+    plug.updateProxy.loadDevice(node);
+  }
 }
 
 
-template<>
-void Visitor<Writer<JSONObject>>::writeTo(
-        Explorer::DeviceDocumentPlugin& plug)
+template <>
+void JSONObjectWriter::write(Explorer::DeviceDocumentPlugin& plug)
 {
-    writeTo(plug.m_loadingNode);
+  Device::Node n;
+  writeTo(n);
+
+  plug.m_explorer = new Explorer::DeviceExplorerModel{plug, &plug};
+  // Here everything is loaded in m_loadingNode
+
+  // Here we recreate the correct structures in term of devices,
+  // given what's present in the node hierarchy
+  for (const auto& node : n)
+  {
+    plug.updateProxy.loadDevice(node);
+  }
 }

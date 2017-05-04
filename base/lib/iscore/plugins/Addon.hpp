@@ -1,7 +1,9 @@
 #pragma once
-#include <QObject>
 #include <QImage>
+#include <QObject>
 #include <iscore/plugins/customfactory/UuidKey.hpp>
+#include <iscore/plugins/qt_interfaces/PluginRequirements_QtInterface.hpp>
+
 namespace iscore
 {
 class Plugin_QtInterface;
@@ -10,23 +12,23 @@ class Plugin_QtInterface;
  *
  * Metadata for i-score addons
  */
-
 struct ISCORE_LIB_BASE_EXPORT Addon
 {
-        iscore::Plugin_QtInterface* plugin{};
-        UuidKey<Addon> key; // Can be the same as plug-in's
-        QString path; // Path to the addon folder
+  iscore::Plugin_QtInterface* plugin{};
+  UuidKey<Plugin> key; // Can be the same as plug-in's
+  QString path;       // Path to the addon folder
 
-        QString name;
-        QString version;
-        QString latestVersionAddress; // URL to a file containing the current version.
+  QString name;
+  QString version;
+  QString
+      latestVersionAddress; // URL to a file containing the current version.
 
-        QString shortDescription;
-        QString longDescription;
-        QImage smallImage;
-        QImage largeImage;
-        bool enabled = true;
-        bool corePlugin = false; // For plug-ins shipped with i-score
+  QString shortDescription;
+  QString longDescription;
+  QImage smallImage;
+  QImage largeImage;
+  bool enabled = true;
+  bool corePlugin = false; // For plug-ins shipped with i-score
 };
 
 /**
@@ -46,8 +48,10 @@ QString addonArchitecture();
  * File paths are given relatively to localaddon.json's folder.
  *
  * A remote file that describes the metadata for the add-on browser.
- * Both have the same keys, however the remote file has URLs instead of local paths,
- * and instead of pointing to dynamic libraries directly, points to compressed add-on packages
+ * Both have the same keys, however the remote file has URLs instead of local
+ * paths,
+ * and instead of pointing to dynamic libraries directly, points to compressed
+ * add-on packages
  * which can be downloaded.
  *
  *

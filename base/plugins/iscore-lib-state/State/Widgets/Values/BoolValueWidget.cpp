@@ -1,26 +1,27 @@
-#include <iscore/widgets/MarginLess.hpp>
 #include <QComboBox>
 #include <QGridLayout>
+#include <iscore/widgets/MarginLess.hpp>
 
 #include <QString>
 
 #include "BoolValueWidget.hpp"
 #include <State/Widgets/Values/ValueWidget.hpp>
 
-class QWidget;
-
-BoolValueWidget::BoolValueWidget(bool value, QWidget *parent)
+namespace State
+{
+BoolValueWidget::BoolValueWidget(bool value, QWidget* parent)
     : ValueWidget{parent}
 {
-    auto lay = new iscore::MarginLess<QGridLayout>{this};
-    m_value = new QComboBox;
-    m_value->addItems({tr("false"), tr("true")});
+  auto lay = new iscore::MarginLess<QGridLayout>{this};
+  m_value = new QComboBox;
+  m_value->addItems({tr("false"), tr("true")});
 
-    lay->addWidget(m_value);
-    m_value->setCurrentIndex(value ? 1 : 0);
+  lay->addWidget(m_value);
+  m_value->setCurrentIndex(value ? 1 : 0);
 }
 
 State::Value BoolValueWidget::value() const
 {
-    return State::Value{bool(m_value->currentIndex())};
+  return State::Value{bool(m_value->currentIndex())};
+}
 }

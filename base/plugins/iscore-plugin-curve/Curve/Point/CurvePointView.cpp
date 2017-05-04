@@ -1,12 +1,12 @@
 #include <Curve/CurveStyle.hpp>
-#include <iscore/selection/Selectable.hpp>
 #include <QColor>
-#include <QtGlobal>
+#include <QCursor>
 #include <QGraphicsSceneEvent>
-#include <qnamespace.h>
 #include <QPainter>
 #include <QPen>
-#include <QCursor>
+#include <QtGlobal>
+#include <iscore/selection/Selectable.hpp>
+#include <qnamespace.h>
 
 #include "CurvePointModel.hpp"
 #include "CurvePointView.hpp"
@@ -14,94 +14,87 @@
 
 class QStyleOptionGraphicsItem;
 class QWidget;
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 namespace Curve
 {
-static const qreal radius = 2.5;
-PointView::PointView(
-        const PointModel* model,
-        const Curve::Style& style,
-        QGraphicsItem* parent):
-    QGraphicsObject{parent},
-    m_style{style}
-{
-    this->setZValue(2);
-    this->setCursor(Qt::CrossCursor);
+const qreal radius = 2.5;
+const QRectF ellipse{-radius, -radius, 2 * radius, 2 * radius};
 
-    setModel(model);
+PointView::PointView(
+    const PointModel* model, const Curve::Style& style, QGraphicsItem* parent)
+    : QGraphicsItem{parent}, m_style{style}
+{
+  this->setZValue(2);
+  this->setCursor(Qt::CrossCursor);
+  this->setFlag(ItemIsFocusable, false);
+  // Bad on retina. :( this->setCacheMode(QGraphicsItem::DeviceCoordinateCache);
+
+  setModel(model);
 }
 
 void PointView::setModel(const PointModel* model)
 {
-    m_model = model;
-    if(m_model)
-    {
-        con(m_model->selection, &Selectable::changed,
-            this, &PointView::setSelected);
-    }
+  m_model = model;
+  if (m_model)
+  {
+    con(m_model->selection, &Selectable::changed, this,
+        &PointView::setSelected);
+  }
 }
 
 const PointModel& PointView::model() const
 {
-    return *m_model;
+  return *m_model;
 }
 
 const Id<PointModel>& PointView::id() const
 {
-    return m_model->id();
+  return m_model->id();
 }
 
 QRectF PointView::boundingRect() const
 {
-    qreal gripSize = radius * 2;
-    return {-gripSize, -gripSize, 2 * gripSize, 2 * gripSize};
+  const qreal gripSize = radius * 2;
+  return {-gripSize, -gripSize, 2 * gripSize, 2 * gripSize};
 }
 
 void PointView::paint(
-        QPainter *painter,
-        const QStyleOptionGraphicsItem *option,
-        QWidget *widget)
+    QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
 {
-    if(!m_enabled)
-        return;
+  painter->setRenderHint(QPainter::Antialiasing, true);
+  if(!m_selected)
+  {
+    painter->setPen(m_style.PenPoint);
+    painter->setBrush(m_style.BrushPoint);
+  }
+  else
+  {
+    painter->setPen(m_style.PenPointSelected);
+    painter->setBrush(m_style.BrushPointSelected);
+  }
 
-    QPen pen;
-    QColor c = m_selected
-               ? m_style.PointSelected
-               : m_style.Point;
-
-    pen.setColor(c);
-    pen.setWidth(1);
-    painter->setPen(pen);
-    painter->setBrush(c);
-
-    pen.setCosmetic(true);
-    pen.setWidth(1);
-
-    painter->setPen(pen);
-    painter->drawEllipse(QRectF{-radius, -radius, 2*radius, 2*radius});
+  painter->drawEllipse(ellipse);
+  painter->setRenderHint(QPainter::Antialiasing, false);
 }
 
 void PointView::setSelected(bool selected)
 {
-    m_selected = selected;
-    update();
+  m_selected = selected;
+  update();
 }
 
 void PointView::enable()
 {
-    m_enabled = true;
-    update();
+  this->setVisible(true);
 }
 
 void PointView::disable()
 {
-    m_enabled = false;
-    update();
+  this->setVisible(false);
 }
 
 void PointView::contextMenuEvent(QGraphicsSceneContextMenuEvent* ev)
 {
-    emit contextMenuRequested(ev->screenPos(), ev->scenePos());
+  emit contextMenuRequested(ev->screenPos(), ev->scenePos());
 }
 }

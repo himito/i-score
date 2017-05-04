@@ -3,7 +3,7 @@ project(iscore_lib_base LANGUAGES CXX)
 iscore_common_setup()
 
 # Packages
-find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets Svg QuickWidgets)
+find_package(Qt5 5.7 REQUIRED COMPONENTS Core Widgets Svg QuickWidgets)
 
 # Files & main target
 file(GLOB_RECURSE HEADERS
@@ -14,43 +14,43 @@ qt5_add_resources(QRCS "${CMAKE_CURRENT_SOURCE_DIR}/resources/iscore.qrc")
 set(SRCS
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/StringConstants.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/InvisibleRootNodeSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/ObjectPathSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/SettableIdentifierGeneration.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/AnySerialization.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/tree/InvisibleRootNodeSerialization.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/path/ObjectPathSerialization.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/IdentifierGeneration.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/CommandDataSerialization.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/customfactory/FactoryInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/customfactory/FactoryFamily.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/customfactory/SerializableInterface.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/ElementPluginModelSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/ElementPluginModelListSerialization.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/AggregateCommand.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/Command.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/CommandData.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/CommandGeneratorMap.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/PropertyCommand.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/SerializableCommand.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/command/Validity/ValidityChecker.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/component/Component.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/Component.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/application/ApplicationContext.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/application/ApplicationComponents.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/actions/Action.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/actions/ActionManager.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/actions/MenuManager.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/actions/ToolbarManager.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/document/DocumentInterface.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/locking/ObjectLocker.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateFactoryInterface.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateModelInterface.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateViewInterface.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegatePresenterInterface.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/ElementPluginModel.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/ElementPluginModelList.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/application/GUIApplicationContextPlugin.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateFactory.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateModel.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegateView.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/DocumentDelegatePresenter.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/documentdelegate/plugin/DocumentPlugin.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/application/GUIApplicationPlugin.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/panel/PanelDelegate.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/panel/PanelDelegateFactory.cpp"
 
@@ -68,7 +68,7 @@ set(SRCS
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/FactoryFamily_QtInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/FactoryInterface_QtInterface.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/GUIApplicationContextPlugin_QtInterface.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/GUIApplicationPlugin_QtInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/PluginRequirements_QtInterface.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/plugins/qt_interfaces/CommandFactory_QtInterface.cpp"
 
@@ -77,12 +77,16 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/DataStreamVisitor.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/JSONObjectVisitor.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/serialization/QtTypesJsonVisitors.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/NamedObjectSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/ObjectIdentifierSerialization.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/IdentifiedObjectAbstract.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/NamedObject.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/ObjectPath.cpp"
+
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/path/ObjectIdentifierSerialization.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/IdentifiedObjectAbstract.cpp"
+
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/path/ObjectPath.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/path/RelativePath.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/tools/RandomNameProvider.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/ModelMetadata.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/Skin.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/model/ColorReference.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/statemachine/GraphicsSceneToolPalette.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/statemachine/CommonSelectionState.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/GraphicsItem.cpp"
@@ -91,6 +95,7 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/SetIcons.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/QmlContainerPanel.cpp" # TODO MOVEME
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/Separator.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/iscore/widgets/JS/JSEdit.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/core/application/SafeQApplication.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/core/application/ApplicationInterface.cpp"
@@ -127,7 +132,7 @@ set(SRCS
 add_library(iscore_lib_base ${SRCS} ${HEADERS} ${QRCS})
 
 target_link_libraries(iscore_lib_base
-        PUBLIC Qt5::Core Qt5::Widgets Qt5::QuickWidgets
+        PUBLIC Qt5::Core Qt5::Widgets Qt5::Qml Qt5::QuickWidgets ossia
     PRIVATE Qt5::Svg QRecentFilesMenu)
 
 set_property(TARGET iscore_lib_base PROPERTY COTIRE_CXX_PREFIX_HEADER_INIT "${CMAKE_CURRENT_SOURCE_DIR}/iscore/prefix.hpp")

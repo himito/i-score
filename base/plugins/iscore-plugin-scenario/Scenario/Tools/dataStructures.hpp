@@ -1,56 +1,63 @@
 #pragma once
 
 /*
-This file is used to define simple data structure to simplify the code when needed
+This file is used to define simple data structure to simplify the code when
+needed
 */
 
 #include <Process/TimeValue.hpp>
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
 #include <QByteArray>
 #include <QMap>
 #include <QPair>
 #include <Scenario/Document/Event/ExecutionStatus.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/Identifier.hpp>
+#include <iscore/tools/std/HashMap.hpp>
+#include <iscore_plugin_scenario_export.h>
 
 namespace Scenario
 {
 class ConstraintModel;
-class ConstraintViewModel;
-class RackModel;
 class TimeNodeModel;
 
-struct TimenodeProperties {
-    TimeValue oldDate;
-    TimeValue newDate;
-    double date;
+struct TimenodeProperties
+{
+  TimeVal oldDate;
+  TimeVal newDate;
+  double date;
 
-    double date_min;
-    double date_max;
+  double date_min;
+  double date_max;
 
-    ExecutionStatus status{ExecutionStatus::Editing};
+  ExecutionStatus status{ExecutionStatus::Editing};
 };
 
-struct ConstraintProperties {
-    TimeValue oldMin;
-    TimeValue newMin;
-    TimeValue oldMax;
-    TimeValue newMax;
-    QPair<
-        QPair<
-            Path<ConstraintModel>,
-            QByteArray
-        >, // The constraint data
-        QMap< // Mapping for the view models of this constraint
-            Id<ConstraintViewModel>,
-            Id<RackModel>
-        >
-     > savedDisplay;
+struct ISCORE_PLUGIN_SCENARIO_EXPORT ConstraintSaveData
+{
+  ConstraintSaveData() = default;
+  ConstraintSaveData(const ConstraintModel&);
 
-    ExecutionStatus status{ExecutionStatus::Editing};
+  void reload(ConstraintModel&) const;
+
+  Path<ConstraintModel> constraintPath;
+  QVector<QByteArray> processes;
+  QVector<QByteArray> racks;
 };
 
-struct ElementsProperties {
-    QMap<Id<TimeNodeModel>, TimenodeProperties> timenodes;
-    QMap<Id<ConstraintModel>, ConstraintProperties> constraints;
+struct ConstraintProperties : public ConstraintSaveData
+{
+  using ConstraintSaveData::ConstraintSaveData;
+
+  TimeVal oldMin;
+  TimeVal newMin;
+  TimeVal oldMax;
+  TimeVal newMax;
+  ExecutionStatus status{ExecutionStatus::Editing};
+};
+
+struct ElementsProperties
+{
+  iscore::hash_map<Id<TimeNodeModel>, TimenodeProperties> timenodes;
+  iscore::hash_map<Id<ConstraintModel>, ConstraintProperties> constraints;
 };
 }

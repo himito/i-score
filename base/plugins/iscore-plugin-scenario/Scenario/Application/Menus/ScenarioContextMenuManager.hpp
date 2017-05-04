@@ -21,20 +21,27 @@ namespace Scenario
 {
 class SlotPresenter;
 class TemporalScenarioPresenter;
+class TemporalConstraintPresenter;
+class FullViewConstraintPresenter;
 class ScenarioContextMenuManager final : public QObject
 {
-    public:
-        static void createSlotContextMenu(
-                const iscore::DocumentContext& docContext,
-                QMenu& menu,
-                const SlotPresenter& slotp);
+public:
+  static void createSlotContextMenu(
+      const iscore::DocumentContext& docContext,
+      QMenu& menu,
+      const FullViewConstraintPresenter& slotp,
+      int slot_index);
+  static void createSlotContextMenu(
+      const iscore::DocumentContext& docContext,
+      QMenu& menu,
+      const TemporalConstraintPresenter& slotp,
+      int slot_index);
 
-        static void createLayerContextMenu(
-                QMenu& menu,
-                QPoint pos,
-                QPointF scenepos,
-                const Process::LayerContextMenuManager&,
-                const Process::LayerPresenter& pres);
-
+  static void createLayerContextMenu(
+      QMenu& menu,
+      QPoint pos,
+      QPointF scenepos,
+      const Process::LayerContextMenuManager&,
+      const Process::LayerPresenter& pres);
 };
 }

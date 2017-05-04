@@ -1,18 +1,16 @@
 #pragma once
 
-#include <Inspector/InspectorWidgetBase.hpp>
 #include <Inspector/InspectorSectionWidget.hpp>
+#include <Inspector/InspectorWidgetBase.hpp>
+#include <Scenario/Inspector/Expression/ExpressionMenu.hpp>
+#include <iscore/selection/SelectionDispatcher.hpp>
 #include <list>
 #include <vector>
 
 class QLabel;
+class QComboBox;
 class QLineEdit;
 class QWidget;
-namespace iscore {
-class Document;
-}  // namespace iscore
-
-
 namespace Scenario
 {
 class StateModel;
@@ -22,49 +20,47 @@ class MetadataWidget;
 class TriggerInspectorWidget;
 /*!
  * \brief The EventInspectorWidget class
- *      Inherits from InspectorWidgetInterface. Manages an inteface for an Event (Timebox) element.
+ *      Inherits from InspectorWidgetInterface. Manages an inteface for an
+ * Event (Timebox) element.
  */
 class EventInspectorWidget final : public QWidget
 {
-        Q_OBJECT
-    public:
-        explicit EventInspectorWidget(
-                const EventModel& object,
-                const iscore::DocumentContext& context,
-                QWidget* parent = nullptr);
+  Q_OBJECT
+public:
+  explicit EventInspectorWidget(
+      const EventModel& object,
+      const iscore::DocumentContext& context,
+      QWidget* parent = nullptr);
 
-        void addState(const StateModel& state);
-        //void removeState(const Id<StateModel>& state);
-        void focusState(const StateModel* state);
+  void addState(const StateModel& state);
+  // void removeState(const Id<StateModel>& state);
+  void focusState(const StateModel* state);
 
-        CommandDispatcher<>* commandDispatcher() const
-        { return m_commandDispatcher; }
+signals:
+  void expandEventSection(bool b);
 
-        iscore::SelectionDispatcher& selectionDispatcher() const
-        { return *m_selectionDispatcher; }
+private:
+  void updateDisplayedValues();
+  void on_conditionChanged();
+  void on_conditionReset();
 
-    signals:
-        void expandEventSection(bool b);
+  std::list<QWidget*> m_properties;
 
-    private:
-        void updateDisplayedValues();
-        void on_conditionChanged();
-        void on_conditionReset();
+  std::map<Id<StateModel>, Inspector::InspectorSectionWidget*>
+      m_statesSections;
+  std::vector<QWidget*> m_states;
 
-        std::list<QWidget*> m_properties;
+  // QLineEdit* m_stateLineEdit{};
+  QWidget* m_statesWidget{};
+  const EventModel& m_model;
+  const iscore::DocumentContext& m_context;
+  CommandDispatcher<> m_commandDispatcher;
+  iscore::SelectionDispatcher m_selectionDispatcher;
 
-        std::map<Id<StateModel>, Inspector::InspectorSectionWidget*> m_statesSections;
-        std::vector<QWidget*> m_states;
+  MetadataWidget* m_metadata{};
 
-        //QLineEdit* m_stateLineEdit{};
-        QWidget* m_statesWidget{};
-        const EventModel& m_model;
-        const iscore::DocumentContext& m_context;
-        CommandDispatcher<>* m_commandDispatcher{};
-        std::unique_ptr<iscore::SelectionDispatcher> m_selectionDispatcher;
-
-        MetadataWidget* m_metadata {};
-
-        ExpressionEditorWidget* m_exprEditor{};
+  ExpressionMenu m_menu;
+  ExpressionEditorWidget* m_exprEditor{};
+  QComboBox* m_offsetBehavior{};
 };
 }

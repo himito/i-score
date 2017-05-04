@@ -1,12 +1,12 @@
 #include <Device/Protocol/ProtocolList.hpp>
 
-#include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/serialization/JSONVisitor.hpp>
 #include <QDebug>
 #include <QJsonObject>
 #include <QJsonValue>
 #include <QString>
 #include <QVariant>
+#include <iscore/serialization/DataStreamVisitor.hpp>
+#include <iscore/serialization/JSONVisitor.hpp>
 
 #include "DeviceSettings.hpp"
 #include "ProtocolFactoryInterface.hpp"
@@ -14,86 +14,94 @@
 #include <iscore/plugins/customfactory/FactoryFamily.hpp>
 
 #include <iscore/plugins/customfactory/StringFactoryKey.hpp>
-#include <iscore/serialization/JSONValueVisitor.hpp>
 #include <iscore/plugins/customfactory/StringFactoryKeySerialization.hpp>
+#include <iscore/serialization/JSONValueVisitor.hpp>
 
-template <typename T> class Reader;
-template <typename T> class Writer;
 
-template<>
-ISCORE_LIB_DEVICE_EXPORT void Visitor<Reader<DataStream>>::readFrom(const Device::DeviceSettings& n)
+template <>
+ISCORE_LIB_DEVICE_EXPORT void
+DataStreamReader::read(const Device::DeviceSettings& n)
 {
-    m_stream << n.name
-             << n.protocol;
+  m_stream << n.name << n.protocol;
 
-    // TODO try to see if this pattern is refactorable with the similar thing
-    // usef for CurveSegmentData.
+  // TODO try to see if this pattern is refactorable with the similar thing
+  // usef for CurveSegmentData.
 
-    auto& pl = context.components.factory<Device::DynamicProtocolList>();
-    auto prot = pl.get(n.protocol);
-    if(prot)
-    {
-        prot->serializeProtocolSpecificSettings(n.deviceSpecificSettings, this->toVariant());
-    }
-    else
-    {
-        qDebug() << "Warning: could not serialize device " << n.name;
-    }
+  auto& pl = components.interfaces<Device::ProtocolFactoryList>();
+  auto prot = pl.get(n.protocol);
+  if (prot)
+  {
+    prot->serializeProtocolSpecificSettings(
+        n.deviceSpecificSettings, this->toVariant());
+  }
+  else
+  {
+    qDebug() << "Warning: could not serialize device " << n.name;
+  }
 
-    insertDelimiter();
+  insertDelimiter();
 }
 
-template<>
-ISCORE_LIB_DEVICE_EXPORT void Visitor<Writer<DataStream>>::writeTo(Device::DeviceSettings& n)
+template <>
+ISCORE_LIB_DEVICE_EXPORT void
+DataStreamWriter::write(Device::DeviceSettings& n)
 {
-    m_stream >> n.name
-             >> n.protocol;
+  m_stream >> n.name >> n.protocol;
 
-    auto& pl = context.components.factory<Device::DynamicProtocolList>();
-    auto prot = pl.get(n.protocol);
-    if(prot)
-    {
-        n.deviceSpecificSettings = prot->makeProtocolSpecificSettings(this->toVariant());
-    }
-    else
-    {
-        qDebug() << "Warning: could not load device " << n.name;
-    }
+  auto& pl = components.interfaces<Device::ProtocolFactoryList>();
+  auto prot = pl.get(n.protocol);
+  if (prot)
+  {
+    n.deviceSpecificSettings
+        = prot->makeProtocolSpecificSettings(this->toVariant());
+  }
+  else
+  {
+    qDebug() << "Warning: could not load device " << n.name;
+  }
 
-    checkDelimiter();
-}
-template<>
-ISCORE_LIB_DEVICE_EXPORT void Visitor<Reader<JSONObject>>::readFrom(const Device::DeviceSettings& n)
-{
-    m_obj[iscore::StringConstant().Name] = n.name;
-    m_obj[iscore::StringConstant().Protocol] = toJsonValue(n.protocol);
-
-    auto& pl = context.components.factory<Device::DynamicProtocolList>();
-    auto prot = pl.get(n.protocol);
-    if(prot)
-    {
-        prot->serializeProtocolSpecificSettings(n.deviceSpecificSettings, this->toVariant());
-    }
-    else
-    {
-        qDebug() << "Warning: could not serialize device " << n.name;
-    }
+  checkDelimiter();
 }
 
-template<>
-ISCORE_LIB_DEVICE_EXPORT void Visitor<Writer<JSONObject>>::writeTo(Device::DeviceSettings& n)
+template <>
+ISCORE_LIB_DEVICE_EXPORT void
+JSONObjectReader::read(const Device::DeviceSettings& n)
 {
-    n.name = m_obj[iscore::StringConstant().Name].toString();
-    n.protocol = fromJsonValue<UuidKey<Device::ProtocolFactory>>(m_obj[iscore::StringConstant().Protocol]);
+  obj[strings.Name] = n.name;
+  obj[strings.Protocol] = toJsonValue(n.protocol);
 
-    auto& pl = context.components.factory<Device::DynamicProtocolList>();
-    auto prot = pl.get(n.protocol);
-    if(prot)
+  auto& pl = components.interfaces<Device::ProtocolFactoryList>();
+  auto prot = pl.get(n.protocol);
+  if (prot)
+  {
+    prot->serializeProtocolSpecificSettings(
+        n.deviceSpecificSettings, this->toVariant());
+  }
+  else
+  {
+    qDebug() << "Warning: could not serialize device " << n.name;
+  }
+}
+
+template <>
+ISCORE_LIB_DEVICE_EXPORT void
+JSONObjectWriter::write(Device::DeviceSettings& n)
+{
+  n.name = obj[strings.Name].toString();
+  n.protocol = fromJsonValue<UuidKey<Device::ProtocolFactory>>(
+      obj[strings.Protocol]);
+
+  auto pl = components.findInterfaces<Device::ProtocolFactoryList>();
+  if(pl)
+  {
+    if (auto prot = pl->get(n.protocol))
     {
-        n.deviceSpecificSettings = prot->makeProtocolSpecificSettings(this->toVariant());
+      n.deviceSpecificSettings
+          = prot->makeProtocolSpecificSettings(this->toVariant());
     }
     else
     {
-        qDebug() << "Warning: could not load device " << n.name;
+      qDebug() << "Warning: could not load device " << n.name;
     }
+  }
 }

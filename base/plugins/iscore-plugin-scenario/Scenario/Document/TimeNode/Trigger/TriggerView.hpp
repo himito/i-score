@@ -1,5 +1,5 @@
 #pragma once
-#include <QGraphicsItem>
+#include <QGraphicsSvgItem>
 #include <QRect>
 #include <Scenario/Document/ScenarioDocument/ScenarioDocumentViewConstants.hpp>
 
@@ -11,28 +11,30 @@ class QWidget;
 
 namespace Scenario
 {
-class TriggerView final : public QGraphicsObject
+class TriggerView final : public QGraphicsSvgItem
 {
-        Q_OBJECT
-    public:
-        TriggerView(QGraphicsItem* parent);
-        QRectF boundingRect() const override;
-        void paint(QPainter *painter,
-                   const QStyleOptionGraphicsItem *option,
-                   QWidget *widget) override;
+  Q_OBJECT
+  Q_INTERFACES(QGraphicsItem)
 
-        static constexpr int static_type()
-        { return QGraphicsItem::UserType + ItemType::Trigger; }
-        int type() const override
-        { return static_type(); }
+public:
+  TriggerView(QGraphicsItem* parent);
 
-    signals:
-        void pressed();
+  static constexpr int static_type()
+  {
+    return QGraphicsItem::UserType + ItemType::Trigger;
+  }
+  int type() const override
+  {
+    return static_type();
+  }
 
-    protected:
-        void mousePressEvent(QGraphicsSceneMouseEvent*) override;
+signals:
+  void pressed();
 
-    private:
-        QGraphicsSvgItem* m_item{};
+protected:
+  void mousePressEvent(QGraphicsSceneMouseEvent*) override;
+
+private:
+  QGraphicsSvgItem* m_item{};
 };
 }

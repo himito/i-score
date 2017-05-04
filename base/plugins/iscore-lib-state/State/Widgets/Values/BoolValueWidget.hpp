@@ -1,17 +1,20 @@
 #pragma once
-#include <State/Value.hpp>
 #include "ValueWidget.hpp"
+#include <State/Value.hpp>
 
 class QComboBox;
 class QWidget;
 
-class ISCORE_LIB_STATE_EXPORT  BoolValueWidget : public State::ValueWidget
+namespace State
 {
-    public:
-        BoolValueWidget(bool value, QWidget* parent = nullptr);
+class ISCORE_LIB_STATE_EXPORT BoolValueWidget final : public State::ValueWidget
+{
+public:
+  BoolValueWidget(bool value, QWidget* parent = nullptr);
 
-        State::Value value() const override;
+  State::Value value() const override;
 
-    private:
-        QComboBox* m_value;
+private:
+  QComboBox* m_value;
 };
+}

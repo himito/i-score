@@ -1,7 +1,8 @@
 #pragma once
+#include <iscore/command/Command.hpp>
 namespace iscore
 {
-    class CommandStackFacade;
+class CommandStackFacade;
 }
 
 /**
@@ -17,18 +18,16 @@ namespace iscore
  */
 class ICommandDispatcher
 {
-    public:
-        ICommandDispatcher(const iscore::CommandStackFacade& stack):
-            m_stack{stack}
-        {
+public:
+  ICommandDispatcher(const iscore::CommandStackFacade& stack) : m_stack{stack}
+  {
+  }
 
-        }
+  const iscore::CommandStackFacade& stack() const
+  {
+    return m_stack;
+  }
 
-        const iscore::CommandStackFacade& stack() const
-        {
-            return m_stack;
-        }
-
-    private:
-        const iscore::CommandStackFacade& m_stack;
+private:
+  const iscore::CommandStackFacade& m_stack;
 };

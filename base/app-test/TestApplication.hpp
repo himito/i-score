@@ -1,7 +1,6 @@
 #pragma once
 #include <core/application/ApplicationInterface.hpp>
 #include <core/application/ApplicationSettings.hpp>
-#include <iscore/tools/NamedObject.hpp>
 
 namespace iscore {
 class Settings;
@@ -12,14 +11,16 @@ class Presenter;
 class QApplication;
 
 class TestApplication final :
-        public NamedObject,
-        public iscore::ApplicationInterface
+        public QObject,
+        public iscore::GUIApplicationInterface
 {
     public:
         TestApplication(int& argc, char** argv);
         ~TestApplication();
 
-        const iscore::ApplicationContext& context() const override;
+        const iscore::GUIApplicationContext& context() const override;
+        const iscore::ApplicationComponents& components() const override
+        { return context().components; }
 
         int exec();
 

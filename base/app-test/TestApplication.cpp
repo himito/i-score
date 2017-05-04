@@ -11,20 +11,16 @@
 #include <iscore/selection/Selection.hpp>
 
 #include <iscore/plugins/settingsdelegate/SettingsDelegateFactory.hpp>
-#include <iscore/plugins/documentdelegate/DocumentDelegateFactoryInterface.hpp>
-#include <iscore/plugins/documentdelegate/plugin/DocumentDelegatePluginModel.hpp>
+#include <iscore/plugins/documentdelegate/DocumentDelegateFactory.hpp>
+#include <iscore/plugins/documentdelegate/plugin/DocumentPlugin.hpp>
 #include <core/presenter/CoreApplicationPlugin.hpp>
 #include <core/document/DocumentModel.hpp>
 TestApplication::TestApplication(int &argc, char **argv):
-    NamedObject{"toto", nullptr}
+    QObject{nullptr}
 {
     m_app = new SafeQApplication{argc, argv};
     m_instance = this;
     this->setParent(m_app);
-
-    qRegisterMetaType<ObjectIdentifierVector> ("ObjectIdentifierVector");
-    qRegisterMetaType<Selection>("Selection");
-    qRegisterMetaType<Id<iscore::DocumentModel>>("Id<DocumentModel>");
     // Settings
     m_settings = std::make_unique<iscore::Settings> ();
 
@@ -34,40 +30,14 @@ TestApplication::TestApplication(int &argc, char **argv):
     auto& ctx = m_presenter->applicationContext();
 
     // Plugins
-    iscore::ApplicationRegistrar registrar{
+    iscore::GUIApplicationRegistrar registrar{
         m_presenter->components(),
                 ctx,
-                *m_view,
                 m_presenter->menuManager(),
                 m_presenter->toolbarManager(),
                 m_presenter->actionManager()};
 
-    registrar.registerFactory(std::make_unique<iscore::DocumentDelegateList>());
-    auto panels = std::make_unique<iscore::PanelDelegateFactoryList>();
-    panels->insert(std::make_unique<iscore::UndoPanelDelegateFactory>());
-    registrar.registerFactory(std::move(panels));
-    registrar.registerFactory(std::make_unique<iscore::DocumentPluginFactoryList>());
-    registrar.registerFactory(std::make_unique<iscore::SettingsDelegateFactoryList>());
-
-    registrar.registerApplicationContextPlugin(new iscore::CoreApplicationPlugin{ctx, *m_presenter});
-    registrar.registerApplicationContextPlugin(new iscore::UndoApplicationPlugin{ctx});
-
-    iscore::PluginLoader::loadPlugins(registrar, ctx);
-    // Load the settings
-    for(auto& elt : ctx.components.factory<iscore::SettingsDelegateFactoryList>())
-    {
-        m_settings->setupSettingsPlugin(ctx, elt);
-    }
-
-    for(iscore::GUIApplicationContextPlugin* app_plug : ctx.components.applicationPlugins())
-    {
-        app_plug->initialize();
-    }
-
-    for(auto& panel_fac : context().components.factory<iscore::PanelDelegateFactoryList>())
-    {
-        registrar.registerPanel(panel_fac);
-    }
+    GUIApplicationInterface::loadPluginData(ctx, registrar, *m_settings, *m_presenter);
 
     m_view->show();
 }
@@ -82,7 +52,7 @@ TestApplication::~TestApplication()
     delete m_app;
 }
 
-const iscore::ApplicationContext &TestApplication::context() const
+const iscore::GUIApplicationContext& TestApplication::context() const
 {
     return m_presenter->applicationContext();
 }

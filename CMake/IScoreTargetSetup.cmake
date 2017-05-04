@@ -50,8 +50,16 @@ endfunction()
 function(iscore_set_msvc_compile_options theTarget)
     target_compile_options(${theTarget} PUBLIC
 #    "/Za"
-    "/wd4180"
-    "/wd4224"
+    "-wd4180"
+    "-wd4224"
+    "-wd4068" # pragma mark -
+    "-wd4250" # inherits via dominance
+    "-wd4251" # DLL stuff
+    "-wd4275" # DLL stuff
+    "-wd4244" # return : conversion from foo to bar, possible loss of data
+    "-wd4800" # conversion from int to bool, performance warning
+    "-wd4503" # decorated name length exceeded
+    "-MP"
     )
 
     target_compile_definitions(${theTarget} PUBLIC
@@ -64,8 +72,6 @@ endfunction()
 
 function(iscore_set_gcc_compile_options theTarget)
     # set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror -Wno-error=shadow -Wno-error=switch -Wno-error=switch-enum -Wno-error=empty-body -Wno-error=overloaded-virtual -Wno-error=suggest-final-methods -Wno-error=suggest-final-types -Wno-error=suggest-override -Wno-error=maybe-uninitialized")
-
-    if (GCC_VERSION VERSION_GREATER 5.2 OR GCC_VERSION VERSION_EQUAL 5.2)
         target_compile_options(${theTarget} PUBLIC
           -Wno-div-by-zero
           -Wsuggest-final-types
@@ -74,40 +80,79 @@ function(iscore_set_gcc_compile_options theTarget)
           -Wpointer-arith
           -Wsuggest-attribute=noreturn
           -Wno-missing-braces
+          -Wmissing-field-initializers
           -Wformat=2
           -Wno-format-nonliteral
           -Wpedantic
+          -Werror=return-local-addr
           )
 
+      if(NOT ISCORE_SANITIZE)
       target_compile_options(${theTarget} PUBLIC
-          -ffunction-sections
-          -fdata-sections
-          -Wl,--gc-sections
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-s>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-flto>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fuse-linker-plugin>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fno-fat-lto-objects>"
-          )
-      target_link_libraries(${theTarget} PUBLIC
-          -ffunction-sections
-          -fdata-sections
-          -Wl,--gc-sections
+          "$<$<CONFIG:Release>:-ffunction-sections>"
+          "$<$<CONFIG:Release>:-fdata-sections>"
+          "$<$<CONFIG:Release>:-Wl,--gc-sections>"
+          "$<$<CONFIG:Debug>:-O0>"
+          "$<$<CONFIG:Debug>:-ggdb>"
+      )
 
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-s>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-flto>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fuse-linker-plugin>"
-          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fno-fat-lto-objects>"
+    if(ISCORE_SPLIT_DEBUG)
+      target_link_libraries(${theTarget} PUBLIC
+        #          "$<$<CONFIG:Debug>:-Wa,--compress-debug-sections>"
+        #          "$<$<CONFIG:Debug>:-Wl,--compress-debug-sections=zlib>"
+                  "$<$<CONFIG:Debug>:-fvar-tracking-assignments>"
+                  "$<$<CONFIG:Debug>:-Wl,--gdb-index>"
+        )
+    endif()
+
+      get_target_property(NO_LTO ${theTarget} ISCORE_TARGET_NO_LTO)
+      if(NOT ${NO_LTO})
+          target_compile_options(${theTarget} PUBLIC
+#            "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-s>"
+#            "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-flto>"
+#            "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fuse-linker-plugin>"
+#            "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fno-fat-lto-objects>"
           )
+      endif()
+      target_link_libraries(${theTarget} PUBLIC
+          "$<$<CONFIG:Release>:-ffunction-sections>"
+          "$<$<CONFIG:Release>:-fdata-sections>"
+          "$<$<CONFIG:Release>:-Wl,--gc-sections>"
+          "$<$<CONFIG:Debug>:-fvar-tracking-assignments>"
+          "$<$<CONFIG:Debug>:-O0>"
+          "$<$<CONFIG:Debug>:-ggdb>"
+
+#          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-s>"
+#          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-flto>"
+#          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fuse-linker-plugin>"
+#          "$<$<BOOL:${ISCORE_ENABLE_LTO}>:-fno-fat-lto-objects>"
+          )
+        if(ISCORE_SPLIT_DEBUG)
+          target_link_libraries(${theTarget} PUBLIC
+            #          "$<$<CONFIG:Debug>:-Wa,--compress-debug-sections>"
+            #          "$<$<CONFIG:Debug>:-Wl,--compress-debug-sections=zlib>"
+          "$<$<CONFIG:Debug>:-gsplit-dwarf>"
+          "$<$<CONFIG:Debug>:-Wl,--gdb-index>"
+          "$<$<CONFIG:Debug>:-fdebug-types-section>"
+          "$<$<CONFIG:Debug>:-ggnu-pubnames>"
+          )
+        endif()
+
+      endif()
       # -Wcast-qual is nice but requires more work...
       # -Wzero-as-null-pointer-constant  is garbage
       # Too much clutter :set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wswitch-enum -Wshadow  -Wsuggest-attribute=const  -Wsuggest-attribute=pure ")
-    endif()
 endfunction()
 
 function(iscore_set_clang_compile_options theTarget)
     target_compile_options(${theTarget} PUBLIC
         -Wno-gnu-string-literal-operator-template
+        -Wno-missing-braces
+        -Werror=return-stack-address
+        -Wmissing-field-initializers
+        -Wno-gnu-statement-expression
         -ftemplate-backtrace-limit=0
+        "$<$<CONFIG:Debug>:-O0>"
         )
     #if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
     #	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Weverything -Wno-c++98-compat -Wno-exit-time-destructors -Wno-padded")
@@ -115,9 +160,21 @@ function(iscore_set_clang_compile_options theTarget)
 endfunction()
 
 function(iscore_set_linux_compile_options theTarget)
-  if(NOT ISCORE_SANITIZE)
     use_gold(${theTarget})
-  endif()
+
+    if(NOT ISCORE_SANITIZE AND LINKER_IS_GOLD AND ISCORE_SPLIT_DEBUG)
+        target_compile_options(${theTarget} PUBLIC
+            # Debug options
+            "$<$<CONFIG:Debug>:-gsplit-dwarf>")
+    endif()
+    target_compile_options(${theTarget} PUBLIC
+        # Debug options
+        "$<$<CONFIG:Debug>:-ggdb>"
+        "$<$<CONFIG:Debug>:-O0>")
+    target_link_libraries(${theTarget} PUBLIC
+        # Debug options
+        "$<$<CONFIG:Debug>:-ggdb>"
+        "$<$<CONFIG:Debug>:-O0>")
 endfunction()
 
 function(iscore_set_unix_compile_options theTarget)
@@ -135,25 +192,21 @@ function(iscore_set_unix_compile_options theTarget)
     -pedantic
     -Woverloaded-virtual
     -pipe
-    -Wmissing-declarations
+    -Wno-missing-declarations
     -Werror=redundant-decls
     -Werror=return-type
     -Werror=trigraphs
 
-    # Debug options
-    "$<$<AND:$<CONFIG:Debug>,$<NOT:$<PLATFORM_ID:Windows>>>:-gsplit-dwarf>"
-    "$<$<AND:$<CONFIG:Debug>,$<BOOL:${WIN32}>>:-Os>"
-    "$<$<AND:$<CONFIG:Debug>,$<NOT:$<BOOL:${WIN32}>>>:-O0>"
-    "$<$<CONFIG:Debug>:-g>"
-
     # Release options
     "$<$<AND:$<CONFIG:Release>,$<BOOL:${NACL}>>:-O3>"
     "$<$<AND:$<CONFIG:Release>,$<NOT:$<BOOL:${NACL}>>>:-Ofast>"
+    "$<$<AND:$<CONFIG:Release>,$<NOT:$<BOOL:${NACL}>>>:-fno-finite-math-only>"
     "$<$<AND:$<CONFIG:Release>,$<BOOL:${ISCORE_ENABLE_OPTIMIZE_CUSTOM}>>:-march=native>"
     )
 
     target_link_libraries(${theTarget} PUBLIC
         "$<$<CONFIG:Release>:-Ofast>"
+        "$<$<CONFIG:Release>:-fno-finite-math-only>"
         "$<$<AND:$<CONFIG:Release>,$<BOOL:${ISCORE_ENABLE_OPTIMIZE_CUSTOM}>>:-march=native>")
 endfunction()
 
@@ -172,12 +225,25 @@ function(iscore_set_compile_options theTarget)
       $<$<BOOL:${ISCORE_OPENGL}>:ISCORE_OPENGL>
       $<$<BOOL:${DEPLOYMENT_BUILD}>:ISCORE_DEPLOYMENT_BUILD>
       $<$<BOOL:${ISCORE_STATIC_PLUGINS}>:ISCORE_STATIC_PLUGINS>
-      $<$<BOOL:${ISCORE_STATIC_PLUGINS}>:QT_STATICPLUGIN>
       )
+  get_target_property(theType ${theTarget} TYPE)
+
+  if(${theType} MATCHES STATIC_LIBRARY)
+    target_compile_definitions(${TheTarget} PRIVATE
+      $<$<BOOL:${ISCORE_STATIC_PLUGINS}>:QT_STATICPLUGIN>
+    )
+  endif()
 
   if(ISCORE_SANITIZE)
-      sanitize_build(${theTarget})
+      get_target_property(NO_SANITIZE ${theTarget} ISCORE_TARGET_NO_SANITIZE)
+      if(NOT "${NO_SANITIZE}")
+          sanitize_build(${theTarget})
+      endif()
       # debugmode_build(${theTarget})
+  endif()
+
+  if (CXX_IS_GCC OR CXX_IS_CLANG)
+    iscore_set_unix_compile_options(${theTarget})
   endif()
 
   if (CXX_IS_CLANG)
@@ -190,10 +256,6 @@ function(iscore_set_compile_options theTarget)
 
   if(CXX_IS_GCC)
       iscore_set_gcc_compile_options(${theTarget})
-  endif()
-
-  if (CXX_IS_GCC OR CXX_IS_CLANG)
-    iscore_set_unix_compile_options(${theTarget})
   endif()
 
   # OS X
@@ -243,7 +305,7 @@ function(setup_iscore_common_lib_features TheTarget)
   generate_export_header(${TheTarget})
   if(NOT ISCORE_STATIC_PLUGINS)
     set_target_properties(${TheTarget} PROPERTIES CXX_VISIBILITY_PRESET hidden)
-    set_target_properties(${TheTarget} PROPERTIES VISIBILITY_INLINES_HIDDEN 1)
+      set_target_properties(${TheTarget} PROPERTIES VISIBILITY_INLINES_HIDDEN 1)
   endif()
 
   string(TOUPPER "${TheTarget}" UPPERCASE_PLUGIN_NAME)

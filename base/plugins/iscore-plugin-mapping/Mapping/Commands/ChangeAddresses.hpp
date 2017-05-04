@@ -1,58 +1,57 @@
 #pragma once
 #include <Device/Address/AddressSettings.hpp>
 #include <Mapping/Commands/MappingCommandFactory.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
 
 struct DataStreamInput;
 struct DataStreamOutput;
-namespace State {
+namespace State
+{
 struct Address;
-}  // namespace iscore
+} // namespace iscore
 
 namespace Mapping
 {
 class ProcessModel;
-class ChangeSourceAddress final : public iscore::SerializableCommand
+class ChangeSourceAddress final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(MappingCommandFactoryName(), ChangeSourceAddress, "ChangeSourceAddress")
-    public:
-        ChangeSourceAddress(
-                Path<ProcessModel>&& path,
-                const State::Address& newval);
+  ISCORE_COMMAND_DECL(
+      MappingCommandFactoryName(), ChangeSourceAddress, "ChangeSourceAddress")
+public:
+  ChangeSourceAddress(
+      const ProcessModel&, Device::FullAddressAccessorSettings newval);
 
-    public:
-        void undo() const override;
-        void redo() const override;
+public:
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput &) const override;
-        void deserializeImpl(DataStreamOutput &) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<ProcessModel> m_path;
-        Device::FullAddressSettings m_old, m_new;
+private:
+  Path<ProcessModel> m_path;
+  Device::FullAddressAccessorSettings m_old, m_new;
 };
 
-// TODO break me
-class ChangeTargetAddress final : public iscore::SerializableCommand
+class ChangeTargetAddress final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(MappingCommandFactoryName(), ChangeTargetAddress, "ChangeTargetAddress")
-    public:
-        ChangeTargetAddress(
-                Path<ProcessModel>&& path,
-                const State::Address& newval);
+  ISCORE_COMMAND_DECL(
+      MappingCommandFactoryName(), ChangeTargetAddress, "ChangeTargetAddress")
+public:
+  ChangeTargetAddress(const ProcessModel&, Device::FullAddressAccessorSettings);
 
-    public:
-        void undo() const override;
-        void redo() const override;
+public:
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput &) const override;
-        void deserializeImpl(DataStreamOutput &) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<ProcessModel> m_path;
-        Device::FullAddressSettings m_old, m_new;
+private:
+  Path<ProcessModel> m_path;
+  Device::FullAddressAccessorSettings m_old, m_new;
 };
 }

@@ -1,8 +1,8 @@
 #pragma once
 
-#include <QtGlobal>
 #include <QGraphicsItem>
 #include <QRect>
+#include <QtGlobal>
 #include <iscore_lib_process_export.h>
 
 class QPainter;
@@ -11,28 +11,39 @@ class QWidget;
 
 namespace Process
 {
-class ISCORE_LIB_PROCESS_EXPORT LayerView : public QGraphicsObject
+class ISCORE_LIB_PROCESS_EXPORT LayerView : public QObject,
+                                            public QGraphicsItem
 {
-    public:
-        using QGraphicsObject::QGraphicsObject;
-        virtual ~LayerView();
+  Q_OBJECT
+  Q_INTERFACES(QGraphicsItem)
+public:
+  LayerView(QGraphicsItem* parent);
 
-        QRectF boundingRect() const final override;
-        void paint(QPainter *painter,
-                   const QStyleOptionGraphicsItem *option,
-                   QWidget *widget) final override;
+  virtual ~LayerView();
 
-        void setHeight(qreal height);
-        qreal height() const;
+  QRectF boundingRect() const final override;
+  void paint(
+      QPainter* painter,
+      const QStyleOptionGraphicsItem* option,
+      QWidget* widget) final override;
 
-        void setWidth(qreal width);
-        qreal width() const;
+  void setHeight(qreal height);
+  qreal height() const;
 
-    protected:
-        virtual void paint_impl(QPainter*) const = 0;
+  void setWidth(qreal width);
+  qreal width() const;
 
-    private:
-        qreal m_height {};
-        qreal m_width {};
+signals:
+  void heightChanged();
+  void widthChanged();
+
+protected:
+  virtual void paint_impl(QPainter*) const = 0;
+  void hoverEnterEvent(QGraphicsSceneHoverEvent* event) override;
+  void hoverLeaveEvent(QGraphicsSceneHoverEvent* event) override;
+
+private:
+  qreal m_height{};
+  qreal m_width{};
 };
 }

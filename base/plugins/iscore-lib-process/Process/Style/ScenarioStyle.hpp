@@ -1,72 +1,119 @@
 #pragma once
+#include <QBrush>
 #include <QColor>
-#include <qnamespace.h>
+#include <QPen>
 #include <iscore_lib_process_export.h>
+#include <qnamespace.h>
 
-#include <Process/Style/ColorReference.hpp>
+#include <iscore/model/ColorReference.hpp>
+namespace iscore
+{
 class Skin;
+}
+
 struct ISCORE_LIB_PROCESS_EXPORT ScenarioStyle
 {
-        ScenarioStyle(const Skin&) noexcept;
+  ScenarioStyle(const iscore::Skin&) noexcept;
 
-        ScenarioStyle(const ScenarioStyle&) = delete;
-        ScenarioStyle(ScenarioStyle&&) = delete;
-        ScenarioStyle& operator=(const ScenarioStyle&) = delete;
-        ScenarioStyle& operator=(ScenarioStyle&&) = delete;
+  ScenarioStyle(const ScenarioStyle&) = delete;
+  ScenarioStyle(ScenarioStyle&&) = delete;
+  ScenarioStyle& operator=(const ScenarioStyle&) = delete;
+  ScenarioStyle& operator=(ScenarioStyle&&) = delete;
 
-        static ScenarioStyle& instance();
+  void setConstraintWidth(double w);
 
-        ColorRef ConstraintBase;
-        ColorRef ConstraintSelected;
-        ColorRef ConstraintPlayFill;
-        ColorRef ConstraintWarning;
-        ColorRef ConstraintInvalid;
-        ColorRef ConstraintDefaultLabel;
-        ColorRef ConstraintDefaultBackground;
+  static ScenarioStyle& instance();
 
-        ColorRef RackSideBorder;
+  iscore::ColorRef ConstraintBase;
+  iscore::ColorRef ConstraintSelected;
+  iscore::ColorRef ConstraintPlayFill;
+  iscore::ColorRef ConstraintPlayDashFill;
+  iscore::ColorRef ConstraintLoop;
+  iscore::ColorRef ConstraintWarning;
+  iscore::ColorRef ConstraintInvalid;
+  iscore::ColorRef ConstraintMuted;
+  iscore::ColorRef ConstraintDefaultLabel;
+  iscore::ColorRef ConstraintDefaultBackground;
 
-        ColorRef ConstraintFullViewParentSelected;
+  iscore::ColorRef RackSideBorder;
 
-        ColorRef ConstraintHeaderText;
-        ColorRef ConstraintHeaderBottomLine;
-        ColorRef ConstraintHeaderRackHidden;
-        ColorRef ConstraintHeaderSideBorder;
+  iscore::ColorRef ConstraintFullViewParentSelected;
 
-        ColorRef ProcessViewBorder;
+  iscore::ColorRef ConstraintHeaderText;
+  iscore::ColorRef ConstraintHeaderBottomLine;
+  iscore::ColorRef ConstraintHeaderRackHidden;
+  iscore::ColorRef ConstraintHeaderSideBorder;
 
-        ColorRef SlotFocus;
-        ColorRef SlotOverlayBorder;
-        ColorRef SlotOverlay;
-        ColorRef SlotHandle;
+  iscore::ColorRef ProcessViewBorder;
 
-        ColorRef TimenodeDefault;
-        ColorRef TimenodeSelected;
+  iscore::ColorRef SlotFocus;
+  iscore::ColorRef SlotOverlayBorder;
+  iscore::ColorRef SlotOverlay;
+  iscore::ColorRef SlotHandle;
 
-        ColorRef EventDefault;
-        ColorRef EventWaiting;
-        ColorRef EventPending;
-        ColorRef EventHappened;
-        ColorRef EventDisposed;
-        ColorRef EventSelected;
+  iscore::ColorRef TimenodeDefault;
+  iscore::ColorRef TimenodeSelected;
 
-        ColorRef ConditionDefault;
-        ColorRef ConditionWaiting;
-        ColorRef ConditionDisabled;
-        ColorRef ConditionFalse;
-        ColorRef ConditionTrue;
+  iscore::ColorRef EventDefault;
+  iscore::ColorRef EventWaiting;
+  iscore::ColorRef EventPending;
+  iscore::ColorRef EventHappened;
+  iscore::ColorRef EventDisposed;
+  iscore::ColorRef EventSelected;
 
-        ColorRef StateOutline;
-        ColorRef StateSelected;
-        ColorRef StateDot;
+  iscore::ColorRef ConditionDefault;
+  iscore::ColorRef ConditionWaiting;
+  iscore::ColorRef ConditionDisabled;
+  iscore::ColorRef ConditionFalse;
+  iscore::ColorRef ConditionTrue;
 
-        ColorRef Background;
-        ColorRef ProcessPanelBackground;
+  iscore::ColorRef StateOutline;
+  iscore::ColorRef StateSelected;
+  iscore::ColorRef StateDot;
 
-        ColorRef TimeRulerBackground;
-        ColorRef TimeRuler;
-        ColorRef LocalTimeRuler;
+  iscore::ColorRef Background;
+  iscore::ColorRef ProcessPanelBackground;
 
-    private:
-        ScenarioStyle() noexcept = default;
+  iscore::ColorRef TimeRulerBackground;
+  iscore::ColorRef TimeRuler;
+  iscore::ColorRef LocalTimeRuler;
+
+  QPen ConstraintSolidPen;
+  QPen ConstraintDashPen;
+  QPen ConstraintRackPen;
+  QPen ConstraintPlayPen;
+  QPen ConstraintPlayDashPen;
+
+  QPen ConstraintBraceSelected;
+  QPen ConstraintBraceWarning;
+  QPen ConstraintBraceInvalid;
+  QPen ConstraintBrace;
+
+  QPen ConstraintHeaderSeparator;
+
+  QPen TimenodePen;
+  QBrush TimenodeBrush;
+
+  QBrush StateTemporalPointBrush;
+  QPen StateTemporalPointPen;
+  QBrush StateBrush;
+
+  QPen EventPen;
+  QBrush EventBrush;
+
+  QPen TransparentPen;
+
+  QPen TimeRulerLargePen, TimeRulerSmallPen;
+
+  QPen SlotHandlePen;
+
+  QFont Bold10Pt;
+  QFont Medium7Pt;
+  QFont Medium8Pt;
+  QFont Medium12Pt;
+
+  QBrush DefaultBrush;
+private:
+  ScenarioStyle() noexcept;
+  void update(const iscore::Skin& skin);
 };

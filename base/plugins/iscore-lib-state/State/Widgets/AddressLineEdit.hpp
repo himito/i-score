@@ -1,9 +1,9 @@
 #pragma once
-#include <QLineEdit>
 #include <QDropEvent>
+#include <QLineEdit>
 #include <QValidator>
-#include <State/Widgets/AddressValidator.hpp>
 #include <State/MessageListSerialization.hpp>
+#include <State/Widgets/AddressValidator.hpp>
 
 #include "AddressValidator.hpp"
 
@@ -14,82 +14,56 @@ namespace State
  *
  * Used to input an address. Changes colors to red-ish if it is invalid.
  */
-template<class Validator_T>
-class AddressLineEditBase :
-        public QLineEdit
+template <class Validator_T, class Parent_T>
+class AddressLineEditBase : public QLineEdit
 {
-    public:
-        explicit AddressLineEditBase(QWidget* parent):
-            QLineEdit{parent}
-        {
-            setAcceptDrops(true);
-            connect(this, &QLineEdit::textChanged,
-                    this, [&] (const QString& str) {
-                QString s = str;
-                int i = 0;
-                if(m_validator.validate(s, i) == QValidator::State::Acceptable)
-                {
-                    this->setStyleSheet("QLineEdit { background: black; }");
-                }
-                else
-                {
-                    this->setStyleSheet("QLineEdit { background: #660000; }");
-                }
-            });
-        }
+public:
+  explicit AddressLineEditBase(Parent_T* parent) :
+    QLineEdit{parent}
+  {
+    setAcceptDrops(true);
+    connect(this, &QLineEdit::textChanged, this, [&](const QString& str) {
+      QString s = str;
+      int i = 0;
+      if (m_validator.validate(s, i) == QValidator::State::Acceptable)
+      {
+        this->setStyleSheet("QLineEdit { background: black; }");
+      }
+      else
+      {
+        this->setStyleSheet("QLineEdit { background: #660000; }");
+      }
+    });
+  }
 
-    private:
-        void dragEnterEvent(QDragEnterEvent *event) override
-        {
-            if(event->mimeData()->formats().contains(iscore::mime::messagelist()))
-            {
-                event->accept();
-            }
-        }
+private:
 
-        void dropEvent(QDropEvent* ev) override
-        {
-            auto mime = ev->mimeData();
+  void dragEnterEvent(QDragEnterEvent* ev) override
+  {
+    static_cast<Parent_T*>(parent())->dragEnterEvent(ev);
+  }
+  void dropEvent(QDropEvent* ev) override
+  {
+    static_cast<Parent_T*>(parent())->dropEvent(ev);
+  }
 
-            if(mime->formats().contains(iscore::mime::messagelist()))
-            {
-                Mime<State::MessageList>::Deserializer des{*mime};
-                State::MessageList ml = des.deserialize();
-                if(!ml.empty())
-                {
-                    this->setText(ml[0].address.toString());
-                    emit editingFinished();
-                }
-            }
-        }
-        Validator_T m_validator;
+  Validator_T m_validator;
 };
 
-class ISCORE_LIB_STATE_EXPORT AddressLineEdit final :
-        public AddressLineEditBase<AddressValidator>
+template<typename Parent_T>
+class AddressLineEdit final
+    : public AddressLineEditBase<AddressValidator, Parent_T>
 {
-    public:
-        using AddressLineEditBase<AddressValidator>::AddressLineEditBase;
-        virtual ~AddressLineEdit();
-};
-class ISCORE_LIB_STATE_EXPORT AddressAccessorLineEdit final :
-        public AddressLineEditBase<AddressAccessorValidator>
-{
-    public:
-        using AddressLineEditBase<AddressAccessorValidator>::AddressLineEditBase;
-        virtual ~AddressAccessorLineEdit();
+public:
+  using AddressLineEditBase<AddressValidator, Parent_T>::AddressLineEditBase;
 };
 
-class ISCORE_LIB_STATE_EXPORT AddressFragmentLineEdit final :
-        public QLineEdit
+template<typename Parent_T>
+class AddressAccessorLineEdit final
+    : public AddressLineEditBase<AddressAccessorValidator, Parent_T>
 {
-    public:
-        AddressFragmentLineEdit(QWidget* parent):
-            QLineEdit{parent}
-        {
-            setValidator(new AddressFragmentValidator{this});
-        }
-
-        virtual ~AddressFragmentLineEdit();
+public:
+  using AddressLineEditBase<AddressAccessorValidator, Parent_T>::AddressLineEditBase;
 };
+
 }

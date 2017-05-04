@@ -1,31 +1,30 @@
 #pragma once
 #include <QObject>
-#include <set>
-
-namespace iscore {
-class SettingsDelegatePresenter;
-}  // namespace iscore
+#include <vector>
 
 namespace iscore
 {
-    class Settings;
-    class SettingsView;
+class SettingsDelegatePresenter;
+} // namespace iscore
 
-    class SettingsPresenter final : public QObject
-    {
-            Q_OBJECT
-        public:
-            SettingsPresenter(SettingsView* view, QObject* parent);
+namespace iscore
+{
+class Settings;
+class SettingsView;
 
-            void addSettingsPresenter(SettingsDelegatePresenter* presenter);
+class SettingsPresenter final : public QObject
+{
+  Q_OBJECT
+public:
+  SettingsPresenter(SettingsView* view, QObject* parent);
 
-        private slots:
-            void on_accept();
-            void on_reject();
+  void addSettingsPresenter(SettingsDelegatePresenter* presenter);
 
-        private:
-            SettingsView* m_view;
+private:
+  void on_accept();
+  void on_reject();
+  SettingsView* m_view;
 
-            std::set<SettingsDelegatePresenter*> m_pluginPresenters;
-    };
+  std::vector<SettingsDelegatePresenter*> m_pluginPresenters;
+};
 }

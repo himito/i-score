@@ -1,68 +1,43 @@
-#include <Scenario/Document/Constraint/ViewModels/ConstraintViewModel.hpp>
+#include <Scenario/Document/Constraint/ConstraintModel.hpp>
 
-#include <iscore/serialization/DataStreamVisitor.hpp>
 #include <algorithm>
+#include <iscore/serialization/DataStreamVisitor.hpp>
 
 #include "ShowRackInViewModel.hpp"
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
 
 namespace Scenario
 {
 namespace Command
 {
-ShowRackInViewModel::ShowRackInViewModel(
-        Path<ConstraintViewModel>&& constraint_path,
-        Id<RackModel> rackId) :
-    m_constraintViewPath {std::move(constraint_path) },
-    m_rackId {std::move(rackId)}
+ShowRack::ShowRack(
+    const ConstraintModel& vm)
+    : m_constraintViewPath{vm}
 {
-    auto& vm = m_constraintViewPath.find();
-    m_previousRackId = vm.shownRack();
 }
 
-ShowRackInViewModel::ShowRackInViewModel(
-        const ConstraintViewModel& vm,
-        Id<RackModel> rackId) :
-    m_constraintViewPath {vm},
-    m_rackId {std::move(rackId)}
+
+void ShowRack::undo() const
 {
-    m_previousRackId = vm.shownRack();
+  auto& vm = m_constraintViewPath.find();
+  vm.setSmallViewVisible(false);
 }
 
-void ShowRackInViewModel::undo() const
+void ShowRack::redo() const
 {
-    auto& vm = m_constraintViewPath.find();
-
-    // TODO unnecessary
-    if(m_previousRackId.val())
-    {
-        vm.showRack(m_previousRackId);
-    }
-    else
-    {
-        vm.hideRack();
-    }
+  auto& vm = m_constraintViewPath.find();
+  vm.setSmallViewVisible(true);
 }
 
-void ShowRackInViewModel::redo() const
+void ShowRack::serializeImpl(DataStreamInput& s) const
 {
-    auto& vm = m_constraintViewPath.find();
-    vm.showRack(m_rackId);
+  s << m_constraintViewPath;
 }
 
-void ShowRackInViewModel::serializeImpl(DataStreamInput& s) const
+void ShowRack::deserializeImpl(DataStreamOutput& s)
 {
-    s << m_constraintViewPath
-      << m_rackId
-      << m_previousRackId;
-}
-
-void ShowRackInViewModel::deserializeImpl(DataStreamOutput& s)
-{
-    s >> m_constraintViewPath
-            >> m_rackId
-            >> m_previousRackId;
+  s >> m_constraintViewPath;
 }
 }
 }

@@ -2,88 +2,85 @@
 
 #include <Explorer/Commands/DeviceExplorerCommandFactory.hpp>
 
-#include <iscore_plugin_deviceexplorer_commands_files.hpp>
 #include "iscore_plugin_deviceexplorer.hpp"
+#include <iscore_plugin_deviceexplorer_commands_files.hpp>
 
 #include <Device/Protocol/ProtocolList.hpp>
-#include <unordered_map>
 #include <iscore/plugins/customfactory/FactorySetup.hpp>
+#include <iscore/tools/std/HashMap.hpp>
 
+#include "DeviceExplorerApplicationPlugin.hpp"
+#include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
 #include <Explorer/DocumentPlugin/DeviceDocumentPluginFactory.hpp>
 #include <Explorer/Listening/ListeningHandlerFactoryList.hpp>
-#include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
-#include "DeviceExplorerApplicationPlugin.hpp"
 
-namespace iscore {
+#include <iscore/serialization/AnySerialization.hpp>
+#include <brigand/brigand.hpp>
+namespace iscore
+{
 
-class FactoryListInterface;
+class InterfaceListBase;
 class PanelFactory;
-}  // namespace iscore
+} // namespace iscore
 
 iscore_plugin_deviceexplorer::iscore_plugin_deviceexplorer()
 {
-    QMetaType::registerComparators<UuidKey<Device::ProtocolFactory>>();
+  QMetaType::registerComparators<UuidKey<Device::ProtocolFactory>>();
+  qRegisterMetaType<Device::AddressSettings>();
+  qRegisterMetaType<Device::FullAddressSettings>();
+  qRegisterMetaType<Device::FullAddressAccessorSettings>();
+  qRegisterMetaTypeStreamOperators<Device::AddressSettings>();
+  qRegisterMetaTypeStreamOperators<Device::FullAddressSettings>();
+  qRegisterMetaTypeStreamOperators<Device::FullAddressAccessorSettings>();
+
+  auto& anySer = iscore::anySerializers();
+  anySer.emplace(std::string("instanceBounds"), std::make_unique<iscore::any_serializer_t<ossia::net::instance_bounds>>());
+  anySer.emplace(std::string("description"), std::make_unique<iscore::any_serializer_t<ossia::net::description>>());
+  anySer.emplace(std::string("priority"), std::make_unique<iscore::any_serializer_t<ossia::net::priority>>());
+  anySer.emplace(std::string("tags"), std::make_unique<iscore::any_serializer_t<ossia::net::tags>>());
+  anySer.emplace(std::string("refreshRate"), std::make_unique<iscore::any_serializer_t<ossia::net::refresh_rate>>());
+  anySer.emplace(std::string("valueStepSize"), std::make_unique<iscore::any_serializer_t<ossia::net::value_step_size>>());
+
+  // TODO continue
 }
 
 iscore_plugin_deviceexplorer::~iscore_plugin_deviceexplorer()
 {
-
 }
 
-std::vector<std::unique_ptr<iscore::FactoryListInterface>> iscore_plugin_deviceexplorer::factoryFamilies()
+std::vector<std::unique_ptr<iscore::InterfaceListBase>>
+iscore_plugin_deviceexplorer::factoryFamilies()
 {
-    return make_ptr_vector<iscore::FactoryListInterface,
-            Device::DynamicProtocolList,
-            Explorer::ListeningHandlerFactoryList>();
+  return make_ptr_vector<iscore::InterfaceListBase, Device::ProtocolFactoryList, Explorer::ListeningHandlerFactoryList>();
 }
 
-
-std::vector<std::unique_ptr<iscore::FactoryInterfaceBase>>
+std::vector<std::unique_ptr<iscore::InterfaceBase>>
 iscore_plugin_deviceexplorer::factories(
-        const iscore::ApplicationContext& ctx,
-        const iscore::AbstractFactoryKey& key) const
+    const iscore::ApplicationContext& ctx,
+    const iscore::InterfaceKey& key) const
 {
-    return instantiate_factories<
-            iscore::ApplicationContext,
-    TL<
-        FW<iscore::DocumentPluginFactory,
-             Explorer::DocumentPluginFactory>,
-        FW<iscore::PanelDelegateFactory,
-             Explorer::PanelDelegateFactory>
-    >>(ctx, key);
+  return instantiate_factories<iscore::ApplicationContext, FW<iscore::DocumentPluginFactory, Explorer::DocumentPluginFactory>, FW<iscore::PanelDelegateFactory, Explorer::PanelDelegateFactory>>(
+      ctx, key);
 }
 
-iscore::GUIApplicationContextPlugin *iscore_plugin_deviceexplorer::make_applicationPlugin(
-        const iscore::GUIApplicationContext& app)
+iscore::GUIApplicationPlugin*
+iscore_plugin_deviceexplorer::make_guiApplicationPlugin(
+    const iscore::GUIApplicationContext& app)
 {
-    return new Explorer::DeviceExplorerApplicationPlugin{app};
+  return new Explorer::ApplicationPlugin{app};
 }
 
-
-std::pair<const CommandParentFactoryKey, CommandGeneratorMap> iscore_plugin_deviceexplorer::make_commands()
+std::pair<const CommandGroupKey, CommandGeneratorMap>
+iscore_plugin_deviceexplorer::make_commands()
 {
-    using namespace Explorer::Command;
-    std::pair<const CommandParentFactoryKey, CommandGeneratorMap> cmds{DeviceExplorerCommandFactoryName(), CommandGeneratorMap{}};
+  using namespace Explorer::Command;
+  std::pair<const CommandGroupKey, CommandGeneratorMap> cmds{
+      DeviceExplorerCommandFactoryName(), CommandGeneratorMap{}};
 
-    using Types = TypeList<
-    #include <iscore_plugin_deviceexplorer_commands.hpp>
-    >;
-    for_each_type<Types>(iscore::commands::FactoryInserter{cmds.second});
+  using Types = TypeList<
+#include <iscore_plugin_deviceexplorer_commands.hpp>
+      >;
+  for_each_type<Types>(iscore::commands::FactoryInserter{cmds.second});
 
-    return cmds;
-}
-
-QStringList iscore_plugin_deviceexplorer::offered() const
-{
-    return {"DeviceExplorer"};
-}
-
-iscore::Version iscore_plugin_deviceexplorer::version() const
-{
-    return iscore::Version{1};
-}
-
-UuidKey<iscore::Plugin> iscore_plugin_deviceexplorer::key() const
-{
-    return "3c2a0e25-ab14-4c06-a1ba-033d721a520f";
+  return cmds;
 }

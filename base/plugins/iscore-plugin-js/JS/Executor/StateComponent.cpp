@@ -1,9 +1,9 @@
 #include "StateComponent.hpp"
+#include <ossia/editor/state/message.hpp>
+#include <Engine/iscore2OSSIA.hpp>
 #include <Explorer/DocumentPlugin/DeviceDocumentPlugin.hpp>
-#include <JS/StateProcess.hpp>
 #include <JS/Executor/JSAPIWrapper.hpp>
-#include <OSSIA/iscore2OSSIA.hpp>
-#include <Editor/Message.h>
+#include <JS/JSStateProcess.hpp>
 
 namespace JS
 {
@@ -11,99 +11,55 @@ namespace Executor
 {
 //// State ////
 State::State(
-        const QString& script,
-        const Explorer::DeviceDocumentPlugin& devices):
-    m_devices{devices.list()}
+    const QString& script, const Explorer::DeviceDocumentPlugin& devices)
+    : m_devices{devices.list()}
 {
-    m_engine.globalObject()
-            .setProperty(
-                "iscore",
-                m_engine.newQObject(
-                    new JS::APIWrapper{m_engine, devices}
-                    )
-                );
+  // TODO find how to make it copyable ?
+  m_engine = std::make_shared<QJSEngine>();
+  m_engine->globalObject().setProperty(
+      "iscore", m_engine->newQObject(new JS::APIWrapper{*m_engine, devices}));
 
-    m_fun = m_engine.evaluate(script);
+  m_fun = m_engine->evaluate(script);
 }
 
-void State::launch() const
+void State::operator()()
 {
-    if(!m_fun.isCallable())
-        return;
+  if (!m_fun.isCallable())
+    return;
 
-    // Get the value of the js fun
-    auto messages = JS::convert::messages(m_fun.call());
+  // Get the value of the js fun
+  auto messages = JS::convert::messages(m_fun.call());
 
-    m_engine.collectGarbage();
+  m_engine->collectGarbage();
 
-    for(const auto& mess : messages)
-    {
-        qDebug() << mess.toString();
-        auto ossia_mess = iscore::convert::message(mess, m_devices);
-        if(ossia_mess)
-            ossia_mess->launch();
-    }
+  for (const auto& mess : messages)
+  {
+    qDebug() << mess.toString();
+    auto ossia_mess = Engine::iscore_to_ossia::message(mess, m_devices);
+    if (ossia_mess)
+      ossia_mess
+          ->launch(); // TODO try to make a "state" convertible to message ?
+  }
 }
 
 //// Component ////
 StateProcessComponent::StateProcessComponent(
-        RecreateOnPlay::StateElement& parentConstraint,
-        JS::StateProcess& element,
-        const RecreateOnPlay::Context& ctx,
-        const Id<iscore::Component>& id,
-        QObject* parent):
-    RecreateOnPlay::StateProcessComponent{parentConstraint, element, id, "JSStateComponent", parent}
+    Engine::Execution::StateComponent& parentConstraint,
+    JS::StateProcess& element,
+    const Engine::Execution::Context& ctx,
+    const Id<iscore::Component>& id,
+    QObject* parent)
+    : Engine::Execution::StateProcessComponent_T<JS::StateProcess>{
+          parentConstraint, element, ctx, id, "JSStateComponent", parent}
 {
-    auto proc = std::make_shared<State>(element.script(), ctx.devices);
-    m_ossia_process = proc;
+  m_ossia_state = ossia::custom_state{State{element.script(), ctx.devices}};
 }
 
-const iscore::Component::Key& StateProcessComponent::key() const
+ossia::state_element StateProcessComponent::make(
+    Process::StateProcess& proc, const Engine::Execution::Context& ctx)
 {
-    // TODO these should be uuids !!!!!
-    static iscore::Component::Key k("3e46d422-6b69-4142-8500-a806b8a94284");
-    return k;
+  return ossia::custom_state{
+      State{static_cast<const JS::StateProcess&>(proc).script(), ctx.devices}};
 }
-
-
-
-//// Factory ////
-StateProcessComponentFactory::~StateProcessComponentFactory()
-{
-
-}
-
-RecreateOnPlay::StateProcessComponent* StateProcessComponentFactory::make(
-        RecreateOnPlay::StateElement& cst,
-        Process::StateProcess& proc,
-        const RecreateOnPlay::Context& ctx,
-        const Id<iscore::Component>& id,
-        QObject* parent) const
-{
-    return new StateProcessComponent{cst, static_cast<JS::StateProcess&>(proc), ctx, id, parent};
-}
-
-const StateProcessComponentFactory::ConcreteFactoryKey&
-StateProcessComponentFactory::concreteFactoryKey() const
-{
-    static ConcreteFactoryKey k("ff5a59c5-a710-46b5-a9c8-74d72a67a5d9");
-    return k;
-}
-
-bool StateProcessComponentFactory::matches(
-        Process::StateProcess& proc,
-        const RecreateOnPlay::DocumentPlugin&,
-        const iscore::DocumentContext&) const
-{
-    return dynamic_cast<JS::StateProcess*>(&proc);
-}
-
-std::shared_ptr<OSSIA::StateElement> StateProcessComponentFactory::make(
-        Process::StateProcess &proc,
-        const RecreateOnPlay::Context &ctx) const
-{
-    return  std::make_shared<State>(static_cast<const JS::StateProcess&>(proc).script(), ctx.devices);
-}
-
 }
 }

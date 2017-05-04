@@ -1,14 +1,14 @@
 #pragma once
-#include <Editor/TimeProcess.h>
+#include <ossia/editor/scenario/time_process.hpp>
+#include <ossia/editor/scenario/time_value.hpp>
+#include <Engine/Executor/ExecutorContext.hpp>
+#include <Engine/Executor/StateProcessComponent.hpp>
 #include <QJSEngine>
 #include <QJSValue>
 #include <QString>
-#include <memory>
-#include <OSSIA/Executor/ProcessElement.hpp>
-#include <OSSIA/Executor/ExecutorContext.hpp>
 #include <iscore/document/DocumentContext.hpp>
 #include <iscore/document/DocumentInterface.hpp>
-#include "Editor/TimeValue.h"
+#include <memory>
 
 namespace Explorer
 {
@@ -18,81 +18,52 @@ namespace Device
 {
 class DeviceList;
 }
-namespace RecreateOnPlay
+namespace Engine
 {
-class ConstraintElement;
+namespace Execution
+{
+class ConstraintComponent;
 }
-namespace OSSIA {
-class State;
-class StateElement;
-}  // namespace OSSIA
+}
+namespace ossia
+{
+class state;
+} // namespace OSSIA
 
 namespace JS
 {
 class StateProcess;
 namespace Executor
 {
-class State :
-        public OSSIA::StateElement
+class State
 {
-    public:
-        State(
-            const QString& script,
-            const Explorer::DeviceDocumentPlugin& devices);
+public:
+  State(const QString& script, const Explorer::DeviceDocumentPlugin& devices);
 
-        void launch() const override;
+  void operator()();
 
-        OSSIA::StateElement::Type getType() const override
-        {
-            return OSSIA::StateElement::Type::USER;
-        }
-
-        const Device::DeviceList& m_devices;
-        mutable QJSEngine m_engine;
-        mutable QJSValue m_fun;
+  const Device::DeviceList& m_devices;
+  std::shared_ptr<QJSEngine> m_engine;
+  QJSValue m_fun;
 };
 
-class StateProcessComponent final :
-        public RecreateOnPlay::StateProcessComponent
+class StateProcessComponent final
+    : public Engine::Execution::StateProcessComponent_T<JS::StateProcess>
 {
-    public:
-        StateProcessComponent(
-                RecreateOnPlay::StateElement& parentState,
-                JS::StateProcess& element,
-                const RecreateOnPlay::Context& ctx,
-                const Id<iscore::Component>& id,
-                QObject* parent);
+  COMPONENT_METADATA("068c116f-9d1f-47d0-bd43-335792ba1a6a")
+public:
+  StateProcessComponent(
+      Engine::Execution::StateComponent& parentState,
+      JS::StateProcess& element,
+      const Engine::Execution::Context& ctx,
+      const Id<iscore::Component>& id,
+      QObject* parent);
 
-    private:
-        const Key &key() const override;
+  static ossia::state_element
+  make(Process::StateProcess& proc, const Engine::Execution::Context& ctxt);
 };
 
-class StateProcessComponentFactory final :
-        public RecreateOnPlay::StateProcessComponentFactory
-{
-    public:
-        virtual ~StateProcessComponentFactory();
-
-        virtual RecreateOnPlay::StateProcessComponent* make(
-                    RecreateOnPlay::StateElement& cst,
-                    Process::StateProcess& proc,
-                    const RecreateOnPlay::Context& ctx,
-                    const Id<iscore::Component>& id,
-                    QObject* parent) const override;
-
-        const ConcreteFactoryKey& concreteFactoryKey() const override;
-
-        bool matches(
-                Process::StateProcess& proc,
-                const RecreateOnPlay::DocumentPlugin&,
-                const iscore::DocumentContext &) const override;
-
-        virtual std::shared_ptr<OSSIA::StateElement> make(
-                  Process::StateProcess& proc,
-                  const RecreateOnPlay::Context& ctxt) const override;
-};
-
-
-
+using StateProcessComponentFactory
+    = Engine::Execution::StateProcessComponentFactory_T<StateProcessComponent>;
 }
 }

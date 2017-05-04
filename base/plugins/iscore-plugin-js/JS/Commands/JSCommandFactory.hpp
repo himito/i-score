@@ -1,6 +1,7 @@
 #pragma once
-#include <iscore/command/SerializableCommand.hpp>
+#include <iscore/command/Command.hpp>
 
-namespace JS {
-const CommandParentFactoryKey& CommandFactoryName();
+namespace JS
+{
+const CommandGroupKey& CommandFactoryName();
 }

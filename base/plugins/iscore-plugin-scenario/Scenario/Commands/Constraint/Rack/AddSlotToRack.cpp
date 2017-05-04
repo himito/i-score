@@ -1,58 +1,53 @@
-#include <Scenario/Document/Constraint/Rack/RackModel.hpp>
-#include <Scenario/Document/Constraint/Rack/Slot/SlotModel.hpp>
-#include <Scenario/Settings/Model.hpp>
+#include <Scenario/Document/Constraint/ConstraintModel.hpp>
+#include <Scenario/Document/Constraint/Slot.hpp>
+#include <Scenario/Settings/ScenarioSettingsModel.hpp>
 
 #include <boost/iterator/iterator_facade.hpp>
 #include <boost/multi_index/detail/hash_index_iterator.hpp>
-#include <iscore/tools/SettableIdentifierGeneration.hpp>
+#include <iscore/tools/IdentifierGeneration.hpp>
 #include <vector>
 
 #include "AddSlotToRack.hpp"
 #include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
-#include <iscore/tools/NotifyingMap.hpp>
+#include <iscore/model/EntityMap.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
+#include <iscore/application/ApplicationContext.hpp>
 
 namespace Scenario
 {
 namespace Command
 {
 
-AddSlotToRack::AddSlotToRack(Path<RackModel>&& rackPath) :
-    m_path {rackPath}
+AddSlotToRack::AddSlotToRack(const Path<ConstraintModel>&  rackPath)
+  : m_path{rackPath}
 {
-    auto rack = m_path.try_find(); // Because we use this in a macro, the rack may not be there yet
-
-    if(rack)
-        m_createdSlotId = getStrongId(rack->slotmodels);
-    else
-        m_createdSlotId = Id<SlotModel>{iscore::id_generator::getFirstId()};
 }
 
 void AddSlotToRack::undo() const
 {
-    auto& rack = m_path.find();
-    rack.slotmodels.remove(m_createdSlotId);
+  auto& rack = m_path.find();
+  rack.removeSlot(rack.smallView().size() - 1);
 }
 
 void AddSlotToRack::redo() const
 {
-    auto& rack = m_path.find();
-    auto h = iscore::AppContext().settings<Scenario::Settings::Model>().getSlotHeight();
+  auto& rack = m_path.find();
+  auto h = iscore::AppContext()
+               .settings<Scenario::Settings::Model>()
+               .getSlotHeight();
 
-    rack.addSlot(new SlotModel {m_createdSlotId,
-                                h,
-                               &rack});
+  rack.addSlot(Slot{{}, Id<Process::ProcessModel>{}, h});
 }
 
 void AddSlotToRack::serializeImpl(DataStreamInput& s) const
 {
-    s << m_path << m_createdSlotId;
+  s << m_path;
 }
 
 void AddSlotToRack::deserializeImpl(DataStreamOutput& s)
 {
-    s >> m_path >> m_createdSlotId;
+  s >> m_path;
 }
 }
 }

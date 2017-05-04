@@ -1,50 +1,49 @@
 #pragma once
 #include <iscore/command/Dispatchers/CommandDispatcher.hpp>
-#include <iscore/tools/NamedObject.hpp>
+
 #include <QPoint>
 #include <QString>
+#include <iscore/widgets/GraphicsItem.hpp>
 #include <iscore_plugin_scenario_export.h>
-class QGraphicsObject;
+class QGraphicsItem;
 class QMimeData;
 class QObject;
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 
 namespace Scenario
 {
 class EventModel;
 class EventView;
-class ISCORE_PLUGIN_SCENARIO_EXPORT EventPresenter final : public NamedObject
+class ISCORE_PLUGIN_SCENARIO_EXPORT EventPresenter final : public QObject
 {
-        Q_OBJECT
+  Q_OBJECT
 
-    public:
-        EventPresenter(const EventModel& model,
-                       QGraphicsObject* parentview,
-                       QObject* parent);
-        virtual ~EventPresenter();
+public:
+  EventPresenter(
+      const EventModel& model, QGraphicsItem* parentview, QObject* parent);
+  virtual ~EventPresenter();
 
-        const Id<EventModel>& id() const;
+  const Id<EventModel>& id() const;
 
-        EventView* view() const;
-        const EventModel& model() const;
+  EventView* view() const;
+  const EventModel& model() const;
 
-        bool isSelected() const;
+  bool isSelected() const;
 
-        void handleDrop(const QPointF& pos, const QMimeData* mime);
+  void handleDrop(const QPointF& pos, const QMimeData* mime);
 
-    signals:
-        void pressed(const QPointF&);
-        void moved(const QPointF&);
-        void released(const QPointF&);
+signals:
+  void pressed(const QPointF&);
+  void moved(const QPointF&);
+  void released(const QPointF&);
 
-        void eventHoverEnter();
-        void eventHoverLeave();
+  void eventHoverEnter();
+  void eventHoverLeave();
 
-    private:
-        void triggerSetted(QString);
-        const EventModel& m_model;
-        EventView* m_view {};
+private:
+  const EventModel& m_model;
+  graphics_item_ptr<EventView> m_view;
 
-        CommandDispatcher<> m_dispatcher;
+  CommandDispatcher<> m_dispatcher;
 };
 }

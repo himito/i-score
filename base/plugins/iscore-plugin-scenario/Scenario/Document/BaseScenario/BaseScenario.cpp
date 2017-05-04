@@ -1,53 +1,64 @@
+#include <QString>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
-#include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
-#include <Scenario/Document/TimeNode/Trigger/TriggerModel.hpp>
 #include <Scenario/Document/Event/EventModel.hpp>
 #include <Scenario/Document/State/StateModel.hpp>
-#include <iscore/tools/std/Optional.hpp>
+#include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
+#include <Scenario/Document/TimeNode/Trigger/TriggerModel.hpp>
 #include <iscore/document/DocumentInterface.hpp>
-#include <QString>
+#include <iscore/tools/std/Optional.hpp>
 #include <tuple>
 
 #include "BaseScenario.hpp"
+#include <ossia/detail/algorithms.hpp>
 #include <Scenario/Document/BaseScenario/BaseScenarioContainer.hpp>
 #include <iscore/selection/Selection.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
-#include <iscore/tools/std/StdlibWrapper.hpp>
-#include <iscore/tools/std/Algorithms.hpp>
+#include <iscore/model/Identifier.hpp>
 
 class QObject;
 
 namespace Scenario
 {
-BaseScenario::BaseScenario(const Id<BaseScenario>& id, QObject* parent):
-    IdentifiedObject<BaseScenario>{id, "Scenario::BaseScenario", parent},
-    BaseScenarioContainer{this},
-    pluginModelList{iscore::IDocument::documentContext(*parent), this}
+BaseScenario::BaseScenario(const Id<BaseScenario>& id, QObject* parent)
+    : IdentifiedObject<BaseScenario>{id, "Scenario::BaseScenario", parent}
+    , BaseScenarioContainer{this}
 {
-    BaseScenarioContainer::init();
+  m_endNode->trigger()->setActive(true);
+}
 
-    m_endNode->trigger()->setActive(true);
+BaseScenario::~BaseScenario()
+{
 }
 
 Selection BaseScenario::selectedChildren() const
 {
-    Selection s;
-    for_each_in_tuple(elements(), [&] (auto elt) {
-        if(elt->selection.get())
-            s.append(elt);
-    });
-    return s;
+  Selection s;
+  ossia::for_each_in_tuple(elements(), [&](auto elt) {
+    if (elt->selection.get())
+      s.append(elt);
+  });
+  return s;
 }
 
-
-const QVector<Id<ConstraintModel> > constraintsBeforeTimeNode(
-        const BaseScenario& scen,
-        const Id<TimeNodeModel>& timeNodeId)
+bool BaseScenario::focused() const
 {
-    if(timeNodeId == scen.endTimeNode().id())
+  bool res = false;
+  ossia::for_each_in_tuple(elements(), [&](auto elt) {
+    if (elt->selection.get())
     {
-        return {scen.constraint().id()};
+      res = true;
     }
-    return {};
+  });
+
+  return res;
+}
+
+const QVector<Id<ConstraintModel>> constraintsBeforeTimeNode(
+    const BaseScenario& scen, const Id<TimeNodeModel>& timeNodeId)
+{
+  if (timeNodeId == scen.endTimeNode().id())
+  {
+    return {scen.constraint().id()};
+  }
+  return {};
 }
 }

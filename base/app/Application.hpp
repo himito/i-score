@@ -3,7 +3,7 @@
 #include <core/application/ApplicationSettings.hpp>
 #include <iscore/application/ApplicationContext.hpp>
 #include <core/plugin/PluginManager.hpp>
-#include <iscore/tools/NamedObject.hpp>
+
 #include <core/settings/Settings.hpp>
 #include <QApplication>
 #include <memory>
@@ -27,8 +27,8 @@ namespace iscore
      * It does instantiate the rest of the software (MVP, settings, plugins).
      */
 class Application final :
-        public NamedObject,
-        public iscore::ApplicationInterface
+        public QObject,
+        public iscore::GUIApplicationInterface
 {
         Q_OBJECT
         friend class ChildEventFilter;
@@ -51,7 +51,8 @@ class Application final :
         const iscore::Settings& settings() const
         { return m_settings; }
 
-        const iscore::ApplicationContext& context() const override;
+        const iscore::GUIApplicationContext& context() const override;
+        const iscore::ApplicationComponents& components() const override;
         void init(); // m_applicationSettings has to be set.
 
     private:

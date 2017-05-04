@@ -4,11 +4,13 @@
 
 #include <Process/ExpandMode.hpp>
 #include <Process/TimeValue.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 
-template <typename Object> class Path;
+template <typename Object>
+class Path;
 
-namespace Scenario {
+namespace Scenario
+{
 class ProcessModel;
 class EventModel;
 
@@ -18,23 +20,26 @@ class SerializableMoveEvent;
 
 class MoveEventClassicFactory final : public MoveEventFactoryInterface
 {
-        ISCORE_CONCRETE_FACTORY_DECL("644a6f8d-de63-4951-b28b-33b5e2c71ac8")
+  ISCORE_CONCRETE("644a6f8d-de63-4951-b28b-33b5e2c71ac8")
 
-        SerializableMoveEvent* make(
-                Path<Scenario::ProcessModel>&& scenarioPath,
-                Id<EventModel> eventId,
-                TimeValue newDate,
-                ExpandMode mode) override;
+  std::unique_ptr<SerializableMoveEvent> make(
+      Path<Scenario::ProcessModel>&& scenarioPath,
+      Id<EventModel>
+          eventId,
+      TimeVal newDate,
+      ExpandMode mode) override;
 
-        SerializableMoveEvent* make() override;
+  std::unique_ptr<SerializableMoveEvent> make() override;
 
-        int priority(const iscore::ApplicationContext& ctx,  MoveEventFactoryInterface::Strategy s) const override
-        {
-            if(s == MoveEventFactoryInterface::CREATION)
-                return 1;
+  int priority(
+      const iscore::ApplicationContext& ctx,
+      MoveEventFactoryInterface::Strategy s) const override
+  {
+    if (s == MoveEventFactoryInterface::CREATION)
+      return 1;
 
-            return 0; // default choice
-        }
+    return 0; // default choice
+  }
 };
 }
 }

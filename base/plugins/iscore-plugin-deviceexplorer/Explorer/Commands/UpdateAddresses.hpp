@@ -1,50 +1,52 @@
 #pragma once
 #include <Device/Node/DeviceNode.hpp>
 #include <Explorer/Commands/DeviceExplorerCommandFactory.hpp>
-#include <iscore/command/SerializableCommand.hpp>
-#include <iscore/tools/ModelPath.hpp>
 #include <QList>
 #include <QPair>
+#include <iscore/command/Command.hpp>
+#include <iscore/model/path/Path.hpp>
 
 #include <State/Value.hpp>
 
 struct DataStreamInput;
 struct DataStreamOutput;
 
-
 namespace Explorer
 {
-class DeviceExplorerModel;
+class DeviceDocumentPlugin;
 namespace Command
 {
 // TODO Moveme
-class UpdateAddressesValues final : public iscore::SerializableCommand
+class UpdateAddressesValues final : public iscore::Command
 {
-        ISCORE_COMMAND_DECL(DeviceExplorerCommandFactoryName(), UpdateAddressesValues, "Update addresses values")
-        public:
-            UpdateAddressesValues(Path<DeviceExplorerModel>&& device_tree,
-                                  const QList<QPair<const Device::Node*, State::Value>>& nodes);
+  ISCORE_COMMAND_DECL(
+      DeviceExplorerCommandFactoryName(),
+      UpdateAddressesValues,
+      "Update addresses values")
+public:
+  UpdateAddressesValues(
+      Path<DeviceDocumentPlugin>&& device_tree,
+      const QList<QPair<const Device::Node*, State::Value>>& nodes);
 
-        void undo() const override;
-        void redo() const override;
+  void undo() const override;
+  void redo() const override;
 
-    protected:
-        void serializeImpl(DataStreamInput&) const override;
-        void deserializeImpl(DataStreamOutput&) override;
+protected:
+  void serializeImpl(DataStreamInput&) const override;
+  void deserializeImpl(DataStreamOutput&) override;
 
-    private:
-        Path<DeviceExplorerModel> m_deviceTree;
+private:
+  Path<DeviceDocumentPlugin> m_deviceTree;
 
-        QList<
-        QPair<
-        Device::NodePath,
-        QPair< // First is old, second is new
-        State::Value,
-        State::Value
-        >
-        >
+  QList<
+          QPair<
+            Device::NodePath,
+            QPair< // First is old, second is new
+              State::Value,
+              State::Value
+            >
+          >
         > m_data;
 };
 }
 }
-

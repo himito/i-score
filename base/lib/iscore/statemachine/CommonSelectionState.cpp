@@ -1,106 +1,99 @@
 #include <QAbstractState>
 #include <QAbstractTransition>
-#include <qcoreevent.h>
 #include <QFinalState>
 #include <QGraphicsItem>
 #include <QKeyEventTransition>
+#include <qcoreevent.h>
 #include <qnamespace.h>
 
 #include "CommonSelectionState.hpp"
 #include "StateMachineUtils.hpp"
+#include <QApplication>
+
+bool CommonSelectionState::multiSelection() const
+{
+  return qApp->queryKeyboardModifiers().testFlag(
+      Qt::KeyboardModifier::ControlModifier);
+}
 
 CommonSelectionState::CommonSelectionState(
-        iscore::SelectionStack &stack,
-        QGraphicsObject *process_view,
-        QState *parent):
-    QState{parent},
-    dispatcher{stack}
+    iscore::SelectionStack& stack, QObject* obj, QState* parent)
+    : QState{parent}, dispatcher{stack}
 {
-    setChildMode(QState::ChildMode::ParallelStates);
-    setObjectName("metaSelectionState");
-    {
-        // Multi-selection state
-        auto selectionModeState = new QState{this};
-        selectionModeState->setObjectName("selectionModeState");
-        {
-            m_singleSelection = new QState{selectionModeState};
+  setObjectName("metaSelectionState");
 
-            selectionModeState->setInitialState(m_singleSelection);
-            m_multiSelection = new QState{selectionModeState};
+  // Wait
+  m_waitState = new QState{this};
+  m_waitState->setObjectName("m_waitState");
+  this->setInitialState(m_waitState);
 
-            auto trans1 = new QKeyEventTransition(process_view,
-                                                  QEvent::KeyPress, Qt::Key_Control, m_singleSelection);
-            trans1->setTargetState(m_multiSelection);
-            auto trans2 = new QKeyEventTransition(process_view,
-                                                  QEvent::KeyRelease, Qt::Key_Control, m_multiSelection);
-            trans2->setTargetState(m_singleSelection);
-        }
+  // Area
+  auto selectionAreaState = new QState{this};
+  selectionAreaState->setObjectName("selectionAreaState");
 
+  iscore::make_transition<iscore::Press_Transition>(
+      m_waitState, selectionAreaState);
+  selectionAreaState->addTransition(
+      selectionAreaState, finishedState(), m_waitState);
+  {
+    // States
+    auto pressAreaSelection = new QState{selectionAreaState};
+    pressAreaSelection->setObjectName("pressAreaSelection");
+    selectionAreaState->setInitialState(pressAreaSelection);
+    auto moveAreaSelection = new QState{selectionAreaState};
+    moveAreaSelection->setObjectName("moveAreaSelection");
+    auto releaseAreaSelection = new QFinalState{selectionAreaState};
+    releaseAreaSelection->setObjectName("releaseAreaSelection");
 
-        /// Proper selection stuff
-        auto selectionState = new QState{this};
-        selectionState->setObjectName("selectionState");
-        {
-            // Wait
-            m_waitState = new QState{selectionState};
-            m_waitState->setObjectName("m_waitState");
-            selectionState->setInitialState(m_waitState);
+    // Transitions
+    iscore::make_transition<iscore::Move_Transition>(
+        pressAreaSelection, moveAreaSelection);
+    iscore::make_transition<iscore::Release_Transition>(
+        pressAreaSelection, releaseAreaSelection);
 
-            // Area
-            auto selectionAreaState = new QState{selectionState};
-            selectionAreaState->setObjectName("selectionAreaState");
+    iscore::make_transition<iscore::Move_Transition>(
+        moveAreaSelection, moveAreaSelection);
+    iscore::make_transition<iscore::Release_Transition>(
+        moveAreaSelection, releaseAreaSelection);
 
-            iscore::make_transition<iscore::Press_Transition>(m_waitState, selectionAreaState);
-            selectionAreaState->addTransition(selectionAreaState, finishedState(), m_waitState);
-            {
-                // States
-                auto pressAreaSelection = new QState{selectionAreaState};
-                pressAreaSelection->setObjectName("pressAreaSelection");
-                selectionAreaState->setInitialState(pressAreaSelection);
-                auto moveAreaSelection = new QState{selectionAreaState};
-                moveAreaSelection->setObjectName("moveAreaSelection");
-                auto releaseAreaSelection = new QFinalState{selectionAreaState};
-                releaseAreaSelection->setObjectName("releaseAreaSelection");
+    // Operations
+    connect(
+        pressAreaSelection, &QState::entered, this,
+        &CommonSelectionState::on_pressAreaSelection);
+    connect(
+        moveAreaSelection, &QState::entered, this,
+        &CommonSelectionState::on_moveAreaSelection);
+    connect(
+        releaseAreaSelection, &QState::entered, this,
+        &CommonSelectionState::on_releaseAreaSelection);
+  }
 
-                // Transitions
-                iscore::make_transition<iscore::Move_Transition>(pressAreaSelection, moveAreaSelection);
-                iscore::make_transition<iscore::Release_Transition>(pressAreaSelection, releaseAreaSelection);
+  // Deselection
+  auto deselectState = new QState{this};
+  deselectState->setObjectName("deselectState");
+  iscore::make_transition<iscore::Cancel_Transition>(
+      selectionAreaState, deselectState);
+  iscore::make_transition<iscore::Cancel_Transition>(
+      m_waitState, deselectState);
+  iscore::make_transition<iscore::Cancel_Transition>(this, deselectState);
+  deselectState->addTransition(m_waitState);
+  connect(
+      deselectState, &QAbstractState::entered, this,
+      &CommonSelectionState::on_deselect);
 
-                iscore::make_transition<iscore::Move_Transition>(moveAreaSelection, moveAreaSelection);
-                iscore::make_transition<iscore::Release_Transition>(moveAreaSelection, releaseAreaSelection);
+  // Actions on selected elements
+  // NOTE : see ObjectMenuActions too.
+  auto t_delete = new QKeyEventTransition(
+      obj, QEvent::KeyPress, Qt::Key_Backspace, m_waitState);
+  connect(
+      t_delete, &QAbstractTransition::triggered, this,
+      &CommonSelectionState::on_delete);
 
-                // Operations
-                connect(pressAreaSelection, &QState::entered,
-                        this, &CommonSelectionState::on_pressAreaSelection);
-                connect(moveAreaSelection, &QState::entered,
-                        this, &CommonSelectionState::on_moveAreaSelection);
-                connect(releaseAreaSelection, &QState::entered,
-                        this, &CommonSelectionState::on_releaseAreaSelection);
-            }
-
-            // Deselection
-            auto deselectState = new QState{selectionState};
-            deselectState->setObjectName("deselectState");
-            iscore::make_transition<iscore::Cancel_Transition>(selectionAreaState, deselectState);
-            iscore::make_transition<iscore::Cancel_Transition>(m_waitState, deselectState);
-            deselectState->addTransition(m_waitState);
-            connect(deselectState, &QAbstractState::entered,
-                    this, &CommonSelectionState::on_deselect);
-
-            // Actions on selected elements
-            //NOTE : see ObjectMenuActions too.
-            auto t_delete = new QKeyEventTransition(
-                                process_view, QEvent::KeyPress, Qt::Key_Backspace, m_waitState);
-            connect(t_delete, &QAbstractTransition::triggered,
-                    this, &CommonSelectionState::on_delete);
-
-            auto t_deleteContent = new QKeyEventTransition(
-                                       process_view, QEvent::KeyPress, Qt::Key_Delete, m_waitState);
-            connect(t_deleteContent, &QAbstractTransition::triggered,
-                    this, &CommonSelectionState::on_deleteContent);
-        }
-    }
+  auto t_deleteContent = new QKeyEventTransition(
+      obj, QEvent::KeyPress, Qt::Key_Delete, m_waitState);
+  connect(
+      t_deleteContent, &QAbstractTransition::triggered, this,
+      &CommonSelectionState::on_deleteContent);
 }
 
 CommonSelectionState::~CommonSelectionState() = default;
-

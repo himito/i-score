@@ -1,18 +1,22 @@
 #pragma once
 
-#include <Scenario/Commands/Metadata/ChangeElementColor.hpp>
-#include <Scenario/Commands/Metadata/ChangeElementComments.hpp>
-#include <Scenario/Commands/Metadata/ChangeElementLabel.hpp>
-#include <Scenario/Commands/Metadata/ChangeElementName.hpp>
-#include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 #include <QColor>
 #include <QPixmap>
 #include <QString>
 #include <QWidget>
+#include <Scenario/Commands/Metadata/ChangeElementColor.hpp>
+#include <Scenario/Commands/Metadata/ChangeElementComments.hpp>
+#include <Scenario/Commands/Metadata/ChangeElementLabel.hpp>
+#include <Scenario/Commands/Metadata/ChangeElementName.hpp>
+#include <Scenario/Commands/Metadata/SetExtendedMetadata.hpp>
+#include <iscore/command/Dispatchers/CommandDispatcher.hpp>
 
-#include <iscore/tools/IdentifiedObject.hpp>
+#include <iscore/model/IdentifiedObject.hpp>
 
+namespace iscore
+{
 class ModelMetadata;
+}
 class QLabel;
 class QLineEdit;
 class QObject;
@@ -26,84 +30,95 @@ class ColorPaletteModel;
 
 namespace Scenario
 {
-
+class ExtendedMetadataWidget;
 class CommentEdit;
 
 // TODO move me in Process
 class MetadataWidget final : public QWidget
 {
-        Q_OBJECT
+  Q_OBJECT
 
-    public:
-        explicit MetadataWidget(
-                const ModelMetadata* metadata,
-                CommandDispatcher<>* m,
-                const QObject* docObject,
-                QWidget* parent = nullptr);
+public:
+  explicit MetadataWidget(
+      const iscore::ModelMetadata& metadata,
+      const iscore::CommandStackFacade& m,
+      const QObject* docObject,
+      QWidget* parent = nullptr);
 
-        QString scriptingName() const;
+  ~MetadataWidget();
 
-        template<typename T>
-        void setupConnections(const T& model)
-        {
-            using namespace Scenario::Command;
-            using namespace iscore::IDocument;
-            connect(this, &MetadataWidget::scriptingNameChanged,
-                    [&](const QString& newName)
-            {
-                if(newName != model.metadata.name())
-                    m_commandDispatcher->submitCommand(new ChangeElementName<T>{path(model), newName});
-            });
+  QString scriptingName() const;
 
-            connect(this, &MetadataWidget::labelChanged,
-                    [&](const QString& newLabel)
-            {
-                if(newLabel != model.metadata.label())
-                    m_commandDispatcher->submitCommand(new ChangeElementLabel<T>{path(model), newLabel});
-            });
+  template <typename T>
+  void setupConnections(const T& model)
+  {
+    using namespace Scenario::Command;
+    using namespace iscore::IDocument;
+    connect(
+        this, &MetadataWidget::scriptingNameChanged,
+        [&](const QString& newName) {
+          if (newName != model.metadata().getName())
+            m_commandDispatcher.submitCommand(
+                new ChangeElementName<T>{path(model), newName});
+        });
 
-            connect(this, &MetadataWidget::commentsChanged,
-                    [&](const QString& newComments)
-            {
-                if(newComments != model.metadata.comment())
-                    m_commandDispatcher->submitCommand(new ChangeElementComments<T>{path(model), newComments});
-            });
+    connect(this, &MetadataWidget::labelChanged, [&](const QString& newLabel) {
+      if (newLabel != model.metadata().getLabel())
+        m_commandDispatcher.submitCommand(
+            new ChangeElementLabel<T>{path(model), newLabel});
+    });
 
-            connect(this, &MetadataWidget::colorChanged,
-                    [&](ColorRef newColor)
-            {
-                if(newColor != model.metadata.color())
-                    m_commandDispatcher->submitCommand(new ChangeElementColor<T>{path(model), newColor});
-            });
-        }
+    connect(
+        this, &MetadataWidget::commentsChanged,
+        [&](const QString& newComments) {
+          if (newComments != model.metadata().getComment())
+            m_commandDispatcher.submitCommand(
+                new ChangeElementComments<T>{path(model), newComments});
+        });
 
-        void setScriptingName(QString arg);
-        void updateAsked();
+    connect(
+        this, &MetadataWidget::colorChanged, [&](iscore::ColorRef newColor) {
+          if (newColor != model.metadata().getColor())
+            m_commandDispatcher.submitCommand(
+                new ChangeElementColor<T>{path(model), newColor});
+        });
 
-    signals:
-        void scriptingNameChanged(QString arg);
-        void labelChanged(QString arg);
-        void commentsChanged(QString arg);
-        void colorChanged(ColorRef arg);
+    connect(
+        this, &MetadataWidget::extendedMetadataChanged,
+        [&](const QVariantMap& newM) {
+          if (newM != model.metadata().getExtendedMetadata())
+            m_commandDispatcher.submitCommand(
+                new SetExtendedMetadata<T>{path(model), newM});
+        });
+  }
 
-    private:
-        const ModelMetadata* m_metadata;
-        CommandDispatcher<>* m_commandDispatcher;
+  void setScriptingName(QString arg);
+  void updateAsked();
 
-        QLineEdit* m_scriptingNameLine {};
-        QLineEdit* m_labelLine {};
-        QPushButton* m_colorButton {};
-        CommentEdit* m_comments {};
-        QPixmap m_colorButtonPixmap {4 * m_colorIconSize / 3, 4 * m_colorIconSize / 3};
-        static const int m_colorIconSize
-        {
-            21
-        };
-        bool m_cmtExpanded{false};
-        QToolButton* m_cmtBtn{};
+signals:
+  void scriptingNameChanged(QString arg);
+  void labelChanged(QString arg);
+  void commentsChanged(QString arg);
+  void colorChanged(iscore::ColorRef arg);
+  void extendedMetadataChanged(const QVariantMap& arg);
 
-        color_widgets::ColorPaletteModel* m_palette{};
+private:
+  const iscore::ModelMetadata& m_metadata;
+  CommandDispatcher<> m_commandDispatcher;
 
-//        QString m_scriptingName;
+  QLineEdit* m_scriptingNameLine{};
+  QLineEdit* m_labelLine{};
+  QToolButton* m_colorButton{};
+  CommentEdit* m_comments{};
+  ExtendedMetadataWidget* m_meta{};
+  QPixmap m_colorButtonPixmap{4 * m_colorIconSize / 3,
+                              4 * m_colorIconSize / 3};
+  static const int m_colorIconSize{21};
+  bool m_cmtExpanded{false};
+  QToolButton* m_cmtBtn{};
+
+  color_widgets::ColorPaletteModel* m_palette{};
+
+  //        QString m_scriptingName;
 };
 }

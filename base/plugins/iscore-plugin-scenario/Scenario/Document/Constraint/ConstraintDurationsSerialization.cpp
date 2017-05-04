@@ -7,52 +7,51 @@
 #include <iscore/serialization/JSONValueVisitor.hpp>
 #include <iscore/serialization/JSONVisitor.hpp>
 
-template <typename T> class Reader;
-template <typename T> class Writer;
+template <typename T>
+class Reader;
+template <typename T>
+class Writer;
 
-template<> void Visitor<Reader<DataStream>>::readFrom(
-        const Scenario::ConstraintDurations& durs)
+
+template <>
+void DataStreamReader::read(
+    const Scenario::ConstraintDurations& durs)
 {
-    m_stream
-            << durs.m_defaultDuration
-            << durs.m_minDuration
-            << durs.m_maxDuration
-            << durs.m_rigidity
-            << durs.m_isMinNull
-            << durs.m_isMaxInfinite;
+  m_stream << durs.m_defaultDuration << durs.m_minDuration
+           << durs.m_maxDuration << durs.m_rigidity << durs.m_isMinNull
+           << durs.m_isMaxInfinite;
 }
 
-template<> void Visitor<Writer<DataStream>>::writeTo(
-        Scenario::ConstraintDurations& durs)
+
+template <>
+void DataStreamWriter::write(Scenario::ConstraintDurations& durs)
 {
-    m_stream
-            >> durs.m_defaultDuration
-            >> durs.m_minDuration
-            >> durs.m_maxDuration
-            >> durs.m_rigidity
-            >> durs.m_isMinNull
-            >> durs.m_isMaxInfinite;
+  m_stream >> durs.m_defaultDuration >> durs.m_minDuration
+      >> durs.m_maxDuration >> durs.m_rigidity >> durs.m_isMinNull
+      >> durs.m_isMaxInfinite;
 }
 
-template<> void Visitor<Reader<JSONObject>>::readFrom(
-        const Scenario::ConstraintDurations& durs)
+
+template <>
+void JSONObjectReader::read(
+    const Scenario::ConstraintDurations& durs)
 {
-    m_obj["DefaultDuration"] = toJsonValue(durs.m_defaultDuration);
-    m_obj["MinDuration"] = toJsonValue(durs.m_minDuration);
-    m_obj["MaxDuration"] = toJsonValue(durs.m_maxDuration);
-    m_obj["Rigidity"] = durs.m_rigidity;
-    m_obj["MinNull"] = durs.m_isMinNull;
-    m_obj["MaxInf"] = durs.m_isMaxInfinite;
+  obj[strings.DefaultDuration] = toJsonValue(durs.m_defaultDuration);
+  obj[strings.MinDuration] = toJsonValue(durs.m_minDuration);
+  obj[strings.MaxDuration] = toJsonValue(durs.m_maxDuration);
+  obj[strings.Rigidity] = durs.m_rigidity;
+  obj[strings.MinNull] = durs.m_isMinNull;
+  obj[strings.MaxInf] = durs.m_isMaxInfinite;
 }
 
-template<> void Visitor<Writer<JSONObject>>::writeTo(
-        Scenario::ConstraintDurations& durs)
-{
-    durs.m_defaultDuration = fromJsonValue<TimeValue> (m_obj["DefaultDuration"]);
-    durs.m_minDuration = fromJsonValue<TimeValue> (m_obj["MinDuration"]);
-    durs.m_maxDuration = fromJsonValue<TimeValue> (m_obj["MaxDuration"]);
-    durs.m_rigidity = m_obj["Rigidity"].toBool();
-    durs.m_isMinNull = m_obj["MinNull"].toBool();
-    durs.m_isMaxInfinite = m_obj["MaxInf"].toBool();
 
+template <>
+void JSONObjectWriter::write(Scenario::ConstraintDurations& durs)
+{
+  durs.m_defaultDuration = fromJsonValue<TimeVal>(obj[strings.DefaultDuration]);
+  durs.m_minDuration = fromJsonValue<TimeVal>(obj[strings.MinDuration]);
+  durs.m_maxDuration = fromJsonValue<TimeVal>(obj[strings.MaxDuration]);
+  durs.m_rigidity = obj[strings.Rigidity].toBool();
+  durs.m_isMinNull = obj[strings.MinNull].toBool();
+  durs.m_isMaxInfinite = obj[strings.MaxInf].toBool();
 }

@@ -1,53 +1,55 @@
 
-#include <iscore/serialization/DataStreamVisitor.hpp>
-#include <iscore/serialization/JSONVisitor.hpp>
 #include <QJsonObject>
 #include <QJsonValue>
+#include <iscore/serialization/DataStreamVisitor.hpp>
+#include <iscore/serialization/JSONVisitor.hpp>
 
 #include "BaseScenario.hpp"
-#include <iscore/plugins/documentdelegate/plugin/ElementPluginModelList.hpp>
 #include <iscore/serialization/JSONValueVisitor.hpp>
 
 namespace Scenario
 {
 class BaseScenarioContainer;
 }
-template <typename T> class Reader;
-template <typename T> class Writer;
-template <typename model> class IdentifiedObject;
+template <typename T>
+class Reader;
+template <typename T>
+class Writer;
+template <typename model>
+class IdentifiedObject;
 
-template<> void Visitor<Reader<DataStream>>::readFrom(const Scenario::BaseScenario& base_scenario)
+
+template <>
+void DataStreamReader::read(
+    const Scenario::BaseScenario& base_scenario)
 {
-    readFrom(static_cast<const IdentifiedObject<Scenario::BaseScenario>&>(base_scenario));
-    readFrom(static_cast<const Scenario::BaseScenarioContainer&>(base_scenario));
+  readFrom(static_cast<const Scenario::BaseScenarioContainer&>(base_scenario));
 
-    readFrom(base_scenario.pluginModelList);
-
-    insertDelimiter();
-}
-
-template<> void Visitor<Writer<DataStream>>::writeTo(Scenario::BaseScenario& base_scenario)
-{
-    writeTo(static_cast<Scenario::BaseScenarioContainer&>(base_scenario));
-    base_scenario.pluginModelList = iscore::ElementPluginModelList{*this, &base_scenario};
-
-    checkDelimiter();
+  insertDelimiter();
 }
 
 
-template<> void Visitor<Reader<JSONObject>>::readFrom(const Scenario::BaseScenario& base_scenario)
+template <>
+void DataStreamWriter::write(
+    Scenario::BaseScenario& base_scenario)
 {
-    readFrom(static_cast<const IdentifiedObject<Scenario::BaseScenario>&>(base_scenario));
-    readFrom(static_cast<const Scenario::BaseScenarioContainer&>(base_scenario));
+  writeTo(static_cast<Scenario::BaseScenarioContainer&>(base_scenario));
 
-    m_obj["PluginsMetadata"] = toJsonValue(base_scenario.pluginModelList);
+  checkDelimiter();
 }
 
 
-template<> void Visitor<Writer<JSONObject>>::writeTo(Scenario::BaseScenario& base_scenario)
+template <>
+void JSONObjectReader::read(
+    const Scenario::BaseScenario& base_scenario)
 {
-    writeTo(static_cast<Scenario::BaseScenarioContainer&>(base_scenario));
+  readFrom(static_cast<const Scenario::BaseScenarioContainer&>(base_scenario));
+}
 
-    Deserializer<JSONValue> elementPluginDeserializer(m_obj["PluginsMetadata"]);
-    base_scenario.pluginModelList = iscore::ElementPluginModelList{elementPluginDeserializer, &base_scenario};
+
+template <>
+void JSONObjectWriter::write(
+    Scenario::BaseScenario& base_scenario)
+{
+  writeTo(static_cast<Scenario::BaseScenarioContainer&>(base_scenario));
 }

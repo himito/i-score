@@ -1,15 +1,14 @@
 #pragma once
 
-#include <Scenario/Document/TimeRuler/AbstractTimeRulerView.hpp>
 #include <QRect>
-
+#include <Scenario/Document/TimeRuler/AbstractTimeRulerView.hpp>
+class QGraphicsView;
 namespace Scenario
 {
 class TimeRulerView final : public AbstractTimeRulerView
 {
-    public:
-        TimeRulerView();
-        QRectF boundingRect() const override;
-
+public:
+  TimeRulerView(QGraphicsView*);
+  QRectF boundingRect() const override;
 };
 }

@@ -1,119 +1,83 @@
 #include "ProcessFactory.hpp"
-#include "StateProcessFactoryList.hpp"
 #include "ProcessList.hpp"
-#include <Process/Dummy/DummyLayerModel.hpp>
+#include "StateProcessFactoryList.hpp"
 #include <Process/Dummy/DummyLayerPresenter.hpp>
 #include <Process/Dummy/DummyLayerView.hpp>
+#include <Process/LayerModelPanelProxy.hpp>
 #include <Process/Process.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
+#include <iscore/model/path/RelativePath.hpp>
 
 namespace Process
 {
-ProcessFactory::~ProcessFactory() = default;
 ProcessModelFactory::~ProcessModelFactory() = default;
-LayerModelFactory::~LayerModelFactory() = default;
-ProcessList::~ProcessList() = default;
+LayerFactory::~LayerFactory() = default;
+ProcessFactoryList::~ProcessFactoryList() = default;
+LayerFactoryList::~LayerFactoryList() = default;
 StateProcessList::~StateProcessList() = default;
 
 
-LayerModel* LayerModelFactory::makeLayer(
-        Process::ProcessModel& proc,
-        const Id<LayerModel>& viewModelId,
-        const QByteArray& constructionData,
-        QObject* parent)
+LayerPresenter* LayerFactory::makeLayerPresenter(
+    const ProcessModel& lm,
+    LayerView* v,
+    const ProcessPresenterContext& context,
+    QObject* parent)
 {
-    auto lm = makeLayer_impl(proc, viewModelId, constructionData, parent);
-    proc.addLayer(lm);
-
-    return lm;
+  return new Dummy::DummyLayerPresenter{
+      lm, static_cast<Dummy::DummyLayerView*>(v), context, parent};
 }
 
-
-LayerModel*LayerModelFactory::loadLayer(
-        Process::ProcessModel& proc,
-        const VisitorVariant& v,
-        QObject* parent)
+LayerView*
+LayerFactory::makeLayerView(const ProcessModel& view, QGraphicsItem* parent)
 {
-    auto lm = loadLayer_impl(proc, v, parent);
-    proc.addLayer(lm);
-
-    return lm;
+  return new Dummy::DummyLayerView{parent};
 }
 
-LayerModel*LayerModelFactory::cloneLayer(
-        Process::ProcessModel& proc,
-        const Id<LayerModel>& newId,
-        const LayerModel& source,
-        QObject* parent)
+LayerPanelProxy*
+LayerFactory::makePanel(const ProcessModel& layer, QObject* parent)
 {
-    auto lm = cloneLayer_impl(proc, newId, source, parent);
-    proc.addLayer(lm);
-
-    return lm;
+  return new Process::GraphicsViewLayerPanelProxy{layer, parent};
 }
 
-
-
-QByteArray LayerModelFactory::makeLayerConstructionData(
-        const ProcessModel&) const
+bool LayerFactory::matches(const ProcessModel& p) const
 {
-    return { };
+  return matches(p.concreteKey());
 }
 
-QByteArray LayerModelFactory::makeStaticLayerConstructionData() const
+bool LayerFactory::matches(
+    const UuidKey<Process::ProcessModel>& p) const
 {
-    return { };
+  return false;
 }
 
-LayerPresenter*LayerModelFactory::makeLayerPresenter(
-        const LayerModel& lm,
-        LayerView* v,
-        const ProcessPresenterContext& context,
-        QObject* parent)
+ProcessFactoryList::object_type* ProcessFactoryList::loadMissing(
+    const VisitorVariant& vis, QObject* parent) const
 {
-    return new Dummy::DummyLayerPresenter{lm, static_cast<Dummy::DummyLayerView*>(v), context, parent};
+  ISCORE_TODO;
+  return nullptr;
 }
 
-LayerView*LayerModelFactory::makeLayerView(
-        const LayerModel& view,
-        QGraphicsItem* parent)
+StateProcessList::object_type*
+StateProcessList::loadMissing(const VisitorVariant& vis, QObject* parent) const
 {
-    return new Dummy::DummyLayerView{parent};
+  ISCORE_TODO;
+  return nullptr;
 }
 
-LayerModel*LayerModelFactory::makeLayer_impl(
-        ProcessModel& p,
-        const Id<LayerModel>& viewModelId,
-        const QByteArray& constructionData,
-        QObject* parent)
+LayerFactory*
+LayerFactoryList::findDefaultFactory(const ProcessModel& proc) const
 {
-    return new Dummy::DummyLayerModel{p, viewModelId, parent};
+  return findDefaultFactory(proc.concreteKey());
 }
 
-LayerModel*LayerModelFactory::loadLayer_impl(
-        ProcessModel& p ,
-        const VisitorVariant& vis,
-        QObject* parent)
+LayerFactory* LayerFactoryList::findDefaultFactory(
+    const UuidKey<ProcessModel>& proc) const
 {
-    return deserialize_dyn(vis, [&] (auto&& deserializer)
-    {
-        auto autom = new Dummy::DummyLayerModel{
-                        deserializer, p, parent};
-
-        return autom;
-    });
+  for (auto& fac : *this)
+  {
+    if (fac.matches(proc))
+      return &fac;
+  }
+  return nullptr;
 }
-
-LayerModel*LayerModelFactory::cloneLayer_impl(
-        ProcessModel& p,
-        const Id<LayerModel>& newId,
-        const LayerModel& source,
-        QObject* parent)
-{
-    return new Dummy::DummyLayerModel{
-        safe_cast<const Dummy::DummyLayerModel&>(source),
-                p,
-                newId,
-                parent};
-}
-
 }

@@ -1,55 +1,42 @@
-#include <Scenario/Document/Constraint/ViewModels/ConstraintViewModel.hpp>
+#include <Scenario/Document/Constraint/ConstraintModel.hpp>
 
-#include <iscore/serialization/DataStreamVisitor.hpp>
 #include <algorithm>
+#include <iscore/serialization/DataStreamVisitor.hpp>
 
 #include "HideRackInViewModel.hpp"
-#include <iscore/tools/ModelPath.hpp>
-#include <iscore/tools/ModelPathSerialization.hpp>
+#include <iscore/model/path/Path.hpp>
+#include <iscore/model/path/PathSerialization.hpp>
 
 namespace Scenario
 {
 namespace Command
 {
-
-HideRackInViewModel::HideRackInViewModel(
-        Path<ConstraintViewModel>&& path) :
-    m_constraintViewPath {std::move(path) }
+HideRack::HideRack(
+    const Scenario::ConstraintModel& constraint_vm)
+    : m_constraintViewPath{constraint_vm}
 {
-    auto& constraint_vm = m_constraintViewPath.find();
-    m_constraintPreviousId = constraint_vm.shownRack();
 }
 
-HideRackInViewModel::HideRackInViewModel(
-        const ConstraintViewModel& constraint_vm) :
-    m_constraintViewPath {constraint_vm}
+void HideRack::undo() const
 {
-    m_constraintPreviousId = constraint_vm.shownRack();
+  auto& vm = m_constraintViewPath.find();
+  vm.setSmallViewVisible(true);
 }
 
-void HideRackInViewModel::undo() const
+void HideRack::redo() const
 {
-    auto& vm = m_constraintViewPath.find();
-    vm.showRack(m_constraintPreviousId);
+  auto& vm = m_constraintViewPath.find();
+  vm.setSmallViewVisible(false);
 }
 
-void HideRackInViewModel::redo() const
+void HideRack::serializeImpl(DataStreamInput& s) const
 {
-    auto& vm = m_constraintViewPath.find();
-    vm.hideRack();
+  s << m_constraintViewPath;
 }
 
-void HideRackInViewModel::serializeImpl(DataStreamInput& s) const
+void HideRack::deserializeImpl(DataStreamOutput& s)
 {
-    s << m_constraintViewPath
-      << m_constraintPreviousId;
+  s >> m_constraintViewPath;
 }
-
-void HideRackInViewModel::deserializeImpl(DataStreamOutput& s)
-{
-    s >> m_constraintViewPath
-            >> m_constraintPreviousId;
-}
-
 }
 }

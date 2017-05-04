@@ -1,26 +1,16 @@
-#include <QByteArray>
-#include <QColor>
-#include <QFile>
-#include <QIODevice>
-#include <QJsonArray>
-#include <QJsonDocument>
-#include <QJsonObject>
-#include <QJsonValue>
-
 #include "AutomationColors.hpp"
-#include <Curve/CurveStyle.hpp>
-#include <Process/Style/Skin.hpp>
-class QString;
+#include <iscore/model/Skin.hpp>
 
 namespace Automation
 {
-Colors::Colors():
-    m_style{
-        Skin::instance().Tender3,
-        Skin::instance().Emphasis2,
-        Skin::instance().Tender1,
-        Skin::instance().Tender2,
-        Skin::instance().Gray}
+Colors::Colors(const iscore::Skin& s)
+  : m_style{
+      s.Tender3,
+      s.Emphasis2,
+      s.Tender1,
+      s.Tender2,
+      s.Gray}
 {
+  m_style.init(s);
 }
 }

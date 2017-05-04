@@ -1,23 +1,20 @@
 #pragma once
 #include <Process/TimeValue.hpp>
-#include <iscore/tools/SettableIdentifier.hpp>
+#include <iscore/model/Identifier.hpp>
 
-#include <Scenario/Process/ScenarioModel.hpp>
 #include <Scenario/Document/Constraint/ConstraintModel.hpp>
 #include <Scenario/Document/Event/EventModel.hpp>
 #include <Scenario/Document/TimeNode/TimeNodeModel.hpp>
+#include <Scenario/Process/ScenarioModel.hpp>
 
-#include <iscore/document/DocumentInterface.hpp>
 #include <Scenario/Commands/Scenario/Deletions/ClearConstraint.hpp>
-#include <Scenario/Document/Constraint/Rack/RackModel.hpp>
-#include <Scenario/Document/Constraint/Rack/Slot/SlotModel.hpp>
+#include <Scenario/Document/Constraint/Slot.hpp>
 #include <Scenario/Process/Algorithms/ProcessPolicy.hpp>
+#include <iscore/document/DocumentInterface.hpp>
 
-#include <Scenario/Document/Constraint/ViewModels/ConstraintViewModel.hpp>
+#include <Process/ProcessList.hpp>
 #include <Scenario/Process/Algorithms/StandardCreationPolicy.hpp>
 #include <Scenario/Process/Algorithms/VerticalMovePolicy.hpp>
-#include <Process/LayerModel.hpp>
-#include <Process/ProcessList.hpp>
 
 #include <Scenario/Tools/dataStructures.hpp>
 
@@ -29,194 +26,149 @@ namespace Scenario
  */
 class CommonDisplacementPolicy
 {
-    public:
+public:
+  template <typename ProcessScaleMethod>
+  static void updatePositions(
+      Scenario::ProcessModel& scenario,
+      ProcessScaleMethod&& scaleMethod,
+      const ElementsProperties& propsToUpdate)
+  {
+    // update each affected timenodes
+    for (auto it = propsToUpdate.timenodes.cbegin();
+         it != propsToUpdate.timenodes.cend();
+         ++it)
+    {
+      auto& curTimenodeToUpdate = scenario.timeNode(it.key());
+      auto& curTimenodePropertiesToUpdate = it.value();
 
-        template<typename ProcessScaleMethod>
-        static
-        void
-        updatePositions(
-                Scenario::ProcessModel& scenario,
-                ProcessScaleMethod&& scaleMethod,
-                const ElementsProperties& propsToUpdate)
-        {
-            // update each affected timenodes
-            for(auto it = propsToUpdate.timenodes.cbegin(); it != propsToUpdate.timenodes.cend(); ++it)
-            {
-                auto& curTimenodeToUpdate = scenario.timeNode(it.key());
-                auto& curTimenodePropertiesToUpdate = it.value();
+      curTimenodeToUpdate.setDate(curTimenodePropertiesToUpdate.newDate);
 
-                curTimenodeToUpdate.setDate(curTimenodePropertiesToUpdate.newDate);
+      // update related events
+      for (const auto& event : curTimenodeToUpdate.events())
+      {
+        scenario.events.at(event).setDate(curTimenodeToUpdate.date());
+      }
+    }
 
-                // update related events
-                for (const auto& event : curTimenodeToUpdate.events())
-                {
-                    scenario.events.at(event).setDate(curTimenodeToUpdate.date());
-                }
-            }
+    // update affected constraints
+    for(auto& e : propsToUpdate.constraints)
+    {
+      auto curConstraintPropertiesToUpdate_id = e.first;
 
-            // update affected constraints
-            QMapIterator<Id<ConstraintModel>, ConstraintProperties> constraintPropertiesIterator(propsToUpdate.constraints);
-            while (constraintPropertiesIterator.hasNext())
-            {
-                constraintPropertiesIterator.next();
+      auto& curConstraintToUpdate
+          = scenario.constraints.at(curConstraintPropertiesToUpdate_id);
+      auto& curConstraintPropertiesToUpdate = e.second;
 
-                auto curConstraintPropertiesToUpdate_id = constraintPropertiesIterator.key();
+      // compute default duration here
+      const auto& startDate
+          = scenario
+                .event(scenario.state(curConstraintToUpdate.startState())
+                           .eventId())
+                .date();
+      const auto& endDate
+          = scenario
+                .event(
+                    scenario.state(curConstraintToUpdate.endState()).eventId())
+                .date();
 
-                auto& curConstraintToUpdate = scenario.constraints.at(curConstraintPropertiesToUpdate_id);
-                auto& curConstraintPropertiesToUpdate = constraintPropertiesIterator.value();
+      TimeVal defaultDuration = endDate - startDate;
 
-                // compute default duration here
-                const auto& startDate = scenario.event(scenario.state(curConstraintToUpdate.startState()).eventId()).date();
-                const auto& endDate = scenario.event(scenario.state(curConstraintToUpdate.endState()).eventId()).date();
+      // set start date and default duration
+      if (!(curConstraintToUpdate.startDate() - startDate).isZero())
+      {
+        curConstraintToUpdate.setStartDate(startDate);
+      }
+      curConstraintToUpdate.duration.setDefaultDuration(defaultDuration);
 
-                TimeValue defaultDuration = endDate - startDate;
+      curConstraintToUpdate.duration.setMinDuration(
+          curConstraintPropertiesToUpdate.newMin);
+      curConstraintToUpdate.duration.setMaxDuration(
+          curConstraintPropertiesToUpdate.newMax);
 
-                // set start date and default duration
-                if (!(curConstraintToUpdate.startDate() - startDate).isZero())
-                {
-                    curConstraintToUpdate.setStartDate(startDate);
-                }
-                curConstraintToUpdate.duration.setDefaultDuration(defaultDuration);
+      for (auto& process : curConstraintToUpdate.processes)
+      {
+        scaleMethod(process, defaultDuration);
+      }
 
+      emit scenario.constraintMoved(curConstraintToUpdate);
+    }
+  }
 
-                curConstraintToUpdate.duration.setMinDuration(curConstraintPropertiesToUpdate.newMin);
-                curConstraintToUpdate.duration.setMaxDuration(curConstraintPropertiesToUpdate.newMax);
+  template <typename ProcessScaleMethod>
+  static void revertPositions(
+      Scenario::ProcessModel& scenario,
+      ProcessScaleMethod&& scaleMethod,
+      const ElementsProperties& propsToUpdate)
+  {
+    // update each affected timenodes with old values
+    for (auto it = propsToUpdate.timenodes.cbegin();
+         it != propsToUpdate.timenodes.cend();
+         ++it)
+    {
+      auto& curTimenodeToUpdate = scenario.timeNode(it.key());
+      auto& curTimenodePropertiesToUpdate = it.value();
 
-                for(auto& process : curConstraintToUpdate.processes)
-                {
-                    scaleMethod(process, defaultDuration);
-                }
+      curTimenodeToUpdate.setDate(curTimenodePropertiesToUpdate.oldDate);
 
+      // update related events to mach the date
+      for (const auto& event : curTimenodeToUpdate.events())
+      {
+        scenario.events.at(event).setDate(curTimenodeToUpdate.date());
+      }
+    }
 
+    // update affected constraints with old values and restor processes
+    for(auto& e : propsToUpdate.constraints)
+    {
+      auto curConstraintPropertiesToUpdate_id = e.first;
 
-                emit scenario.constraintMoved(curConstraintToUpdate);
-            }
-        }
+      auto& curConstraintToUpdate
+          = scenario.constraints.at(curConstraintPropertiesToUpdate_id);
+      auto& curConstraintPropertiesToUpdate = e.second;
 
-        template<typename ProcessScaleMethod>
-        static
-        void
-        revertPositions(
-                Scenario::ProcessModel& scenario,
-                ProcessScaleMethod&& scaleMethod,
-                const ElementsProperties& propsToUpdate)
-        {
-            // update each affected timenodes with old values
-            for(auto it = propsToUpdate.timenodes.cbegin(); it != propsToUpdate.timenodes.cend(); ++it)
-            {
-                auto& curTimenodeToUpdate = scenario.timeNode(it.key());
-                auto& curTimenodePropertiesToUpdate = it.value();
+      // compute default duration here
+      const auto& startDate
+          = scenario
+                .event(scenario.state(curConstraintToUpdate.startState())
+                           .eventId())
+                .date();
+      const auto& endDate
+          = scenario
+                .event(
+                    scenario.state(curConstraintToUpdate.endState()).eventId())
+                .date();
 
-                curTimenodeToUpdate.setDate(curTimenodePropertiesToUpdate.oldDate);
+      TimeVal defaultDuration = endDate - startDate;
 
-                // update related events to mach the date
-                for (const auto& event : curTimenodeToUpdate.events())
-                {
-                    scenario.events.at(event).setDate(curTimenodeToUpdate.date());
-                }
-            }
+      // set start date and default duration
+      if (!(curConstraintToUpdate.startDate() - startDate).isZero())
+      {
+        curConstraintToUpdate.setStartDate(startDate);
+      }
+      curConstraintToUpdate.duration.setDefaultDuration(defaultDuration);
 
-            // update affected constraints with old values and restor processes
-            QMapIterator<Id<ConstraintModel>, ConstraintProperties> constraintPropertiesIterator(propsToUpdate.constraints);
-            while (constraintPropertiesIterator.hasNext())
-            {
-                constraintPropertiesIterator.next();
+      // set durations
+      curConstraintToUpdate.duration.setMinDuration(
+          curConstraintPropertiesToUpdate.oldMin);
+      curConstraintToUpdate.duration.setMaxDuration(
+          curConstraintPropertiesToUpdate.oldMax);
 
-                auto curConstraintPropertiesToUpdate_id = constraintPropertiesIterator.key();
+      // Now we have to restore the state of each constraint that might have
+      // been modified
+      // during this command.
 
-                auto& curConstraintToUpdate = scenario.constraints.at(curConstraintPropertiesToUpdate_id);
-                auto& curConstraintPropertiesToUpdate = constraintPropertiesIterator.value();
+      // 1. Clear the constraint
+      // TODO Don't use a command since it serializes a ton of unused stuff.
+      Command::ClearConstraint clear_cmd{curConstraintToUpdate};
+      clear_cmd.redo();
 
-                // compute default duration here
-                const auto& startDate = scenario.event(scenario.state(curConstraintToUpdate.startState()).eventId()).date();
-                const auto& endDate = scenario.event(scenario.state(curConstraintToUpdate.endState()).eventId()).date();
+      // 2. Restore the rackes & processes.
+      // Restore the constraint. The saving is done in
+      // GenericDisplacementPolicy.
+      curConstraintPropertiesToUpdate.reload(curConstraintToUpdate);
 
-                TimeValue defaultDuration = endDate - startDate;
-
-                // set start date and default duration
-                if (!(curConstraintToUpdate.startDate() - startDate).isZero())
-                {
-                    curConstraintToUpdate.setStartDate(startDate);
-                }
-                curConstraintToUpdate.duration.setDefaultDuration(defaultDuration);
-
-                // set durations
-                curConstraintToUpdate.duration.setMinDuration(curConstraintPropertiesToUpdate.oldMin);
-                curConstraintToUpdate.duration.setMaxDuration(curConstraintPropertiesToUpdate.oldMax);
-
-                // Now we have to restore the state of each constraint that might have been modified
-                // during this command.
-                auto& savedConstraintData = propsToUpdate.constraints[curConstraintPropertiesToUpdate_id].savedDisplay;
-
-                // 1. Clear the constraint
-                // TODO Don't use a command since it serializes a ton of unused stuff.
-                Command::ClearConstraint clear_cmd{Path<ConstraintModel>{savedConstraintData.first.first}};
-                clear_cmd.redo();
-
-                auto& constraint = savedConstraintData.first.first.find();
-                // 2. Restore the rackes & processes.
-
-                // TODO if possible refactor this with ReplaceConstraintContent and ConstraintModel::clone
-                // Be careful however, the code differs in subtle ways
-                {
-                    ConstraintModel src_constraint{
-                        Deserializer<DataStream>{savedConstraintData.first.second},
-                        &constraint}; // Temporary parent
-
-                    std::map<const Process::ProcessModel*, Process::ProcessModel*> processPairs;
-
-                    // Clone the processes
-                    for(const auto& sourceproc : src_constraint.processes)
-                    {
-                        auto newproc = sourceproc.clone(sourceproc.id(), &constraint);
-
-                        processPairs.insert(std::make_pair(&sourceproc, newproc));
-                        AddProcess(constraint, newproc);
-                    }
-
-                    // Clone the rackes
-                    auto& procs = iscore::AppContext().components.factory<Process::ProcessList>();
-
-                    for(const auto& sourcerack : src_constraint.racks)
-                    {
-                        // A note about what happens here :
-                        // Since we want to duplicate our process view models using
-                        // the target constraint's cloned shared processes (they might setup some specific data),
-                        // we maintain a pair mapping each original process to their cloned counterpart.
-                        // We can then use the correct cloned process to clone the process view model.
-                        auto newrack = new RackModel{
-                                       sourcerack,
-                                       sourcerack.id(),
-                                       [&] (const SlotModel& source, SlotModel& target)
-                        {
-                            for(const auto& lm : source.layers)
-                            {
-                                // We can safely reuse the same id since it's in a different slot.
-                                Process::ProcessModel* proc = processPairs[&lm.processModel()];
-                                auto fact = procs.get(proc->concreteFactoryKey());
-
-                                // TODO harmonize the order of parameters (source first, then new id)
-                                target.layers.add(fact->cloneLayer(*proc, lm.id(), lm, &target));
-                            }
-                        },
-                        &constraint};
-                        constraint.racks.add(newrack);
-                    }
-                }
-
-                // 3. Restore the correct rackes in the constraint view models
-                if(constraint.processes.size() != 0)
-                {
-                    for(auto& viewmodel : constraint.viewModels())
-                    {
-                        viewmodel->showRack(curConstraintPropertiesToUpdate.savedDisplay.second[viewmodel->id()]);
-                    }
-                }
-
-
-                emit scenario.constraintMoved(curConstraintToUpdate);
-            }
-        }
+      emit scenario.constraintMoved(curConstraintToUpdate);
+    }
+  }
 };
-
 }

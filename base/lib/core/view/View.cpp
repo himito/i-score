@@ -1,236 +1,255 @@
+#include <ossia/detail/algorithms.hpp>
+#include <QAction>
+#include <QCloseEvent>
+#include <QDesktopWidget>
+#include <QDockWidget>
+#include <QEvent>
+#include <QFlags>
+#include <QRect>
+#include <QTabBar>
+#include <QTabWidget>
+#include <QWidget>
+#include <algorithm>
 #include <core/document/Document.hpp>
 #include <core/document/DocumentModel.hpp>
 #include <core/document/DocumentView.hpp>
 #include <core/presenter/Presenter.hpp>
 #include <core/view/View.hpp>
-#include <iscore/menu/MenuInterface.hpp>
+
+#include <iscore/plugins/documentdelegate/DocumentDelegateView.hpp>
+#include <iscore/actions/Menu.hpp>
 #include <iscore/plugins/panel/PanelDelegate.hpp>
-#include <QAction>
-#include <qcoreevent.h>
-#include <QDesktopWidget>
-#include <QDockWidget>
-#include <QEvent>
-#include <QFlags>
-#include <qnamespace.h>
-#include <QRect>
-#include <QTabBar>
-#include <QTabWidget>
-#include <QWidget>
-#include <QCloseEvent>
-#include <algorithm>
-#include <iterator>
-#include <set>
-#include <iscore/tools/std/Algorithms.hpp>
 #include <iscore/widgets/QmlContainerPanel.hpp>
 #include <iscore_git_info.hpp>
-
-class QObject;
-
+#include <iterator>
+#include <qcoreevent.h>
+#include <qnamespace.h>
+#include <set>
+#include <iscore/plugins/application/GUIApplicationPlugin.hpp>
 
 namespace iscore
 {
 struct PanelComparator
 {
-        bool operator()(
-                const QPair<iscore::PanelDelegate*, QDockWidget*>& lhs,
-                const QPair<iscore::PanelDelegate*, QDockWidget*>& rhs) const
-        {
-            return lhs.first->defaultPanelStatus().priority < rhs.first->defaultPanelStatus().priority;
-        }
+  bool operator()(
+      const QPair<iscore::PanelDelegate*, QDockWidget*>& lhs,
+      const QPair<iscore::PanelDelegate*, QDockWidget*>& rhs) const
+  {
+    return lhs.first->defaultPanelStatus().priority
+           < rhs.first->defaultPanelStatus().priority;
+  }
 };
 
-View::View(QObject* parent) :
-    QMainWindow {},
-    m_tabWidget{new QTabWidget}
+View::View(QObject* parent) : QMainWindow{}, m_tabWidget{new QTabWidget}
 {
-    setObjectName("View");
-    this->setWindowIcon(QIcon("://i-score.png"));
+  setObjectName("View");
+  this->setWindowIcon(QIcon("://i-score.png"));
 
-    QString version = QString{"%1.%2.%3-%4"}
-            .arg(ISCORE_VERSION_MAJOR)
-            .arg(ISCORE_VERSION_MINOR)
-            .arg(ISCORE_VERSION_PATCH)
-            .arg(ISCORE_VERSION_EXTRA);
-    auto title = tr("i-score - %1").arg(version);
-    this->setWindowIconText(title);
-    this->setWindowTitle(title);
-    m_tabWidget->setObjectName("Documents");
-    //setUnifiedTitleAndToolBarOnMac(true);
+  QString version = QString{"%1.%2.%3-%4"}
+                        .arg(ISCORE_VERSION_MAJOR)
+                        .arg(ISCORE_VERSION_MINOR)
+                        .arg(ISCORE_VERSION_PATCH)
+                        .arg(ISCORE_VERSION_EXTRA);
+  auto title = tr("i-score - %1").arg(version);
+  this->setWindowIconText(title);
+  this->setWindowTitle(title);
+  m_tabWidget->setObjectName("Documents");
 
-    setDockOptions(QMainWindow::ForceTabbedDocks | QMainWindow::VerticalTabs);
-    setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
-    setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
+  // setUnifiedTitleAndToolBarOnMac(true);
 
-    QDesktopWidget w;
-    auto rect = w.availableGeometry();
-    this->resize(static_cast<int>(rect.width() * 0.75),
-                 static_cast<int>(rect.height() * 0.75));
+  setDockOptions(QMainWindow::ForceTabbedDocks | QMainWindow::VerticalTabs);
+  setCorner(Qt::BottomLeftCorner, Qt::LeftDockWidgetArea);
+  setCorner(Qt::BottomRightCorner, Qt::RightDockWidgetArea);
 
-    setCentralWidget(m_tabWidget);
-    m_tabWidget->tabBar()->setDocumentMode(true);
-    connect(m_tabWidget, &QTabWidget::currentChanged,
-            this, [&] (int index) {
-           auto view = dynamic_cast<DocumentView*>(m_tabWidget->widget(index));
-           if(!view)
-               return;
-           emit activeDocumentChanged(view->document().model().id());
-    }, Qt::QueuedConnection);
+  QDesktopWidget w;
+  auto rect = w.availableGeometry();
+  this->resize(
+      static_cast<int>(rect.width() * 0.75),
+      static_cast<int>(rect.height() * 0.75));
 
-    connect(m_tabWidget, &QTabWidget::tabCloseRequested,
-            this, [&] (int index)
-    {
-        emit closeRequested(safe_cast<DocumentView*>(m_tabWidget->widget(index))->document().model().id());
-    });
+  setCentralWidget(m_tabWidget);
+  m_tabWidget->setContentsMargins(0, 0, 0, 0);
+  m_tabWidget->tabBar()->setDocumentMode(true);
+  m_tabWidget->tabBar()->setDrawBase(false);
+  m_tabWidget->tabBar()->setAutoHide(true);
+  connect(
+      m_tabWidget, &QTabWidget::currentChanged, this,
+      [&](int index) {
+        auto view = dynamic_cast<DocumentView*>(m_tabWidget->widget(index));
+        if (!view)
+          return;
+        emit activeDocumentChanged(view->document().model().id());
+      },
+      Qt::QueuedConnection);
 
+  connect(m_tabWidget, &QTabWidget::tabCloseRequested, this, [&](int index) {
+    emit closeRequested(m_documents.at(m_tabWidget->widget(index))
+                            ->document()
+                            .model()
+                            .id());
+  });
 }
 
 void View::setPresenter(Presenter* p)
 {
-    m_presenter = p;
+  m_presenter = p;
 }
-
 void View::addDocumentView(DocumentView* doc)
 {
-    doc->setParent(this);
-    m_tabWidget->addTab(doc, doc->document().metadata.fileName());
-    m_tabWidget->setCurrentIndex(m_tabWidget->count() - 1);
-    m_tabWidget->setTabsClosable(true);
+  doc->setParent(this);
+  auto widg = doc->viewDelegate().getWidget();
+  m_documents.insert(std::make_pair(widg, doc));
+  m_tabWidget->addTab(widg, doc->document().metadata().fileName());
+  m_tabWidget->setCurrentIndex(m_tabWidget->count() - 1);
+  m_tabWidget->setTabsClosable(true);
+  emit sizeChanged(size());
 }
 
 void View::setupPanel(PanelDelegate* v)
 {
-    using namespace std;
-    auto dial = new QDockWidget {v->defaultPanelStatus().prettyName, this};
-    dial->setWidget(v->widget());
-    dial->toggleViewAction()->setShortcut(v->defaultPanelStatus().shortcut);
+  using namespace std;
+  auto dial = new QDockWidget{v->defaultPanelStatus().prettyName, this};
+  auto w = v->widget();
+  dial->setWidget(w);
+  dial->toggleViewAction()->setShortcut(v->defaultPanelStatus().shortcut);
 
-    auto& mw = v->context().menus.get().at(iscore::Menus::Windows());
-    mw.menu()->addAction(dial->toggleViewAction());
+  auto& mw = v->context().menus.get().at(iscore::Menus::Windows());
+  mw.menu()->addAction(dial->toggleViewAction());
 
-    // Note : this only has meaning at initialisation time.
-    auto dock = v->defaultPanelStatus().dock;
+  // Note : this only has meaning at initialisation time.
+  auto dock = v->defaultPanelStatus().dock;
 
-    this->addDockWidget(dock, dial);
-    if(dock == Qt::LeftDockWidgetArea)
+  this->addDockWidget(dock, dial);
+  if (dock == Qt::LeftDockWidgetArea)
+  {
+    m_leftPanels.push_back({v, dial});
+    if (m_leftPanels.size() > 1)
     {
-        m_leftPanels.push_back({v, dial});
-        if(m_leftPanels.size() > 1)
-        {
-            // Find the one with the biggest priority
-            auto it = max_element(m_leftPanels, PanelComparator{});
+      // Find the one with the biggest priority
+      auto it = ossia::max_element(m_leftPanels, PanelComparator{});
 
-            it->second->raise();
-            if(dial != it->second)
-            {
-                // dial is not on top
-                tabifyDockWidget(dial, it->second);
-            }
-            else
-            {
-                // dial is on top
-                auto it = find_if(m_leftPanels, [=] (auto elt) {
-                    return elt.second != dial;
-                });
-                ISCORE_ASSERT(it != m_leftPanels.end());
-                tabifyDockWidget(it->second, dial);
-            }
-        }
+      it->second->raise();
+      if (dial != it->second)
+      {
+        // dial is not on top
+        tabifyDockWidget(dial, it->second);
+      }
+      else
+      {
+        // dial is on top
+        auto it = ossia::find_if(
+            m_leftPanels, [=](auto elt) { return elt.second != dial; });
+        ISCORE_ASSERT(it != m_leftPanels.end());
+        tabifyDockWidget(it->second, dial);
+      }
     }
-    else if(dock == Qt::RightDockWidgetArea)
+  }
+  else if (dock == Qt::RightDockWidgetArea)
+  {
+    m_rightPanels.push_back({v, dial});
+
+    if (m_rightPanels.size() > 1)
     {
-        m_rightPanels.push_back({v, dial});
+      // Find the one with the biggest priority
+      auto it = ossia::max_element(m_rightPanels, PanelComparator{});
 
-        if(m_rightPanels.size() > 1)
-        {
-            // Find the one with the biggest priority
-            auto it = max_element(m_rightPanels, PanelComparator{});
-
-            it->second->raise();
-            if(dial != it->second)
-            {
-                tabifyDockWidget(dial, it->second);
-            }
-            else
-            {
-                auto it = find_if(m_rightPanels, [=] (auto elt) {
-                    return elt.second != dial;
-                });
-                ISCORE_ASSERT(it != m_rightPanels.end());
-                tabifyDockWidget(it->second, dial);
-            }
-        }
+      it->second->raise();
+      if (dial != it->second)
+      {
+        tabifyDockWidget(dial, it->second);
+      }
+      else
+      {
+        auto it = ossia::find_if(
+            m_rightPanels, [=](auto elt) { return elt.second != dial; });
+        ISCORE_ASSERT(it != m_rightPanels.end());
+        tabifyDockWidget(it->second, dial);
+      }
     }
+  }
 
-    if(!v->defaultPanelStatus().shown)
-        dial->hide();
+  if (!v->defaultPanelStatus().shown)
+    dial->hide();
 }
 
-void View::closeDocument(DocumentView *doc)
+void View::closeDocument(DocumentView* doc)
 {
-    for(int i = 0; i < m_tabWidget->count(); i++)
+  for (int i = 0; i < m_tabWidget->count(); i++)
+  {
+    auto widg = doc->viewDelegate().getWidget() ;
+    if (widg == m_tabWidget->widget(i))
     {
-        if(doc == m_tabWidget->widget(i))
-        {
-            m_tabWidget->removeTab(i);
-            return;
-        }
+      m_documents.erase(widg);
+
+      m_tabWidget->removeTab(i);
+      return;
     }
+  }
 }
 
 void View::restoreLayout()
 {
-    for(auto panels : {m_leftPanels, m_rightPanels})
-    {
-        sort(panels, PanelComparator{});
+  for (auto panels : {m_leftPanels, m_rightPanels})
+  {
+    ossia::sort(panels, PanelComparator{});
 
-        for(auto& panel : panels)
-        {
-            auto dock = panel.second;
-            if(dock->isFloating())
-            {
-                dock->setFloating(false);
-            }
-        }
+    for (auto& panel : panels)
+    {
+      auto dock = panel.second;
+      if (dock->isFloating())
+      {
+        dock->setFloating(false);
+      }
     }
+  }
 }
 
 void View::closeEvent(QCloseEvent* ev)
 {
-    if(m_presenter->exit())
-    {
-        ev->accept();
-    }
-    else
-    {
-        ev->ignore();
-    }
+  if (m_presenter->exit())
+  {
+    ev->accept();
+  }
+  else
+  {
+    ev->ignore();
+  }
 }
 
 void View::on_fileNameChanged(DocumentView* d, const QString& newName)
 {
-    for(int i = 0; i < m_tabWidget->count(); i++)
+  for (int i = 0; i < m_tabWidget->count(); i++)
+  {
+    if (d->viewDelegate().getWidget() == m_tabWidget->widget(i))
     {
-        if(d == m_tabWidget->widget(i))
-        {
-            QString n = newName;
-            while(n.contains("/"))
-            {
-                n.remove(0, n.indexOf("/")+1);
-            }
-            n.truncate(n.lastIndexOf("."));
-            m_tabWidget->setTabText(i, n);
-            return;
-        }
+      QString n = newName;
+      while (n.contains("/"))
+      {
+        n.remove(0, n.indexOf("/") + 1);
+      }
+      n.truncate(n.lastIndexOf("."));
+      m_tabWidget->setTabText(i, n);
+      return;
     }
+  }
 }
 
 void View::changeEvent(QEvent* ev)
 {
-    if(ev->type() == QEvent::ActivationChange)
+  if (ev->type() == QEvent::ActivationChange)
+  {
+    for(GUIApplicationPlugin* ctrl : m_presenter->applicationContext().guiApplicationPlugins())
     {
-        emit activeWindowChanged();
+      ctrl->on_activeWindowChanged();
     }
+  }
 
-    QMainWindow::changeEvent(ev);
+  QMainWindow::changeEvent(ev);
+}
+
+void View::resizeEvent(QResizeEvent* e)
+{
+  QMainWindow::resizeEvent(e);
+  emit sizeChanged(e->size());
 }
 }

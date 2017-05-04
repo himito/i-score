@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1)
 project(iscore_plugin_js LANGUAGES CXX)
 
-if(NOT TARGET iscore_plugin_ossia)
+if(NOT TARGET iscore_plugin_engine)
     return()
 endif()
 
@@ -9,18 +9,28 @@ iscore_common_setup()
 
 # Packages
 find_package(Qt5 5.3 REQUIRED COMPONENTS Core Widgets Qml)
-if(NOT TARGET iscore_plugin_ossia)
+if(NOT TARGET iscore_plugin_engine)
   return()
 endif()
 
 # Files & main target
-file(GLOB_RECURSE HDRS
-    "${CMAKE_CURRENT_SOURCE_DIR}/*.hpp"
+set(HDRS
+  "${CMAKE_CURRENT_SOURCE_DIR}/iscore_plugin_js.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Commands/EditScript.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Commands/JSCommandFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Executor/Component.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Executor/JSAPIWrapper.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Executor/ProcessScript.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Executor/StateComponent.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Inspector/JSInspectorFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/Inspector/JSInspectorWidget.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessFactory.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessMetadata.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessModel.hpp"
+  "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSStateProcess.hpp"
 )
 set(SRCS
-"${CMAKE_CURRENT_SOURCE_DIR}/JS/jsedit/jsedit.cpp"
-
-"${CMAKE_CURRENT_SOURCE_DIR}/JS/StateProcess.cpp"
+"${CMAKE_CURRENT_SOURCE_DIR}/JS/JSStateProcess.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessModel.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/JSProcessModelSerialization.cpp"
 
@@ -31,9 +41,7 @@ set(SRCS
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/Commands/EditScript.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/Commands/JSCommandFactory.cpp"
 
-"${CMAKE_CURRENT_SOURCE_DIR}/JS/Inspector/JSInspectorFactory.cpp"
 "${CMAKE_CURRENT_SOURCE_DIR}/JS/Inspector/JSInspectorWidget.cpp"
-"${CMAKE_CURRENT_SOURCE_DIR}/JS/Inspector/NotifyingPlainTextEdit.cpp"
 
 "${CMAKE_CURRENT_SOURCE_DIR}/iscore_plugin_js.cpp"
 )
@@ -44,6 +52,6 @@ iscore_generate_command_list_file(${PROJECT_NAME} "${HDRS}")
 
 target_link_libraries(${PROJECT_NAME} PUBLIC
                      Qt5::Core Qt5::Widgets Qt5::Qml
-                     iscore_lib_base iscore_plugin_ossia iscore_lib_process iscore_lib_inspector iscore_lib_device iscore_plugin_deviceexplorer)
+                     iscore_lib_base iscore_plugin_engine iscore_lib_process iscore_lib_inspector iscore_lib_device iscore_plugin_deviceexplorer)
 
 setup_iscore_plugin(${PROJECT_NAME})

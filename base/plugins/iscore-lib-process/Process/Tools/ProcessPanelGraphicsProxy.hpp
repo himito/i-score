@@ -3,21 +3,22 @@
 #include <QRect>
 #include <QSize>
 
-namespace Process { class LayerModel; }
 class ProcessPanelPresenter;
 class QPainter;
 class QStyleOptionGraphicsItem;
 class QWidget;
 
-class ProcessPanelGraphicsProxy final : public QGraphicsObject
+class ProcessPanelGraphicsProxy final : public QGraphicsItem
 {
-        QSizeF m_size;
+  QSizeF m_size;
 
-    public:
-        ProcessPanelGraphicsProxy();
+public:
+  ProcessPanelGraphicsProxy();
 
-        QRectF boundingRect() const override;
-        void paint(QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget) override;
+  QRectF boundingRect() const override;
+  void paint(
+      QPainter* painter, const QStyleOptionGraphicsItem* option,
+      QWidget* widget) override;
 
-        void setSize(const QSizeF& size);
+  void setRect(const QSizeF& size);
 };

@@ -1,26 +1,27 @@
 #include "ScenarioCommandFactory.hpp"
-#include <iscore/command/SerializableCommand.hpp>
+#include <iscore/command/Command.hpp>
 
 namespace Scenario
 {
 namespace Command
 {
 
-const CommandParentFactoryKey& ScenarioCommandFactoryName(){
-    static const CommandParentFactoryKey key{"ScenarioApplicationPlugin"};
-    return key;
-}
-
-
+const CommandGroupKey& ScenarioCommandFactoryName()
+{
+  static const CommandGroupKey key{"ScenarioApplicationPlugin"};
+  return key;
 }
 }
+}
 
+template <>
+const CommandGroupKey& CommandFactoryName<Scenario::ProcessModel>()
+{
+  return Scenario::Command::ScenarioCommandFactoryName();
+}
 
-template<>
-const CommandParentFactoryKey& CommandFactoryName<Scenario::ProcessModel>()
-{ return Scenario::Command::ScenarioCommandFactoryName(); }
-
-
-template<>
-const CommandParentFactoryKey& CommandFactoryName<Scenario::BaseScenario>()
-{ return Scenario::Command::ScenarioCommandFactoryName(); }
+template <>
+const CommandGroupKey& CommandFactoryName<Scenario::BaseScenario>()
+{
+  return Scenario::Command::ScenarioCommandFactoryName();
+}

@@ -2,44 +2,37 @@
 #include <Process/State/ProcessStateDataInterface.hpp>
 #include <State/Address.hpp>
 
-namespace Process { class ProcessModel; }
+namespace Process
+{
+class ProcessModel;
+}
 class QObject;
 
 namespace Dummy
 {
-DummyState::DummyState(
-        Process::ProcessModel& model,
-        QObject* parent):
-    ProcessStateDataInterface{model, parent}
+DummyState::DummyState(Process::ProcessModel& model, QObject* parent)
+    : ProcessStateDataInterface{model, parent}
 {
-
 }
 
-QString DummyState::stateName() const
+ProcessStateDataInterface* DummyState::clone(QObject* parent) const
 {
-    return "Dummy";
+  return new DummyState{process(), parent};
 }
 
-ProcessStateDataInterface* DummyState::clone(
-        QObject* parent) const
+std::vector<State::AddressAccessor> DummyState::matchingAddresses()
 {
-    return new DummyState{process(), parent};
-}
-
-std::vector<State::Address> DummyState::matchingAddresses()
-{
-    return {};
+  return {};
 }
 
 State::MessageList DummyState::messages() const
 {
-    return {};
+  return {};
 }
 
-State::MessageList DummyState::setMessages(
-        const State::MessageList&,
-        const Process::MessageNode&)
+State::MessageList
+DummyState::setMessages(const State::MessageList&, const Process::MessageNode&)
 {
-    return {};
+  return {};
 }
 }

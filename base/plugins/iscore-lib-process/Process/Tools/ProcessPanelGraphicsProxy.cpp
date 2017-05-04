@@ -3,31 +3,32 @@
 
 #include "ProcessPanelGraphicsProxy.hpp"
 
-namespace Process { class LayerModel; }
 class QStyleOptionGraphicsItem;
 class QWidget;
 
 ProcessPanelGraphicsProxy::ProcessPanelGraphicsProxy()
 {
+  this->setCacheMode(QGraphicsItem::NoCache);
 }
 
 QRectF ProcessPanelGraphicsProxy::boundingRect() const
 {
-    return {0, 0, m_size.width(), m_size.height()};
+  return {0, 0, m_size.width(), m_size.height()};
 }
 
 void ProcessPanelGraphicsProxy::paint(
-        QPainter* painter,
-        const QStyleOptionGraphicsItem* option,
-        QWidget* widget)
+    QPainter* painter, const QStyleOptionGraphicsItem* option, QWidget* widget)
 {
-    painter->setRenderHint(QPainter::Antialiasing, false);
-    painter->setBrush(ScenarioStyle::instance().ProcessPanelBackground.getBrush());
-    painter->drawRect(boundingRect());
+  painter->setRenderHint(QPainter::Antialiasing, false);
+  painter->setBrush(
+      ScenarioStyle::instance().ProcessPanelBackground.getColor());
+  auto rect = boundingRect();
+  painter->setPen(Qt::DashLine);
+  painter->drawLine(rect.width(), 0, rect.width(), rect.height());
 }
 
-void ProcessPanelGraphicsProxy::setSize(const QSizeF& size)
+void ProcessPanelGraphicsProxy::setRect(const QSizeF& size)
 {
-    prepareGeometryChange();
-    m_size = size;
+  prepareGeometryChange();
+  m_size = size;
 }
