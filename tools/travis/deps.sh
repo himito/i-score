@@ -9,7 +9,7 @@ export ISCORE_PLUGINS_TO_BUILD=("iscore-addon-staticanalysis" "iscore-addon-remo
 cd base/addons
 for plugin in "${ISCORE_PLUGINS_TO_BUILD[@]}"
 do
-   git clone "https://github.com/himito/$plugin"
+   git clone "https://github.com/vmo-score/$plugin"
 done
 
 for plugin in */
