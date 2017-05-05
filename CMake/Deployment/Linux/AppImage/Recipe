@@ -25,12 +25,26 @@ cd ./$BUILD_DIR
 # Get i-score from git
 (
     if [ ! -d i-score ] ; then
-        git clone https://github.com/OSSIA/i-score
+        git clone https://github.com/vmo-score/i-score.git
     fi
 
     cd i-score/
     git_pull_rebase_helper
 )
+
+
+# Set-up the plug-ins
+export ISCORE_PLUGINS_TO_BUILD=("iscore-addon-staticanalysis" "iscore-addon-remotecontrol")
+
+(
+  cd i-score/base/addons
+  for plugin in "${ISCORE_PLUGINS_TO_BUILD[@]}"
+
+  do
+     git clone "https://github.com/vmo-score/$plugin"
+  done
+)
+
 
 # Build i-score in the AppDir
 mkdir -p $APP.AppDir/usr

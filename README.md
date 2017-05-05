@@ -3,7 +3,7 @@ i-score
 
 i-score is an interactive intermedia sequencer - read more on http://i-score.org/.
 
-**This fork provides a plugin to generate an interactive score to control the improvisation according to larger structures found in an audio recording - read more [here](https://himito.gitlab.io/vmo_i-score_generator/).**
+**This fork provides a plugin to generate an interactive score to control the improvisation according to larger structures found in an audio recording - read more [here](https://vmo-score.github.io/).**
 
 ![i-score screenshot](/Documentation/iscore.png?raw=true)
 
@@ -14,12 +14,12 @@ i-score is an interactive intermedia sequencer - read more on http://i-score.org
 
 ### Status
 
-* Linux, OS X : [![Travis Status](https://api.travis-ci.org/himito/i-score.svg?branch=master)](https://travis-ci.org/himito/i-score)
-* Windows : [![Appveyor Status](https://ci.appveyor.com/api/projects/status/github/himito/i-score?branch=master&svg=true)](https://ci.appveyor.com/project/himito/i-score)
+* Linux, OS X : [![Travis Status](https://api.travis-ci.org/vmo-score/i-score.svg?branch=master)](https://travis-ci.org/vmo-score/i-score)
+* Windows : [![Appveyor Status](https://ci.appveyor.com/api/projects/status/github/vmo-score/i-score?branch=master&svg=true)](https://ci.appveyor.com/project/vmo-score/i-score)
 
 ### Releases
 
-Releases are available for [Windows, Linux (via AppImage) and Mac OS X](https://github.com/himito/i-score/releases/latest).
+Releases are available for [Windows, Linux (via AppImage) and Mac OS X](https://github.com/vmo-score/i-score/releases/latest).
 
 * Windows: install and run.
 * OS X: extract and run i-score.app.
