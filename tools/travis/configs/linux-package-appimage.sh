@@ -1,7 +1,7 @@
 #!/bin/sh
 
-docker pull iscore/i-score-package-linux
-docker run --name buildvm iscore/i-score-package-linux /bin/bash Recipe
+docker pull vmoscore/i-score-package-linux
+docker run --name buildvm vmoscore/i-score-package-linux /bin/bash Recipe
 docker cp buildvm:/i-score.AppDir.txz .
 
 tar xaf i-score.AppDir.txz
