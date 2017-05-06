@@ -29,13 +29,13 @@ matrix:
     env: CONF=linux-debug CAN_DEPLOY=False
   - os: linux
     env: CONF=linux-static-debug CAN_DEPLOY=False
-  - os: linux
-    env: CONF=linux-release CAN_DEPLOY=False
   include:
   - os: osx
     env: CONF=osx-package CAN_DEPLOY=True
+  # - os: linux
+  #   env: CONF=linux-package-appimage CAN_DEPLOY=True
   - os: linux
-    env: CONF=linux-package-appimage CAN_DEPLOY=True
+    env: CONF=linux-release CAN_DEPLOY=True
 before_install:
 - ./tools/travis/deps.sh
 script:
